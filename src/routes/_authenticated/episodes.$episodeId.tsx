@@ -9,7 +9,7 @@ import { ChevronLeft, Sparkles, ScanSearch, ShieldAlert, Loader2, Download } fro
 import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.functions";
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
 import { PharmacistConciliationPanel } from "@/components/conciliation/PharmacistConciliationPanel";
-import { TraitementsDomicileColumn } from "@/components/conciliation/TraitementsDomicileColumn";
+
 
 import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
@@ -206,9 +206,8 @@ function EpisodeConciliationPage() {
         <ComparaisonTable episodeId={episodeId} patientId={episode.patient_id} />
       </div>
 
-      {/* STEP 2 — COMPARISON 2 COLUMNS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <TraitementsDomicileColumn patientId={episode.patient_id} />
+      {/* DIVERGENCES SUMMARY */}
+      <div className="mb-4">
         <DivergencesColumn conciliations={recon.conciliations} />
       </div>
 
