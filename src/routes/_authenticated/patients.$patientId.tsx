@@ -15,7 +15,7 @@ import { ComorbiditesSection } from "@/components/patient/ComorbiditesSection";
 import { TraitementsHabituelsSection } from "@/components/patient/TraitementsHabituelsSection";
 import { EpisodesSection } from "@/components/patient/EpisodesSection";
 
-export const Route = createFileRoute("/patients/$patientId")({
+export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
   component: PatientDetailPage,
 });

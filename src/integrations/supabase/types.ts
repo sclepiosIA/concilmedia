@@ -93,6 +93,50 @@ export type Database = {
           },
         ]
       }
+      biologie_resultats: {
+        Row: {
+          created_at: string
+          date_prelevement: string | null
+          id: string
+          parametre: string
+          patient_id: string
+          source: string
+          unite: string | null
+          valeur: number | null
+          valeur_texte: string | null
+        }
+        Insert: {
+          created_at?: string
+          date_prelevement?: string | null
+          id?: string
+          parametre: string
+          patient_id: string
+          source?: string
+          unite?: string | null
+          valeur?: number | null
+          valeur_texte?: string | null
+        }
+        Update: {
+          created_at?: string
+          date_prelevement?: string | null
+          id?: string
+          parametre?: string
+          patient_id?: string
+          source?: string
+          unite?: string | null
+          valeur?: number | null
+          valeur_texte?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "biologie_resultats_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comorbidites: {
         Row: {
           code_cim10: string | null

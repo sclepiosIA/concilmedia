@@ -16,7 +16,7 @@ import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
 import type { RiskResult } from "@/lib/conciliation/riskScore";
 
-export const Route = createFileRoute("/episodes/$episodeId")({
+export const Route = createFileRoute("/_authenticated/episodes/$episodeId")({
   head: () => ({ meta: [{ title: "Conciliation médicamenteuse" }] }),
   component: EpisodeConciliationPage,
 });

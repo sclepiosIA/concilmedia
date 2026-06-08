@@ -8,12 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { Plus, Search, User } from "lucide-react";
+import { Plus, Search, User, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
 import { fr } from "date-fns/locale";
 
-export const Route = createFileRoute("/patients/")({
+export const Route = createFileRoute("/_authenticated/patients/")({
   head: () => ({ meta: [{ title: "Patients — Conciliation" }] }),
   component: PatientsListPage,
 });
@@ -22,6 +23,7 @@ function PatientsListPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const { data: patients = [] } = useQuery({
     queryKey: ["patients"],
@@ -79,6 +81,10 @@ function PatientsListPage() {
           <h1 className="text-2xl font-bold">Patients</h1>
           <p className="text-sm text-muted-foreground">{patients.length} patient(s)</p>
         </div>
+        <div className="flex items-center gap-2">
+        <Button variant="outline" onClick={() => setBulkOpen(true)}>
+          <Sparkles className="h-4 w-4 mr-1" /> Import PDF en masse
+        </Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-1" /> Nouveau patient</Button>
@@ -112,7 +118,9 @@ function PatientsListPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+      <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} />
 
       <div className="relative mb-4">
         <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
