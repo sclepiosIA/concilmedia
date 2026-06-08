@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Sparkles, ScanSearch, ShieldAlert, Loader2, Download } from "lucide-react";
+import { ChevronLeft, ScanSearch, ShieldAlert, Loader2, Download } from "lucide-react";
 import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.functions";
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
 
