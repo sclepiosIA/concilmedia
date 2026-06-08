@@ -28,7 +28,7 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
 
   const labels = comorbidites.map((c) => c.libelle);
   const complexity = computeComplexity(labels);
-  const { profile, vigilance } = generateClinicalProfile(labels);
+  const { vigilance } = generateClinicalProfile(labels);
 
   if (labels.length === 0) {
     return (
@@ -56,7 +56,7 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
           ))}
         </div>
 
-        <p className="text-sm">{profile}</p>
+        
 
         {vigilance.length > 0 && (
           <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-1">
