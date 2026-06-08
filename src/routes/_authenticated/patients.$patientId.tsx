@@ -10,13 +10,10 @@ import { ChevronLeft, FilePlus2, Sparkles, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { TraitementsHabituelsSection } from "@/components/patient/TraitementsHabituelsSection";
 import { EpisodesSection } from "@/components/patient/EpisodesSection";
 import { BiologieSection } from "@/components/patient/BiologieSection";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
-import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
-import { MedicationProfileCard } from "@/components/patient/MedicationProfileCard";
 import { PatientPriorityBadge } from "@/components/patient/PatientPriorityBadge";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
