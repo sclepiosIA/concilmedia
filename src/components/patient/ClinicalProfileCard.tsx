@@ -56,7 +56,7 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
           ))}
         </div>
 
-        <p className="text-sm">{profile}</p>
+        {void profile}
 
         {vigilance.length > 0 && (
           <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-1">
