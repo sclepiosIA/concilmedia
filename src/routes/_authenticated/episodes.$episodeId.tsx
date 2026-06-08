@@ -180,7 +180,6 @@ function EpisodeConciliationPage() {
         </CardContent>
       </Card>
 
-      <BilanEntreeSection episodeId={episodeId} />
 
       {/* MAIN 3-COLUMN WORKSPACE */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
