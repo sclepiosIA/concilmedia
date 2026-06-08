@@ -11,8 +11,6 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { AntecedentsSection } from "@/components/patient/AntecedentsSection";
-import { AllergiesSection } from "@/components/patient/AllergiesSection";
-import { ComorbiditesSection } from "@/components/patient/ComorbiditesSection";
 import { TraitementsHabituelsSection } from "@/components/patient/TraitementsHabituelsSection";
 import { EpisodesSection } from "@/components/patient/EpisodesSection";
 import { BiologieSection } from "@/components/patient/BiologieSection";
