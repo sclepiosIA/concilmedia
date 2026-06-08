@@ -113,6 +113,15 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
     queryFn: async () =>
       (await supabase.from("comorbidites").select("*").eq("patient_id", patientId).eq("statut", "actif")).data ?? [],
   });
+  const { data: patient } = useQuery({
+    queryKey: ["patient", patientId, "imc"],
+    queryFn: async () =>
+      (await supabase.from("patients").select("poids_kg, taille_cm").eq("id", patientId).maybeSingle()).data,
+  });
+  const imc =
+    patient?.poids_kg && patient?.taille_cm
+      ? patient.poids_kg / Math.pow(patient.taille_cm / 100, 2)
+      : null;
 
   const labels = comorbidites.map((c) => c.libelle);
   const complexity = computeComplexity(labels);
