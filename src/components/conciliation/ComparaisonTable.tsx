@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GitCompareArrows, Home, Hospital, ArrowRight, AlertTriangle, CheckCircle2, Plus, Minus } from "lucide-react";
+import { GitCompareArrows, Home, Hospital, ArrowRight, AlertTriangle, CheckCircle2, Plus, Minus, ShieldAlert } from "lucide-react";
+import { classifyDci, HIGH_RISK_CLASSES } from "@/lib/conciliation/atcInteractions";
 
 type Row = {
   dci: string;
