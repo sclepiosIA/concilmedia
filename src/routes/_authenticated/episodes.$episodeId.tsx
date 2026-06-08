@@ -170,6 +170,20 @@ function EpisodeConciliationPage() {
         <ComparaisonTable episodeId={episodeId} patientId={episode.patient_id} />
       </div>
 
+      {/* CTA — valider et générer la synthèse IA pour le dossier patient */}
+      <div className="mb-4 flex justify-center">
+        <Button size="lg" onClick={() => setSyntheseOpen(true)} className="gap-2">
+          <Sparkles className="h-4 w-4" />
+          Valider et générer la synthèse IA du dossier patient
+        </Button>
+      </div>
+
+      <SynthesePatientDialog
+        patientId={episode.patient_id}
+        open={syntheseOpen}
+        onOpenChange={setSyntheseOpen}
+        autoAnalyze
+      />
 
       {/* TABLEAU DE SYNTHESE CLINIQUE ET MEDICAMENTEUSE */}
       <div className="mb-4">
