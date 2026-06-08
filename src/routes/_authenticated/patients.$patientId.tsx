@@ -80,7 +80,7 @@ function PatientDetailPage() {
             <Button variant="outline" onClick={() => setHistoriqueOpen(true)}>
               <FileText className="h-4 w-4 mr-1" /> Historique
             </Button>
-            <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
+            <Button onClick={() => setNouvelleOpen(true)}>
               <FilePlus2 className="h-4 w-4 mr-1" /> Nouvelle conciliation
             </Button>
           </div>
