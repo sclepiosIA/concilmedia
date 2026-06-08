@@ -31,6 +31,7 @@ function PatientsListPage() {
   const [prescriptionFiles, setPrescriptionFiles] = useState<File[]>([]);
   const [bulkTargetId, setBulkTargetId] = useState<string | undefined>(undefined);
   const [toDelete, setToDelete] = useState<{ id: string; nom: string; prenom: string } | null>(null);
+  const [syntheseFor, setSyntheseFor] = useState<string | null>(null);
   const pendingFiles = [...preHospFiles, ...prescriptionFiles];
 
   const { data: patients = [] } = useQuery({
