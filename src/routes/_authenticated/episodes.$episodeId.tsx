@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -5,9 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ScanSearch } from "lucide-react";
+import { ChevronLeft, ScanSearch, Sparkles } from "lucide-react";
 import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.functions";
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
+import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 
 
 
@@ -30,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/episodes/$episodeId")({
 function EpisodeConciliationPage() {
   const { episodeId } = Route.useParams();
   const recon = useMedicationReconciliation(episodeId);
+  const [syntheseOpen, setSyntheseOpen] = useState(false);
   const qc = useQueryClient();
   const computeRisk = useServerFn(computePrioritization);
   const pdfFn = useServerFn(generateEpisodeConciliationPdf);
@@ -167,6 +170,20 @@ function EpisodeConciliationPage() {
         <ComparaisonTable episodeId={episodeId} patientId={episode.patient_id} />
       </div>
 
+      {/* CTA — valider et générer la synthèse IA pour le dossier patient */}
+      <div className="mb-4 flex justify-center">
+        <Button size="lg" onClick={() => setSyntheseOpen(true)} className="gap-2">
+          <Sparkles className="h-4 w-4" />
+          Valider et générer la synthèse IA du dossier patient
+        </Button>
+      </div>
+
+      <SynthesePatientDialog
+        patientId={episode.patient_id}
+        open={syntheseOpen}
+        onOpenChange={setSyntheseOpen}
+        autoAnalyze
+      />
 
       {/* TABLEAU DE SYNTHESE CLINIQUE ET MEDICAMENTEUSE */}
       <div className="mb-4">
