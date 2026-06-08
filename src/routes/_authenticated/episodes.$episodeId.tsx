@@ -206,9 +206,8 @@ function EpisodeConciliationPage() {
         <ComparaisonTable episodeId={episodeId} patientId={episode.patient_id} />
       </div>
 
-      {/* STEP 2 — COMPARISON 2 COLUMNS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-        <TraitementsDomicileColumn patientId={episode.patient_id} />
+      {/* DIVERGENCES SUMMARY */}
+      <div className="mb-4">
         <DivergencesColumn conciliations={recon.conciliations} />
       </div>
 
