@@ -9,11 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, FilePlus2, Sparkles, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { toast } from "sonner";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { BiologieSection } from "@/components/patient/BiologieSection";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
 import { HistoriqueConciliationsDialog } from "@/components/patient/HistoriqueConciliationsDialog";
+import { NouvelleConciliationDialog } from "@/components/conciliation/NouvelleConciliationDialog";
 import { PatientPriorityBadge } from "@/components/patient/PatientPriorityBadge";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
