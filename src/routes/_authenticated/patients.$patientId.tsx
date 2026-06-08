@@ -96,7 +96,7 @@ function PatientDetailPage() {
               <Sparkles className="h-4 w-4 mr-1" /> Importer PDF (IA)
             </Button>
             <Button variant="outline" onClick={() => setSyntheseOpen(true)}>
-              <FileText className="h-4 w-4 mr-1" /> Synthèse patient
+              <FileText className="h-4 w-4 mr-1" /> Historique
             </Button>
             <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
               <FilePlus2 className="h-4 w-4 mr-1" /> Nouvelle conciliation
