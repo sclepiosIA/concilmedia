@@ -102,7 +102,7 @@ function PatientDetailPage() {
               <FileText className="h-4 w-4 mr-1" /> Synthèse patient
             </Button>
             <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
-              <FilePlus2 className="h-4 w-4 mr-1" /> Nouvel épisode
+              <FilePlus2 className="h-4 w-4 mr-1" /> Nouvelle conciliation
             </Button>
           </div>
         </CardContent>
