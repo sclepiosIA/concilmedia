@@ -13,6 +13,7 @@ import { toast } from "sonner";
 export function SynthesePatientDialog({ patientId, open, onOpenChange }: { patientId: string; open: boolean; onOpenChange: (v: boolean) => void }) {
   const qc = useQueryClient();
   const analyzeFn = useServerFn(analyzePatientSynthesis);
+  const pdfFn = useServerFn(generatePatientSynthesisPdf);
 
   const { data: patient } = useQuery({
     queryKey: ["patient", patientId],
