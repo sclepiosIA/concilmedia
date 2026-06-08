@@ -25,9 +25,11 @@ function PatientsListPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [preHospFiles, setPreHospFiles] = useState<File[]>([]);
+  const [prescriptionFiles, setPrescriptionFiles] = useState<File[]>([]);
   const [bulkTargetId, setBulkTargetId] = useState<string | undefined>(undefined);
   const [toDelete, setToDelete] = useState<{ id: string; nom: string; prenom: string } | null>(null);
+  const pendingFiles = [...preHospFiles, ...prescriptionFiles];
 
   const { data: patients = [] } = useQuery({
     queryKey: ["patients"],
@@ -136,26 +138,49 @@ function PatientsListPage() {
                 <div><Label>Poids (kg)</Label><Input name="poids" type="number" step="0.1" /></div>
                 <div><Label>Taille (cm)</Label><Input name="taille" type="number" /></div>
               </div>
-              <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-3 space-y-2">
+              <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-3 space-y-3">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <Sparkles className="h-4 w-4 text-primary" />
                   Documents sources pour conciliation (optionnel)
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Ajoutez des PDF (ordonnances, comptes-rendus, bilans…). L'IA les analysera après création.
-                </p>
-                <Input
-                  type="file"
-                  accept="application/pdf,image/*"
-                  multiple
-                  onChange={(e) => setPendingFiles(Array.from(e.target.files ?? []))}
-                />
-                {pendingFiles.length > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    {pendingFiles.length} fichier(s) sélectionné(s) : {pendingFiles.map((f) => f.name).join(", ")}
-                  </div>
-                )}
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold">1. Documents de pré-hospitalisation</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Ordonnances de ville, comptes-rendus, bilans biologiques, courriers…
+                  </p>
+                  <Input
+                    type="file"
+                    accept="application/pdf,image/*"
+                    multiple
+                    onChange={(e) => setPreHospFiles(Array.from(e.target.files ?? []))}
+                  />
+                  {preHospFiles.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      {preHospFiles.length} fichier(s) : {preHospFiles.map((f) => f.name).join(", ")}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold">2. Prescription médicale hospitalière</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Ordonnance d'entrée / prescription faite à l'hôpital — déclenche la conciliation.
+                  </p>
+                  <Input
+                    type="file"
+                    accept="application/pdf,image/*"
+                    multiple
+                    onChange={(e) => setPrescriptionFiles(Array.from(e.target.files ?? []))}
+                  />
+                  {prescriptionFiles.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      {prescriptionFiles.length} fichier(s) : {prescriptionFiles.map((f) => f.name).join(", ")}
+                    </div>
+                  )}
+                </div>
               </div>
+
               <Button type="submit" className="w-full" disabled={createMut.isPending}>Créer</Button>
             </form>
           </DialogContent>
@@ -166,7 +191,7 @@ function PatientsListPage() {
         open={bulkOpen}
         onOpenChange={(v) => {
           setBulkOpen(v);
-          if (!v) { setPendingFiles([]); setBulkTargetId(undefined); }
+          if (!v) { setPreHospFiles([]); setPrescriptionFiles([]); setBulkTargetId(undefined); }
         }}
         targetPatientId={bulkTargetId}
         initialFiles={bulkTargetId ? pendingFiles : undefined}
