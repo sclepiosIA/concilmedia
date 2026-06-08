@@ -14,13 +14,455 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      allergies: {
+        Row: {
+          created_at: string
+          date_apparition: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          reaction: string | null
+          severite: string | null
+          substance: string
+        }
+        Insert: {
+          created_at?: string
+          date_apparition?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          reaction?: string | null
+          severite?: string | null
+          substance: string
+        }
+        Update: {
+          created_at?: string
+          date_apparition?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          reaction?: string | null
+          severite?: string | null
+          substance?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "allergies_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      antecedents: {
+        Row: {
+          actif: boolean
+          created_at: string
+          date_evenement: string | null
+          description: string
+          id: string
+          patient_id: string
+          type: string
+        }
+        Insert: {
+          actif?: boolean
+          created_at?: string
+          date_evenement?: string | null
+          description: string
+          id?: string
+          patient_id: string
+          type: string
+        }
+        Update: {
+          actif?: boolean
+          created_at?: string
+          date_evenement?: string | null
+          description?: string
+          id?: string
+          patient_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "antecedents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comorbidites: {
+        Row: {
+          code_cim10: string | null
+          created_at: string
+          id: string
+          libelle: string
+          patient_id: string
+          statut: string
+        }
+        Insert: {
+          code_cim10?: string | null
+          created_at?: string
+          id?: string
+          libelle: string
+          patient_id: string
+          statut?: string
+        }
+        Update: {
+          code_cim10?: string | null
+          created_at?: string
+          id?: string
+          libelle?: string
+          patient_id?: string
+          statut?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comorbidites_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conciliation_ai_analyses: {
+        Row: {
+          created_at: string
+          episode_id: string
+          id: string
+          model: string
+          patient_id: string
+          payload: Json
+        }
+        Insert: {
+          created_at?: string
+          episode_id: string
+          id?: string
+          model: string
+          patient_id: string
+          payload: Json
+        }
+        Update: {
+          created_at?: string
+          episode_id?: string
+          id?: string
+          model?: string
+          patient_id?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conciliation_ai_analyses_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conciliation_ai_analyses_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conciliation_medicaments: {
+        Row: {
+          action_corrective: string | null
+          created_at: string
+          date_analyse: string | null
+          date_validation: string | null
+          episode_id: string
+          id: string
+          intention: string
+          justification: string | null
+          medication_domicile: Json
+          medication_hospitalisation: Json | null
+          patient_id: string
+          pharmacien_id: string | null
+          phase: string
+          statut: string
+          type_divergence: string
+        }
+        Insert: {
+          action_corrective?: string | null
+          created_at?: string
+          date_analyse?: string | null
+          date_validation?: string | null
+          episode_id: string
+          id?: string
+          intention?: string
+          justification?: string | null
+          medication_domicile: Json
+          medication_hospitalisation?: Json | null
+          patient_id: string
+          pharmacien_id?: string | null
+          phase: string
+          statut?: string
+          type_divergence: string
+        }
+        Update: {
+          action_corrective?: string | null
+          created_at?: string
+          date_analyse?: string | null
+          date_validation?: string | null
+          episode_id?: string
+          id?: string
+          intention?: string
+          justification?: string | null
+          medication_domicile?: Json
+          medication_hospitalisation?: Json | null
+          patient_id?: string
+          pharmacien_id?: string | null
+          phase?: string
+          statut?: string
+          type_divergence?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conciliation_medicaments_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conciliation_medicaments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      episodes: {
+        Row: {
+          created_at: string
+          date_entree: string
+          date_sortie: string | null
+          id: string
+          motif: string | null
+          patient_id: string
+          service: string | null
+          statut: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_entree?: string
+          date_sortie?: string | null
+          id?: string
+          motif?: string | null
+          patient_id: string
+          service?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_entree?: string
+          date_sortie?: string | null
+          id?: string
+          motif?: string | null
+          patient_id?: string
+          service?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "episodes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          created_at: string
+          created_by: string
+          date_naissance: string | null
+          id: string
+          nir: string | null
+          nom: string
+          notes: string | null
+          poids_kg: number | null
+          prenom: string
+          sexe: string | null
+          taille_cm: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          date_naissance?: string | null
+          id?: string
+          nir?: string | null
+          nom: string
+          notes?: string | null
+          poids_kg?: number | null
+          prenom: string
+          sexe?: string | null
+          taille_cm?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          date_naissance?: string | null
+          id?: string
+          nir?: string | null
+          nom?: string
+          notes?: string | null
+          poids_kg?: number | null
+          prenom?: string
+          sexe?: string | null
+          taille_cm?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      prescriptions_hospitalieres: {
+        Row: {
+          actif: boolean
+          created_at: string
+          date_debut: string
+          date_fin: string | null
+          dosage: string | null
+          episode_id: string
+          id: string
+          indication: string | null
+          medicament: string
+          patient_id: string
+          posologie: string | null
+          prescripteur: string | null
+          voie_administration: string | null
+        }
+        Insert: {
+          actif?: boolean
+          created_at?: string
+          date_debut?: string
+          date_fin?: string | null
+          dosage?: string | null
+          episode_id: string
+          id?: string
+          indication?: string | null
+          medicament: string
+          patient_id: string
+          posologie?: string | null
+          prescripteur?: string | null
+          voie_administration?: string | null
+        }
+        Update: {
+          actif?: boolean
+          created_at?: string
+          date_debut?: string
+          date_fin?: string | null
+          dosage?: string | null
+          episode_id?: string
+          id?: string
+          indication?: string | null
+          medicament?: string
+          patient_id?: string
+          posologie?: string | null
+          prescripteur?: string | null
+          voie_administration?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescriptions_hospitalieres_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_hospitalieres_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      traitements_habituels: {
+        Row: {
+          actif: boolean
+          created_at: string
+          dci: string | null
+          dosage: string | null
+          dosage_unite: string | null
+          id: string
+          indication: string | null
+          nom_commercial: string | null
+          patient_id: string
+          posologie_coucher: string | null
+          posologie_matin: string | null
+          posologie_midi: string | null
+          posologie_soir: string | null
+          source: string | null
+          updated_at: string
+          voie_administration: string | null
+        }
+        Insert: {
+          actif?: boolean
+          created_at?: string
+          dci?: string | null
+          dosage?: string | null
+          dosage_unite?: string | null
+          id?: string
+          indication?: string | null
+          nom_commercial?: string | null
+          patient_id: string
+          posologie_coucher?: string | null
+          posologie_matin?: string | null
+          posologie_midi?: string | null
+          posologie_soir?: string | null
+          source?: string | null
+          updated_at?: string
+          voie_administration?: string | null
+        }
+        Update: {
+          actif?: boolean
+          created_at?: string
+          dci?: string | null
+          dosage?: string | null
+          dosage_unite?: string | null
+          id?: string
+          indication?: string | null
+          nom_commercial?: string | null
+          patient_id?: string
+          posologie_coucher?: string | null
+          posologie_matin?: string | null
+          posologie_midi?: string | null
+          posologie_soir?: string | null
+          source?: string | null
+          updated_at?: string
+          voie_administration?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traitements_habituels_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      owns_episode: { Args: { _episode_id: string }; Returns: boolean }
+      owns_patient: { Args: { _patient_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
