@@ -213,9 +213,8 @@ function PatientsListPage() {
         }}
         targetPatientId={bulkTargetId}
         initialFiles={bulkTargetId ? pendingFiles : undefined}
-        onCompleted={(patientIds) => {
-          const id = bulkTargetId ?? patientIds[0];
-          if (id) setSyntheseFor(id);
+        onCompleted={() => {
+          if (bulkTargetId) setSyntheseFor(bulkTargetId);
         }}
       />
 
