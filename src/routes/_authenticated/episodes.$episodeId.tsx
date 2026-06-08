@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Sparkles, ScanSearch, ShieldAlert, Loader2, Download } from "lucide-react";
 import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.functions";
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
-import { PharmacistConciliationPanel } from "@/components/conciliation/PharmacistConciliationPanel";
+
 
 
 import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
