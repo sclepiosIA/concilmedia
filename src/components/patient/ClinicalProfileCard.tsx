@@ -79,7 +79,7 @@ function OrganMap({ labels, imc }: { labels: string[]; imc: number | null }) {
     { key: "cv", label: "Cardiovasculaire", icon: Heart, match: ["hta", "hypertension", "coronar", "infarctus", "fibrillation", "insuffisance cardiaque"], active: false },
     { key: "rein", label: "Rénal", icon: Droplet, match: ["renal", "rein", "irc"], active: false },
     { key: "metab", label: "Métabolique", icon: Activity, match: ["diabete", "dyslipid", "cholesterol"], active: false },
-    { key: "poids", label: "Pondéral", icon: Scale, match: ["obesite", "imc"], active: false, detail: imc !== null ? `IMC ${imc.toFixed(1)}` : undefined },
+    { key: "poids", label: "Pondéral", icon: Scale, match: ["obesite", "imc"], active: false, detail: imc !== null ? `BMI ${imc.toFixed(1)}` : undefined },
     { key: "neuro", label: "Neuro", icon: Brain, match: ["avc", "ait", "epilep", "parkinson", "demence"], active: false },
     { key: "resp", label: "Respiratoire", icon: Wind, match: ["bpco", "asthme", "pneumo"], active: false },
   ].map((t) => ({ ...t, active: has(t.match) }));
