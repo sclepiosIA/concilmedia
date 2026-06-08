@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Check, MessageSquare } from "lucide-react";
 import { useState } from "react";
+import { GRAVITE_LABEL, GRAVITE_COLOR, type Gravite } from "@/lib/clinical/complexityScore";
 
 const typeColors: Record<string, string> = {
   omission: "destructive",
