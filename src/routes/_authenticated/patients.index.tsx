@@ -8,9 +8,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { Plus, Search, User } from "lucide-react";
+import { Plus, Search, User, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
 import { fr } from "date-fns/locale";
 
 export const Route = createFileRoute("/_authenticated/patients/")({
