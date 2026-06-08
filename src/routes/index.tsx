@@ -62,8 +62,8 @@ function Dashboard() {
         <div className="container mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2 font-semibold"><Pill className="h-5 w-5 text-primary" /> Conciliation Médicamenteuse</div>
           <div className="flex gap-2">
-            <Link to="/_authenticated/dashboard"><Button size="sm" variant="outline">Dashboard mémoire</Button></Link>
-            <Link to="/_authenticated/patients"><Button size="sm">Patients</Button></Link>
+            <Link to="/dashboard"><Button size="sm" variant="outline">Dashboard mémoire</Button></Link>
+            <Link to="/patients"><Button size="sm">Patients</Button></Link>
           </div>
         </div>
       </header>
