@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, Pill } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { OrdonnanceUploader } from "@/components/conciliation/OrdonnanceUploader";
 
 export function TraitementsHabituelsSection({ patientId }: { patientId: string }) {
   const qc = useQueryClient();
@@ -28,6 +29,7 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
 
   return (
     <div className="space-y-3">
+      <OrdonnanceUploader patientId={patientId} />
       {!open ? <Button variant="outline" size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Ajouter un traitement</Button> : (
         <Card><CardContent className="py-4">
           <form onSubmit={(e) => {
