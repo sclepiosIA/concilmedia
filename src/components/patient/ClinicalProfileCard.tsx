@@ -123,7 +123,7 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
   const complexity = computeComplexity(labels);
   const risks = buildRiskProfile(labels);
   const vigilance = buildVigilance(labels);
-  const complexityTone: Tone = complexity.niveau === "eleve" ? "red" : complexity.niveau === "modere" ? "orange" : "green";
+  
 
   if (labels.length === 0 && allergies.length === 0) {
     return (
@@ -193,16 +193,6 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
             </ul>
           </ProfileTile>
 
-          <div className="md:col-span-2">
-            <ProfileTile tone={complexityTone} icon={Activity} title="Complexité patient">
-              <div className="flex items-center gap-3">
-                <Badge variant="outline" className={`text-base px-3 py-1 ${TONE[complexity.niveau]}`}>
-                  {COMPLEXITY_LABEL[complexity.niveau]}
-                </Badge>
-                <span className="text-sm text-muted-foreground">Score : <strong className="text-foreground">{complexity.score} pts</strong></span>
-              </div>
-            </ProfileTile>
-          </div>
         </div>
       </CardContent>
     </Card>
