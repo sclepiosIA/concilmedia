@@ -112,7 +112,7 @@ export function ComparaisonTable({ episodeId, patientId }: { episodeId: string; 
                     <span className="inline-flex items-center gap-1"><Hospital className="h-3 w-3" /> Hôpital — Dosage</span>
                   </th>
                   <th className="text-left p-3 font-semibold">Hôpital — Posologie</th>
-                  <th className="text-left p-3 font-semibold">Statut</th>
+                  <th className="text-left p-3 font-semibold">Divergence</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
