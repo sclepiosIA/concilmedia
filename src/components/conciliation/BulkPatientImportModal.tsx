@@ -43,7 +43,7 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: { open: boolean; onOpenChange: (v: boolean) => void; targetPatientId?: string }) {
+export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, initialFiles }: { open: boolean; onOpenChange: (v: boolean) => void; targetPatientId?: string; initialFiles?: File[] }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const extract = useServerFn(extractPatientDossier);
@@ -52,6 +52,14 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: 
   const [phase, setPhase] = useState<"upload" | "extracting" | "review" | "done">("upload");
   const [progress, setProgress] = useState(0);
   const [summary, setSummary] = useState<{ created: number; updated: number; failed: { name: string; error: string }[]; created_episode_ids: string[] } | null>(null);
+
+  useEffect(() => {
+    if (open && initialFiles && initialFiles.length > 0) {
+      const valid = initialFiles.filter((f) => f.size <= MAX_SIZE).slice(0, MAX_FILES);
+      setItems(valid.map((f) => ({ id: `${f.name}-${f.lastModified}-${Math.random()}`, file: f, status: "pending" as ItemStatus })));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const onFiles = (e: ChangeEvent<HTMLInputElement>) => {
     const fs = Array.from(e.target.files ?? []);
