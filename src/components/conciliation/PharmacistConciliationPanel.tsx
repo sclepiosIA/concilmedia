@@ -69,6 +69,11 @@ function ConciliationRow({ item, onUpdate, onValidate }: { item: MedicationConci
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
+            {item.gravite && (
+              <Badge variant="outline" className={GRAVITE_COLOR[item.gravite as Gravite]}>
+                {GRAVITE_LABEL[item.gravite as Gravite]}
+              </Badge>
+            )}
             <Badge variant={(typeColors[item.type_divergence] ?? "default") as "default" | "secondary" | "destructive" | "outline"}>
               {item.type_divergence.replace("_", " ")}
             </Badge>
