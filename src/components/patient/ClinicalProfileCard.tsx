@@ -69,17 +69,17 @@ interface OrganTile {
   match: string[];
 }
 
-function OrganMap({ labels }: { labels: string[] }) {
+function OrganMap({ labels, imc }: { labels: string[]; imc: number | null }) {
   const norm = labels.map((l) =>
     l.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
   );
   const has = (kws: string[]) => kws.some((k) => norm.some((n) => n.includes(k)));
 
-  const tiles: OrganTile[] = [
+  const tiles: (OrganTile & { detail?: string })[] = [
     { key: "cv", label: "Cardiovasculaire", icon: Heart, match: ["hta", "hypertension", "coronar", "infarctus", "fibrillation", "insuffisance cardiaque"], active: false },
     { key: "rein", label: "Rénal", icon: Droplet, match: ["renal", "rein", "irc"], active: false },
     { key: "metab", label: "Métabolique", icon: Activity, match: ["diabete", "dyslipid", "cholesterol"], active: false },
-    { key: "poids", label: "Pondéral", icon: Scale, match: ["obesite", "imc"], active: false },
+    { key: "poids", label: "Pondéral", icon: Scale, match: ["obesite", "imc"], active: false, detail: imc !== null ? `IMC ${imc.toFixed(1)}` : undefined },
     { key: "neuro", label: "Neuro", icon: Brain, match: ["avc", "ait", "epilep", "parkinson", "demence"], active: false },
     { key: "resp", label: "Respiratoire", icon: Wind, match: ["bpco", "asthme", "pneumo"], active: false },
   ].map((t) => ({ ...t, active: has(t.match) }));
@@ -98,7 +98,7 @@ function OrganMap({ labels }: { labels: string[] }) {
             </div>
             <div className="text-xs">
               <div className="font-medium text-red-900">{t.label}</div>
-              <div className="text-red-700/80">Atteint</div>
+              <div className="text-red-700/80">{t.detail ?? "Atteint"}</div>
             </div>
           </div>
         );
@@ -113,6 +113,15 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
     queryFn: async () =>
       (await supabase.from("comorbidites").select("*").eq("patient_id", patientId).eq("statut", "actif")).data ?? [],
   });
+  const { data: patient } = useQuery({
+    queryKey: ["patient", patientId, "imc"],
+    queryFn: async () =>
+      (await supabase.from("patients").select("poids_kg, taille_cm").eq("id", patientId).maybeSingle()).data,
+  });
+  const imc =
+    patient?.poids_kg && patient?.taille_cm
+      ? patient.poids_kg / Math.pow(patient.taille_cm / 100, 2)
+      : null;
 
   const labels = comorbidites.map((c) => c.libelle);
   const complexity = computeComplexity(labels);
@@ -149,7 +158,7 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
 
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Systèmes atteints</div>
-          <OrganMap labels={labels} />
+          <OrganMap labels={labels} imc={imc} />
         </div>
 
         {vigilance.length > 0 && (
