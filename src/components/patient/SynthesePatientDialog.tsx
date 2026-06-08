@@ -12,7 +12,7 @@ import { generatePatientSynthesisPdf } from "@/lib/conciliation/pdfExport.functi
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { toast } from "sonner";
 
-export function SynthesePatientDialog({ patientId, open, onOpenChange }: { patientId: string; open: boolean; onOpenChange: (v: boolean) => void }) {
+export function SynthesePatientDialog({ patientId, open, onOpenChange, autoAnalyze = false }: { patientId: string; open: boolean; onOpenChange: (v: boolean) => void; autoAnalyze?: boolean }) {
   const qc = useQueryClient();
   const analyzeFn = useServerFn(analyzePatientSynthesis);
   const pdfFn = useServerFn(generatePatientSynthesisPdf);
