@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sparkles, Loader2, Download, AlertTriangle } from "lucide-react";
 import { analyzePatientSynthesis } from "@/lib/conciliation/analyzePatientSynthesis.functions";
 import { generatePatientSynthesisPdf } from "@/lib/conciliation/pdfExport.functions";
