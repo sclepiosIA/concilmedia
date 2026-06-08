@@ -62,7 +62,6 @@ function PriseCell({ value, icon: Icon, label }: { value: string | null; icon: R
 
 export function TraitementsHabituelsSection({ patientId }: { patientId: string }) {
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
   const { data = [] } = useQuery({
     queryKey: ["traitements", patientId],
     queryFn: async () =>
@@ -74,17 +73,6 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
           .order("created_at", { ascending: false })
       ).data ?? []) as Traitement[],
   });
-  const add = useMutation({
-    mutationFn: async (v: Record<string, string | number>) => {
-      const { error } = await supabase.from("traitements_habituels").insert({ patient_id: patientId, ...v });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["traitements", patientId] });
-      setOpen(false);
-      toast.success("Traitement ajouté");
-    },
-  });
   const del = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("traitements_habituels").delete().eq("id", id);
@@ -95,13 +83,7 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        {!open && (
-          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Ajouter un traitement
-          </Button>
-        )}
-      </div>
+      <OrdonnanceUploader patientId={patientId} />
 
       {open && (
         <Card>
