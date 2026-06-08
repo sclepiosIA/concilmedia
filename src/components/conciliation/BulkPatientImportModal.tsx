@@ -114,8 +114,10 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: 
         qc.invalidateQueries({ queryKey: ["allergies", targetPatientId] });
         qc.invalidateQueries({ queryKey: ["traitements", targetPatientId] });
         qc.invalidateQueries({ queryKey: ["biologie", targetPatientId] });
+        qc.invalidateQueries({ queryKey: ["episodes", targetPatientId] });
       }
-      toast.success(targetPatientId ? `Données ajoutées (${r.updated})` : `${r.created} créé(s), ${r.updated} mis à jour`);
+      const epMsg = r.created_episode_ids.length > 0 ? ` • ${r.created_episode_ids.length} épisode(s) créé(s)` : "";
+      toast.success(targetPatientId ? `Données ajoutées${epMsg}` : `${r.created} créé(s), ${r.updated} mis à jour${epMsg}`);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur import"),
   });
