@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { classifyDci } from "@/lib/conciliation/atcInteractions";
+import { classifyDivergenceGravite, type Gravite } from "@/lib/clinical/complexityScore";
 
 export interface MedicationConciliation {
   id: string;
@@ -30,6 +32,8 @@ export interface MedicationConciliation {
   date_analyse: string | null;
   date_validation: string | null;
   created_at: string;
+  gravite: Gravite | null;
+  classe_atc: string | null;
 }
 
 export function useMedicationReconciliation(episodeId: string) {
