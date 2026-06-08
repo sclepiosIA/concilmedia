@@ -18,6 +18,7 @@ import { EpisodesSection } from "@/components/patient/EpisodesSection";
 import { BiologieSection } from "@/components/patient/BiologieSection";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
+import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
@@ -111,6 +112,10 @@ function PatientDetailPage() {
 
       <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} targetPatientId={patientId} />
       <SynthesePatientDialog patientId={patientId} open={syntheseOpen} onOpenChange={setSyntheseOpen} />
+
+      <div className="mb-6">
+        <ClinicalProfileCard patientId={patientId} />
+      </div>
 
       <Tabs defaultValue="antecedents">
         <TabsList className="grid grid-cols-6 w-full max-w-4xl">
