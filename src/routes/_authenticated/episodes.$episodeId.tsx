@@ -84,6 +84,11 @@ function EpisodeConciliationPage() {
     queryFn: async () => (await supabase.from("allergies").select("*").eq("patient_id", episode!.patient_id)).data ?? [],
   });
 
+  const { data: prescriptions = [] } = useQuery({
+    queryKey: ["prescriptions", episodeId],
+    queryFn: async () => (await supabase.from("prescriptions_hospitalieres").select("id").eq("episode_id", episodeId).eq("actif", true)).data ?? [],
+  });
+
   if (!episode) return <div className="container py-8">Chargement…</div>;
   const p = episode.patients;
   const age = p?.date_naissance ? Math.floor((Date.now() - new Date(p.date_naissance).getTime()) / 31557600000) : null;
@@ -92,11 +97,13 @@ function EpisodeConciliationPage() {
 
   const total = recon.stats.nonTraite + recon.stats.resolu;
   const reconRatio = total > 0 ? recon.stats.resolu / total : 0;
-  const bilanDone = !!(episode as { bilan_entree_completed_at?: string | null }).bilan_entree_completed_at;
+  const ordonnanceDone = prescriptions.length > 0;
+  const divergencesDone = recon.conciliations.length > 0;
   const validationDone = total > 0 && reconRatio === 1;
   const progressPct = Math.round(
-    (bilanDone ? 33 : 0) + reconRatio * 34 + (validationDone ? 33 : 0)
+    (ordonnanceDone ? 33 : 0) + (divergencesDone ? 33 : 0) + (validationDone ? 34 : 0)
   );
+
 
   return (
     <div className="container mx-auto px-4 py-4 max-w-[1600px]">
