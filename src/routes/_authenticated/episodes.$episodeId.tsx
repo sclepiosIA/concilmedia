@@ -206,28 +206,6 @@ function EpisodeConciliationPage() {
         <ComparaisonTable episodeId={episodeId} patientId={episode.patient_id} />
       </div>
 
-      {/* DIVERGENCES SUMMARY */}
-      <div className="mb-4">
-        <DivergencesColumn conciliations={recon.conciliations} />
-      </div>
-
-      {/* STEP 3 — VALIDATION PHARMACIEN */}
-      <Card className="border-2 border-primary/15 shadow-sm mb-4">
-        <CardHeader className="pb-3 bg-primary/[0.03] border-b">
-          <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Validation pharmaceutique
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <PharmacistConciliationPanel
-            conciliations={recon.conciliations}
-            onUpdate={recon.updateConciliation}
-            onValidate={recon.validateConciliation}
-            isLoading={recon.isLoading}
-          />
-        </CardContent>
-      </Card>
 
       {/* SECONDARY: AI ANALYSIS */}
       <AIAnalysisPanel episodeId={episodeId} />
