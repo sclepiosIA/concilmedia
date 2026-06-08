@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, FlaskConical } from "lucide-react";
-import { useState, useMemo } from "react";
+import { Trash2, FlaskConical, FileUp, Loader2 } from "lucide-react";
+import { useRef, useMemo } from "react";
 import { toast } from "sonner";
+import { extractBiologie } from "@/lib/conciliation/extractBiologie.functions";
 
 type BioRow = {
   id: string;
@@ -19,7 +19,6 @@ type BioRow = {
   source: string;
 };
 
-// Seuils simples pour affichage d'alerte
 function flagFor(p: string, v: number | null): "low" | "high" | null {
   if (v === null) return null;
   const key = p.toLowerCase();
@@ -35,9 +34,22 @@ function flagFor(p: string, v: number | null): "low" | "high" | null {
   return null;
 }
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const res = r.result as string;
+      resolve(res.split(",")[1] ?? "");
+    };
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
 export function BiologieSection({ patientId }: { patientId: string }) {
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const extract = useServerFn(extractBiologie);
 
   const { data = [] } = useQuery({
     queryKey: ["biologie", patientId],
@@ -62,13 +74,19 @@ export function BiologieSection({ patientId }: { patientId: string }) {
     return Array.from(m.entries());
   }, [data]);
 
-  const add = useMutation({
-    mutationFn: async (v: { parametre: string; valeur?: number; unite?: string; valeur_texte?: string; date_prelevement?: string }) => {
-      const { error } = await supabase.from("biologie_resultats").insert({ patient_id: patientId, source: "manuel", ...v });
-      if (error) throw error;
+  const importPdf = useMutation({
+    mutationFn: async (f: File) => {
+      const b64 = await fileToBase64(f);
+      return extract({ data: { patientId, fileBase64: b64, mimeType: f.type, fileName: f.name } });
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["biologie", patientId] }); setOpen(false); toast.success("Résultat ajouté"); },
+    onSuccess: (r) => {
+      toast.success(`${r.inserted} résultat(s) importé(s) depuis le PDF`);
+      qc.invalidateQueries({ queryKey: ["biologie", patientId] });
+      if (fileRef.current) fileRef.current.value = "";
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur d'import"),
   });
+
   const del = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("biologie_resultats").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["biologie", patientId] }),
@@ -76,31 +94,29 @@ export function BiologieSection({ patientId }: { patientId: string }) {
 
   return (
     <div className="space-y-3">
-      {!open ? (
-        <Button variant="outline" size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Ajouter un résultat</Button>
-      ) : (
-        <Card><CardContent className="py-4">
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.currentTarget);
-            const valeurStr = String(fd.get("valeur") ?? "");
-            add.mutate({
-              parametre: String(fd.get("parametre")),
-              valeur: valeurStr ? Number(valeurStr) : undefined,
-              unite: String(fd.get("unite") ?? "") || undefined,
-              valeur_texte: String(fd.get("valeur_texte") ?? "") || undefined,
-              date_prelevement: String(fd.get("date_prelevement") ?? "") || undefined,
-            });
-          }} className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <div><Label>Paramètre</Label><Input name="parametre" required placeholder="DFG" /></div>
-            <div><Label>Valeur</Label><Input name="valeur" type="number" step="any" /></div>
-            <div><Label>Unité</Label><Input name="unite" placeholder="mL/min/1,73m²" /></div>
-            <div><Label>Texte</Label><Input name="valeur_texte" placeholder="(optionnel)" /></div>
-            <div><Label>Date</Label><Input name="date_prelevement" type="date" /></div>
-            <div className="col-span-2 md:col-span-5 flex gap-2"><Button type="submit" size="sm">Enregistrer</Button><Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button></div>
-          </form>
-        </CardContent></Card>
-      )}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/pdf,image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) importPdf.mutate(f);
+        }}
+      />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => fileRef.current?.click()}
+        disabled={importPdf.isPending}
+      >
+        {importPdf.isPending ? (
+          <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Analyse en cours…</>
+        ) : (
+          <><FileUp className="h-4 w-4 mr-1" /> Ajouter un résultat PDF</>
+        )}
+      </Button>
+
       {data.length === 0 && <p className="text-sm text-muted-foreground py-4">Aucun résultat biologique</p>}
       {grouped.map(([param, rows]) => (
         <Card key={param}>
