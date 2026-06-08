@@ -111,12 +111,9 @@ function PatientDetailPage() {
       <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} targetPatientId={patientId} />
       <SynthesePatientDialog patientId={patientId} open={syntheseOpen} onOpenChange={setSyntheseOpen} />
 
-      <div className="mb-6">
-        <ClinicalProfileCard patientId={patientId} />
-      </div>
-
       <div className="space-y-6">
         <section><h2 className="text-lg font-semibold mb-3">Épisodes</h2><EpisodesSection patientId={patientId} /></section>
+        <div className="mb-6"><ClinicalProfileCard patientId={patientId} /></div>
         <section>
           <h2 className="text-lg font-semibold mb-3">Traitements</h2>
           <div className="mb-3"><MedicationProfileCard patientId={patientId} /></div>
