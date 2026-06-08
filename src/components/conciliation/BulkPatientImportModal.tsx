@@ -43,7 +43,7 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, initialFiles }: { open: boolean; onOpenChange: (v: boolean) => void; targetPatientId?: string; initialFiles?: File[] }) {
+export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, initialFiles, onCompleted }: { open: boolean; onOpenChange: (v: boolean) => void; targetPatientId?: string; initialFiles?: File[]; onCompleted?: () => void }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const extract = useServerFn(extractPatientDossier);
@@ -126,6 +126,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
       }
       const epMsg = r.created_episode_ids.length > 0 ? ` • ${r.created_episode_ids.length} épisode(s) créé(s)` : "";
       toast.success(targetPatientId ? `Données ajoutées${epMsg}` : `${r.created} créé(s), ${r.updated} mis à jour${epMsg}`);
+      onCompleted?.();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur import"),
   });

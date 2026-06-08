@@ -13,6 +13,7 @@ import { Plus, Search, User, Sparkles, Trash2, FlaskConical } from "lucide-react
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
+import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { fr } from "date-fns/locale";
 import { seedDemoJeanMartin } from "@/lib/conciliation/seedDemoJeanMartin";
 
@@ -30,6 +31,7 @@ function PatientsListPage() {
   const [prescriptionFiles, setPrescriptionFiles] = useState<File[]>([]);
   const [bulkTargetId, setBulkTargetId] = useState<string | undefined>(undefined);
   const [toDelete, setToDelete] = useState<{ id: string; nom: string; prenom: string } | null>(null);
+  const [syntheseFor, setSyntheseFor] = useState<string | null>(null);
   const pendingFiles = [...preHospFiles, ...prescriptionFiles];
 
   const { data: patients = [] } = useQuery({
@@ -211,7 +213,19 @@ function PatientsListPage() {
         }}
         targetPatientId={bulkTargetId}
         initialFiles={bulkTargetId ? pendingFiles : undefined}
+        onCompleted={() => {
+          if (bulkTargetId) setSyntheseFor(bulkTargetId);
+        }}
       />
+
+      {syntheseFor && (
+        <SynthesePatientDialog
+          patientId={syntheseFor}
+          open={!!syntheseFor}
+          onOpenChange={(v) => { if (!v) setSyntheseFor(null); }}
+          autoAnalyze
+        />
+      )}
 
       <div className="relative mb-4">
         <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />

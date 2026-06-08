@@ -1,16 +1,18 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sparkles, Loader2, Download, AlertTriangle } from "lucide-react";
 import { analyzePatientSynthesis } from "@/lib/conciliation/analyzePatientSynthesis.functions";
 import { generatePatientSynthesisPdf } from "@/lib/conciliation/pdfExport.functions";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { toast } from "sonner";
 
-export function SynthesePatientDialog({ patientId, open, onOpenChange }: { patientId: string; open: boolean; onOpenChange: (v: boolean) => void }) {
+export function SynthesePatientDialog({ patientId, open, onOpenChange, autoAnalyze = false }: { patientId: string; open: boolean; onOpenChange: (v: boolean) => void; autoAnalyze?: boolean }) {
   const qc = useQueryClient();
   const analyzeFn = useServerFn(analyzePatientSynthesis);
   const pdfFn = useServerFn(generatePatientSynthesisPdf);
@@ -37,6 +39,14 @@ export function SynthesePatientDialog({ patientId, open, onOpenChange }: { patie
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["patient-synthesis-analysis", patientId] }); toast.success("Analyse IA terminée"); },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur IA"),
   });
+
+  // Lance automatiquement l'analyse IA si demandée et qu'aucune analyse n'existe encore
+  useEffect(() => {
+    if (open && autoAnalyze && analysis === null && !mut.isPending && !mut.isSuccess) {
+      mut.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, autoAnalyze, analysis]);
 
   const payload = analysis?.payload as unknown as AIAnalysisPayload | undefined;
   const bioLatest = new Map<string, typeof bio[number]>();
@@ -89,44 +99,66 @@ export function SynthesePatientDialog({ patientId, open, onOpenChange }: { patie
             )}
           </div>
 
-          <Section title={`Antécédents (${ant.length})`}>
-            {ant.map((a) => <div key={a.id} className="text-xs">• [{a.type}] {a.description}{a.date_evenement ? ` (${a.date_evenement})` : ""}</div>)}
-            {ant.length === 0 && <div className="text-xs text-muted-foreground italic">Aucun</div>}
-          </Section>
-
-          <Section title={`Comorbidités (${com.length})`}>
-            {com.map((c) => <div key={c.id} className="text-xs">• {c.libelle}</div>)}
-            {com.length === 0 && <div className="text-xs text-muted-foreground italic">Aucune</div>}
-          </Section>
-
-          <Section title={`Allergies (${all.length})`}>
-            {all.map((a) => <div key={a.id} className="text-xs">• {a.substance}{a.reaction ? ` → ${a.reaction}` : ""}{a.severite ? ` (${a.severite})` : ""}</div>)}
-            {all.length === 0 && <div className="text-xs text-muted-foreground italic">Aucune</div>}
-          </Section>
-
-          <Section title={`Biologie récente (${bioLatest.size})`}>
-            <div className="grid grid-cols-2 gap-1">
-              {[...bioLatest.values()].map((b) => (
-                <div key={b.id} className="text-xs border rounded px-2 py-1">
-                  <strong>{b.parametre}</strong> {b.valeur ?? b.valeur_texte ?? "—"} {b.unite ?? ""}{" "}
-                  <span className="text-muted-foreground">{b.date_prelevement ? `(${b.date_prelevement})` : ""}</span>
-                </div>
-              ))}
-            </div>
-            {bioLatest.size === 0 && <div className="text-xs text-muted-foreground italic">Aucune valeur</div>}
-          </Section>
-
-          <Section title={`Traitements habituels (${trt.length})`}>
-            {trt.map((t) => (
-              <div key={t.id} className="text-xs">
-                • <strong>{t.dci}</strong> {t.dosage ?? ""}{t.dosage_unite ?? ""} {t.voie_administration ?? ""}
-                {(t.posologie_matin || t.posologie_midi || t.posologie_soir || t.posologie_coucher) &&
-                  ` — ${[t.posologie_matin, t.posologie_midi, t.posologie_soir, t.posologie_coucher].map((x) => x ?? "0").join("-")}`}
-                {t.indication && <span className="text-muted-foreground"> ({t.indication})</span>}
-              </div>
+          <SectionTable title="Antécédents" count={ant.length} headers={["Type", "Description", "Date"]}>
+            {ant.map((a) => (
+              <TableRow key={a.id}>
+                <TableCell className="font-medium capitalize">{a.type}</TableCell>
+                <TableCell>{a.description}</TableCell>
+                <TableCell className="text-muted-foreground">{a.date_evenement ?? "—"}</TableCell>
+              </TableRow>
             ))}
-            {trt.length === 0 && <div className="text-xs text-muted-foreground italic">Aucun</div>}
-          </Section>
+          </SectionTable>
+
+          <SectionTable title="Comorbidités" count={com.length} headers={["Libellé", "Statut", "Code CIM-10"]}>
+            {com.map((c) => (
+              <TableRow key={c.id}>
+                <TableCell className="font-medium">{c.libelle}</TableCell>
+                <TableCell><Badge variant="secondary" className="capitalize">{c.statut}</Badge></TableCell>
+                <TableCell className="text-muted-foreground">{c.code_cim10 ?? "—"}</TableCell>
+              </TableRow>
+            ))}
+          </SectionTable>
+
+          <SectionTable title="Allergies" count={all.length} headers={["Substance", "Réaction", "Sévérité"]}>
+            {all.map((a) => (
+              <TableRow key={a.id}>
+                <TableCell className="font-medium">{a.substance}</TableCell>
+                <TableCell>{a.reaction ?? "—"}</TableCell>
+                <TableCell>
+                  {a.severite ? (
+                    <Badge variant={a.severite === "severe" || a.severite === "anaphylaxie" ? "destructive" : "secondary"} className="capitalize">{a.severite}</Badge>
+                  ) : "—"}
+                </TableCell>
+              </TableRow>
+            ))}
+          </SectionTable>
+
+          <SectionTable title="Biologie récente" count={bioLatest.size} headers={["Paramètre", "Valeur", "Unité", "Date"]}>
+            {[...bioLatest.values()].map((b) => (
+              <TableRow key={b.id}>
+                <TableCell className="font-medium">{b.parametre}</TableCell>
+                <TableCell>{b.valeur ?? b.valeur_texte ?? "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{b.unite ?? "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{b.date_prelevement ?? "—"}</TableCell>
+              </TableRow>
+            ))}
+          </SectionTable>
+
+          <SectionTable title="Traitements habituels" count={trt.length} headers={["DCI", "Dosage", "Voie", "M-Mi-S-C", "Indication"]}>
+            {trt.map((t) => (
+              <TableRow key={t.id}>
+                <TableCell className="font-medium">{t.dci}</TableCell>
+                <TableCell>{t.dosage ? `${t.dosage}${t.dosage_unite ?? ""}` : "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{t.voie_administration ?? "—"}</TableCell>
+                <TableCell className="font-mono text-xs">
+                  {(t.posologie_matin || t.posologie_midi || t.posologie_soir || t.posologie_coucher)
+                    ? [t.posologie_matin, t.posologie_midi, t.posologie_soir, t.posologie_coucher].map((x) => x ?? "0").join("-")
+                    : "—"}
+                </TableCell>
+                <TableCell className="text-muted-foreground">{t.indication ?? "—"}</TableCell>
+              </TableRow>
+            ))}
+          </SectionTable>
 
           {payload && (
             <div className="border rounded p-3 bg-muted/30">
@@ -149,11 +181,24 @@ export function SynthesePatientDialog({ patientId, open, onOpenChange }: { patie
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionTable({ title, count, headers, children }: { title: string; count: number; headers: string[]; children: React.ReactNode }) {
   return (
     <div>
-      <div className="font-semibold text-xs uppercase text-muted-foreground mb-1">{title}</div>
-      <div className="space-y-0.5">{children}</div>
+      <div className="font-semibold text-xs uppercase text-muted-foreground mb-1">{title} ({count})</div>
+      {count === 0 ? (
+        <div className="text-xs text-muted-foreground italic border rounded px-3 py-2">Aucun</div>
+      ) : (
+        <div className="border rounded-md overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {headers.map((h) => <TableHead key={h} className="h-8 text-xs">{h}</TableHead>)}
+              </TableRow>
+            </TableHeader>
+            <TableBody>{children}</TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }
