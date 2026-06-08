@@ -107,6 +107,21 @@ function PatientsListPage() {
           <p className="text-sm text-muted-foreground">{patients.length} patient(s)</p>
         </div>
         <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          onClick={async () => {
+            try {
+              const id = await seedDemoJeanMartin();
+              qc.invalidateQueries({ queryKey: ["patients"] });
+              toast.success("Patient démo Jean Martin créé");
+              window.location.href = `/patients/${id}`;
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Erreur");
+            }
+          }}
+        >
+          <FlaskConical className="h-4 w-4 mr-1" /> Démo Jean Martin
+        </Button>
         <Button variant="outline" onClick={() => setBulkOpen(true)}>
           <Sparkles className="h-4 w-4 mr-1" /> Import PDF en masse
         </Button>
