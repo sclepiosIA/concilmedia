@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ScanSearch, ShieldAlert, Loader2, Download } from "lucide-react";
+import { ChevronLeft, ScanSearch } from "lucide-react";
 import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.functions";
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
 
@@ -98,12 +98,7 @@ function EpisodeConciliationPage() {
 
   const total = recon.stats.nonTraite + recon.stats.resolu;
   const reconRatio = total > 0 ? recon.stats.resolu / total : 0;
-  const ordonnanceDone = prescriptions.length > 0;
-  const divergencesDone = recon.conciliations.length > 0;
   const validationDone = total > 0 && reconRatio === 1;
-  const progressPct = Math.round(
-    (ordonnanceDone ? 33 : 0) + (divergencesDone ? 33 : 0) + (validationDone ? 34 : 0)
-  );
 
 
   return (
@@ -116,7 +111,7 @@ function EpisodeConciliationPage() {
         <ChevronLeft className="h-4 w-4" /> Retour patient
       </Link>
 
-      {/* HEADER: patient + actions + workflow stepper */}
+      {/* HEADER: patient + actions */}
       <Card className="mb-4">
         <CardContent className="p-5">
           <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
@@ -151,34 +146,9 @@ function EpisodeConciliationPage() {
                 <ScanSearch className="h-4 w-4 mr-1" /> Détecter divergences
               </Button>
             </div>
-          </div>
-
-          <div className="flex items-center gap-4 pt-4 border-t">
-            <div className="flex-1">
-              <div className="flex justify-between text-xs font-semibold uppercase tracking-wider mb-2">
-                <span className={ordonnanceDone ? "text-emerald-600" : "text-muted-foreground"}>
-                  1. Ordonnance importée
-                </span>
-                <span className={divergencesDone && !validationDone ? "text-primary" : divergencesDone ? "text-emerald-600" : "text-muted-foreground"}>
-                  2. Divergences détectées
-                </span>
-                <span className={validationDone ? "text-emerald-600" : "text-muted-foreground"}>
-                  3. Validation
-                </span>
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden flex">
-                <div className="h-full bg-emerald-500 transition-all" style={{ width: ordonnanceDone ? "33.3%" : "0%" }} />
-                <div className="h-full bg-primary transition-all" style={{ width: divergencesDone ? "33.3%" : "0%" }} />
-                <div className="h-full bg-emerald-500 transition-all" style={{ width: validationDone ? "33.4%" : "0%" }} />
-              </div>
-            </div>
-            <div className="text-right min-w-[100px]">
-              <div className="text-[10px] text-muted-foreground font-medium uppercase">Progression</div>
-              <div className="text-lg font-bold">{progressPct}%</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </CardContent>
+    </Card>
 
 
       {/* STEP 1 — UPLOAD ORDONNANCE */}
