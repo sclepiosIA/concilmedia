@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, FilePlus2 } from "lucide-react";
+import { ChevronLeft, FilePlus2, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import { AllergiesSection } from "@/components/patient/AllergiesSection";
 import { ComorbiditesSection } from "@/components/patient/ComorbiditesSection";
 import { TraitementsHabituelsSection } from "@/components/patient/TraitementsHabituelsSection";
 import { EpisodesSection } from "@/components/patient/EpisodesSection";
+import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
@@ -24,6 +26,8 @@ function PatientDetailPage() {
   const { patientId } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [bulkOpen, setBulkOpen] = useState(false);
+
 
   const { data: patient } = useQuery({
     queryKey: ["patient", patientId],
@@ -88,11 +92,18 @@ function PatientDetailPage() {
               </div>
             )}
           </div>
-          <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
-            <FilePlus2 className="h-4 w-4 mr-1" /> Nouvel épisode
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => setBulkOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-1" /> Importer PDF (IA)
+            </Button>
+            <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
+              <FilePlus2 className="h-4 w-4 mr-1" /> Nouvel épisode
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} targetPatientId={patientId} />
 
       <Tabs defaultValue="antecedents">
         <TabsList className="grid grid-cols-5 w-full max-w-3xl">

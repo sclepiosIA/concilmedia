@@ -34,7 +34,7 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function BulkPatientImportModal({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: { open: boolean; onOpenChange: (v: boolean) => void; targetPatientId?: string }) {
   const qc = useQueryClient();
   const extract = useServerFn(extractPatientDossier);
   const commit = useServerFn(commitBulkImport);
@@ -88,13 +88,24 @@ export function BulkPatientImportModal({ open, onOpenChange }: { open: boolean; 
   const importMut = useMutation({
     mutationFn: async () => {
       const ready = items.filter((i) => i.status === "ready" && i.dossier);
-      return commit({ data: { items: ready.map((i) => i.dossier!) } });
+      const payload = ready.map((i) => targetPatientId
+        ? { ...i.dossier!, existing_patient_id: targetPatientId }
+        : i.dossier!);
+      return commit({ data: { items: payload } });
     },
     onSuccess: (r) => {
       setSummary(r);
       setPhase("done");
       qc.invalidateQueries({ queryKey: ["patients"] });
-      toast.success(`${r.created} créé(s), ${r.updated} mis à jour`);
+      if (targetPatientId) {
+        qc.invalidateQueries({ queryKey: ["patient", targetPatientId] });
+        qc.invalidateQueries({ queryKey: ["antecedents", targetPatientId] });
+        qc.invalidateQueries({ queryKey: ["comorbidites", targetPatientId] });
+        qc.invalidateQueries({ queryKey: ["allergies", targetPatientId] });
+        qc.invalidateQueries({ queryKey: ["traitements", targetPatientId] });
+        qc.invalidateQueries({ queryKey: ["biologie", targetPatientId] });
+      }
+      toast.success(targetPatientId ? `Données ajoutées (${r.updated})` : `${r.created} créé(s), ${r.updated} mis à jour`);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur import"),
   });
