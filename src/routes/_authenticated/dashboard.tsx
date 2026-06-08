@@ -11,7 +11,7 @@ import { seedSyntheticCohort } from "@/lib/conciliation/seedSynthetic.functions"
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
 import type { RiskResult } from "@/lib/conciliation/riskScore";
 
-export const Route = createFileRoute("/dashboard")({
+export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard mémoire" }] }),
   component: DashboardPage,
 });

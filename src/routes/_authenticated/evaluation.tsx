@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { evaluatePrecision, type EvaluationMetrics } from "@/lib/conciliation/evaluate.functions";
 import { EvaluationMatrix } from "@/components/conciliation/EvaluationMatrix";
 
-export const Route = createFileRoute("/evaluation")({
+export const Route = createFileRoute("/_authenticated/evaluation")({
   head: () => ({ meta: [{ title: "Évaluation précision" }] }),
   component: EvaluationPage,
 });

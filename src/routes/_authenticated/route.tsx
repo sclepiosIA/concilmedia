@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Pill, Users, LogOut, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();
