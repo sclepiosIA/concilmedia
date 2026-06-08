@@ -156,10 +156,10 @@ export function TableauSyntheseClinique({ episodeId, patientId }: { episodeId: s
             </TableHeader>
             <TableBody>
               {rows.map((r) => (
-                <TableRow key={r.label}>
+                <TableRow key={r.label} className={`${LEVEL_BG[r.level]} transition-colors`}>
                   <TableCell className="font-medium">{r.label}</TableCell>
-                  <TableCell>{r.value}</TableCell>
-                  <TableCell><LevelDot level={r.level} /></TableCell>
+                  <TableCell className={LEVEL_TEXT[r.level]}>{r.value}</TableCell>
+                  <TableCell><LevelBadge level={r.level} /></TableCell>
                 </TableRow>
               ))}
             </TableBody>
