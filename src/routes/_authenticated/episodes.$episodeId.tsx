@@ -88,9 +88,18 @@ function EpisodeConciliationPage() {
   const p = episode.patients;
   const age = p?.date_naissance ? Math.floor((Date.now() - new Date(p.date_naissance).getTime()) / 31557600000) : null;
   const allergiesCritiques = allergies.filter((a) => a.severite === "severe" || a.severite === "anaphylaxie");
+  const initials = `${p?.nom?.[0] ?? ""}${p?.prenom?.[0] ?? ""}`.toUpperCase();
+
+  const total = recon.stats.nonTraite + recon.stats.resolu;
+  const reconRatio = total > 0 ? recon.stats.resolu / total : 0;
+  const bilanDone = !!(episode as { bilan_entree_completed_at?: string | null }).bilan_entree_completed_at;
+  const validationDone = total > 0 && reconRatio === 1;
+  const progressPct = Math.round(
+    (bilanDone ? 33 : 0) + reconRatio * 34 + (validationDone ? 33 : 0)
+  );
 
   return (
-    <div className="container mx-auto px-4 py-4 max-w-[1400px]">
+    <div className="container mx-auto px-4 py-4 max-w-[1600px]">
       <Link
         to="/patients/$patientId"
         params={{ patientId: episode.patient_id }}
@@ -99,70 +108,96 @@ function EpisodeConciliationPage() {
         <ChevronLeft className="h-4 w-4" /> Retour patient
       </Link>
 
+      {/* HEADER: patient + actions + workflow stepper */}
       <Card className="mb-4">
-        <CardContent className="py-4 flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-xl font-bold">
-              {p?.nom.toUpperCase()} {p?.prenom}
-              {age !== null && <span className="text-sm font-normal text-muted-foreground ml-2">• {age} ans • {p?.sexe}</span>}
-            </h1>
-            <div className="text-sm text-muted-foreground">{episode.motif} — {episode.service}</div>
-            {allergiesCritiques.length > 0 && (
-              <div className="mt-2 flex gap-1 flex-wrap">
-                {allergiesCritiques.map((a) => (
-                  <Badge key={a.id} variant="destructive">⚠ {a.substance}</Badge>
-                ))}
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-base shrink-0">
+                {initials || "—"}
               </div>
-            )}
-            {latestRisk && (
-              <div className="mt-2">
-                <RiskScoreBadge score={latestRisk.score} niveau={latestRisk.niveau as RiskResult["niveau"]} />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl font-bold truncate">{p?.nom?.toUpperCase()} {p?.prenom}</h1>
+                  {age !== null && (
+                    <span className="text-sm text-muted-foreground">• {age} ans • {p?.sexe}</span>
+                  )}
+                  {latestRisk && (
+                    <RiskScoreBadge score={latestRisk.score} niveau={latestRisk.niveau as RiskResult["niveau"]} />
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground truncate">
+                  {episode.motif} — {episode.service}
+                </p>
+                {allergiesCritiques.length > 0 && (
+                  <div className="mt-1.5 flex gap-1 flex-wrap">
+                    {allergiesCritiques.map((a) => (
+                      <Badge key={a.id} variant="destructive" className="text-[10px]">⚠ {a.substance}</Badge>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <div className="text-xs px-3 py-1.5 rounded-md bg-muted">
-              {recon.stats.nonTraite} non traitée(s) • {recon.stats.resolu} résolue(s)
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => riskMut.mutate()}
-              disabled={riskMut.isPending}
-            >
-              {riskMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldAlert className="h-4 w-4 mr-1" />}
-              Score de risque
-            </Button>
-            <Button variant="outline" size="sm" onClick={downloadPdf}>
-              <Download className="h-4 w-4 mr-1" /> Export PDF
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => recon.detectDivergences()}
-              disabled={recon.isDetecting}
-            >
-              <ScanSearch className="h-4 w-4 mr-1" /> Détecter divergences
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="text-xs px-3 py-1.5 rounded-md bg-muted text-muted-foreground">
+                {recon.stats.nonTraite} non traitée(s) • {recon.stats.resolu} résolue(s)
+              </div>
+              <Button variant="outline" size="sm" onClick={() => riskMut.mutate()} disabled={riskMut.isPending}>
+                {riskMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldAlert className="h-4 w-4 mr-1" />}
+                Score de risque
+              </Button>
+              <Button variant="outline" size="sm" onClick={downloadPdf}>
+                <Download className="h-4 w-4 mr-1" /> Export PDF
+              </Button>
+              <Button size="sm" onClick={() => recon.detectDivergences()} disabled={recon.isDetecting}>
+                <ScanSearch className="h-4 w-4 mr-1" /> Détecter divergences
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 pt-4 border-t">
+            <div className="flex-1">
+              <div className="flex justify-between text-xs font-semibold uppercase tracking-wider mb-2">
+                <span className={bilanDone ? "text-emerald-600" : "text-muted-foreground"}>
+                  1. Bilan d'entrée
+                </span>
+                <span className={total > 0 && !validationDone ? "text-primary" : "text-muted-foreground"}>
+                  2. Conciliation {total > 0 && !validationDone && "(en cours)"}
+                </span>
+                <span className={validationDone ? "text-emerald-600" : "text-muted-foreground"}>
+                  3. Validation
+                </span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden flex">
+                <div className="h-full bg-emerald-500 transition-all" style={{ width: bilanDone ? "33.3%" : "0%" }} />
+                <div className="h-full bg-primary transition-all" style={{ width: `${reconRatio * 33.3}%` }} />
+                <div className="h-full bg-emerald-500 transition-all" style={{ width: validationDone ? "33.4%" : "0%" }} />
+              </div>
+            </div>
+            <div className="text-right min-w-[100px]">
+              <div className="text-[10px] text-muted-foreground font-medium uppercase">Progression</div>
+              <div className="text-lg font-bold">{progressPct}%</div>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       <BilanEntreeSection episodeId={episodeId} />
 
+      {/* MAIN 3-COLUMN WORKSPACE */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-3">
           <TraitementsDomicileColumn patientId={episode.patient_id} />
         </div>
         <div className="lg:col-span-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
+          <Card className="border-2 border-primary/15 shadow-sm">
+            <CardHeader className="pb-3 bg-primary/[0.03] border-b">
+              <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
                 Conciliation médicamenteuse
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-4">
               <PharmacistConciliationPanel
                 conciliations={recon.conciliations}
                 onUpdate={recon.updateConciliation}
@@ -173,11 +208,18 @@ function EpisodeConciliationPage() {
           </Card>
         </div>
         <div className="lg:col-span-3 space-y-4">
+          <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">
+            Profil &amp; Vigilance
+          </h2>
           <ClinicalProfileCard patientId={episode.patient_id} />
           <ClinicalRecommendationsCard patientId={episode.patient_id} conciliations={recon.conciliations} />
-          <PrescriptionsHospitalieresColumn episodeId={episodeId} patientId={episode.patient_id} />
-          <AIAnalysisPanel episodeId={episodeId} />
         </div>
+      </div>
+
+      {/* SECONDARY ROW: prescriptions hospitalières + analyse IA */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        <PrescriptionsHospitalieresColumn episodeId={episodeId} patientId={episode.patient_id} />
+        <AIAnalysisPanel episodeId={episodeId} />
       </div>
     </div>
   );
