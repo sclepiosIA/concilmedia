@@ -122,7 +122,6 @@ function PatientDetailPage() {
           <TraitementsHabituelsSection patientId={patientId} />
         </section>
         <section><h2 className="text-lg font-semibold mb-3">Biologie</h2><BiologieSection patientId={patientId} /></section>
-        <section><h2 className="text-lg font-semibold mb-3">Épisodes</h2><EpisodesSection patientId={patientId} /></section>
       </div>
     </div>
   );
