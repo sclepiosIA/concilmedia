@@ -70,7 +70,7 @@ function DashboardPage() {
   const { data: episodes = [] } = useQuery({
     queryKey: ["dash-episodes", dateFrom, dateTo, service],
     queryFn: async () => {
-      let q = supabase.from("episodes").select("id, service, date_admission, patient_id, created_at");
+      let q = supabase.from("episodes").select("id, service, patient_id, created_at");
       if (service !== "all") q = q.eq("service", service);
       q = q.gte("created_at", fromIso).lte("created_at", toIso);
       const { data } = await q;
