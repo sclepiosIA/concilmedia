@@ -26,7 +26,7 @@ function PatientDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [syntheseOpen, setSyntheseOpen] = useState(false);
+  const [historiqueOpen, setHistoriqueOpen] = useState(false);
 
 
   const { data: patient } = useQuery({
