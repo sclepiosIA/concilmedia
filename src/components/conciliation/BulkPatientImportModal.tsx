@@ -34,7 +34,7 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function BulkPatientImportModal({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: { open: boolean; onOpenChange: (v: boolean) => void; targetPatientId?: string }) {
   const qc = useQueryClient();
   const extract = useServerFn(extractPatientDossier);
   const commit = useServerFn(commitBulkImport);
