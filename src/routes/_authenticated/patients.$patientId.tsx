@@ -10,7 +10,7 @@ import { ChevronLeft, FilePlus2, Sparkles, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { EpisodesSection } from "@/components/patient/EpisodesSection";
+import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { BiologieSection } from "@/components/patient/BiologieSection";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
