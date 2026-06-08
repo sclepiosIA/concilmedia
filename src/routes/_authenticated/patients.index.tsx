@@ -191,7 +191,7 @@ function PatientsListPage() {
         open={bulkOpen}
         onOpenChange={(v) => {
           setBulkOpen(v);
-          if (!v) { setPendingFiles([]); setBulkTargetId(undefined); }
+          if (!v) { setPreHospFiles([]); setPrescriptionFiles([]); setBulkTargetId(undefined); }
         }}
         targetPatientId={bulkTargetId}
         initialFiles={bulkTargetId ? pendingFiles : undefined}
