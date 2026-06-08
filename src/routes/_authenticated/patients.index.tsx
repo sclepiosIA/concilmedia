@@ -51,16 +51,21 @@ function PatientsListPage() {
     mutationFn: async (input: { nom: string; prenom: string; date_naissance: string; sexe: string; poids_kg?: number; taille_cm?: number }) => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error("Non connecté");
-      const { error } = await supabase.from("patients").insert({
+      const { data, error } = await supabase.from("patients").insert({
         ...input,
         created_by: user.user.id,
-      });
+      }).select("id").single();
       if (error) throw error;
+      return data.id as string;
     },
-    onSuccess: () => {
+    onSuccess: (newId) => {
       qc.invalidateQueries({ queryKey: ["patients"] });
       toast.success("Patient créé");
       setOpen(false);
+      if (pendingFiles.length > 0) {
+        setBulkTargetId(newId);
+        setBulkOpen(true);
+      }
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
   });
