@@ -173,12 +173,15 @@ export type Database = {
       conciliation_medicaments: {
         Row: {
           action_corrective: string | null
+          classe_atc: string | null
           created_at: string
           date_analyse: string | null
           date_validation: string | null
           episode_id: string
+          gravite: string | null
           id: string
           intention: string
+          is_synthetic: boolean
           justification: string | null
           medication_domicile: Json
           medication_hospitalisation: Json | null
@@ -190,12 +193,15 @@ export type Database = {
         }
         Insert: {
           action_corrective?: string | null
+          classe_atc?: string | null
           created_at?: string
           date_analyse?: string | null
           date_validation?: string | null
           episode_id: string
+          gravite?: string | null
           id?: string
           intention?: string
+          is_synthetic?: boolean
           justification?: string | null
           medication_domicile: Json
           medication_hospitalisation?: Json | null
@@ -207,12 +213,15 @@ export type Database = {
         }
         Update: {
           action_corrective?: string | null
+          classe_atc?: string | null
           created_at?: string
           date_analyse?: string | null
           date_validation?: string | null
           episode_id?: string
+          gravite?: string | null
           id?: string
           intention?: string
+          is_synthetic?: boolean
           justification?: string | null
           medication_domicile?: Json
           medication_hospitalisation?: Json | null
@@ -250,6 +259,7 @@ export type Database = {
           service: string | null
           statut: string
           updated_at: string
+          via_urgences: boolean
         }
         Insert: {
           created_at?: string
@@ -261,6 +271,7 @@ export type Database = {
           service?: string | null
           statut?: string
           updated_at?: string
+          via_urgences?: boolean
         }
         Update: {
           created_at?: string
@@ -272,6 +283,7 @@ export type Database = {
           service?: string | null
           statut?: string
           updated_at?: string
+          via_urgences?: boolean
         }
         Relationships: [
           {
@@ -283,12 +295,55 @@ export type Database = {
           },
         ]
       }
+      ground_truth_dnis: {
+        Row: {
+          created_at: string
+          created_by: string
+          episode_id: string
+          expected_intention: string
+          id: string
+          medicament: string
+          notes: string | null
+          type_divergence: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          episode_id: string
+          expected_intention?: string
+          id?: string
+          medicament: string
+          notes?: string | null
+          type_divergence: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          episode_id?: string
+          expected_intention?: string
+          id?: string
+          medicament?: string
+          notes?: string | null
+          type_divergence?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ground_truth_dnis_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
+          cohort_tag: string | null
           created_at: string
           created_by: string
           date_naissance: string | null
           id: string
+          is_synthetic: boolean
           nir: string | null
           nom: string
           notes: string | null
@@ -299,10 +354,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cohort_tag?: string | null
           created_at?: string
           created_by: string
           date_naissance?: string | null
           id?: string
+          is_synthetic?: boolean
           nir?: string | null
           nom: string
           notes?: string | null
@@ -313,10 +370,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cohort_tag?: string | null
           created_at?: string
           created_by?: string
           date_naissance?: string | null
           id?: string
+          is_synthetic?: boolean
           nir?: string | null
           nom?: string
           notes?: string | null
@@ -387,6 +446,47 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_scores: {
+        Row: {
+          ai_adjustment: string | null
+          computed_at: string
+          created_by: string
+          episode_id: string
+          id: string
+          niveau: string
+          score: number
+          variables: Json
+        }
+        Insert: {
+          ai_adjustment?: string | null
+          computed_at?: string
+          created_by?: string
+          episode_id: string
+          id?: string
+          niveau: string
+          score: number
+          variables?: Json
+        }
+        Update: {
+          ai_adjustment?: string | null
+          computed_at?: string
+          created_by?: string
+          episode_id?: string
+          id?: string
+          niveau?: string
+          score?: number
+          variables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_scores_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
             referencedColumns: ["id"]
           },
         ]
