@@ -26,6 +26,8 @@ function PatientDetailPage() {
   const { patientId } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [bulkOpen, setBulkOpen] = useState(false);
+
 
   const { data: patient } = useQuery({
     queryKey: ["patient", patientId],
