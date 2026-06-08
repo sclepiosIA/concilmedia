@@ -15,6 +15,7 @@ import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
 import { OrdonnanceHospitaliereDropzone } from "@/components/conciliation/OrdonnanceHospitaliereDropzone";
 import { DivergencesColumn } from "@/components/conciliation/DivergencesColumn";
+import { ComparaisonTable } from "@/components/conciliation/ComparaisonTable";
 
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
@@ -198,6 +199,11 @@ function EpisodeConciliationPage() {
           hasPrescriptions={prescriptions.length > 0}
           onImported={() => recon.detectDivergences()}
         />
+      </div>
+
+      {/* COMPARISON TABLE — DCI / dosage / posologie side by side */}
+      <div className="mb-4">
+        <ComparaisonTable episodeId={episodeId} patientId={episode.patient_id} />
       </div>
 
       {/* STEP 2 — COMPARISON 2 COLUMNS */}
