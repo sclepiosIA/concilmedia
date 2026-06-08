@@ -27,6 +27,17 @@ function EpisodeConciliationPage() {
   const recon = useMedicationReconciliation(episodeId);
   const qc = useQueryClient();
   const computeRisk = useServerFn(computePrioritization);
+  const pdfFn = useServerFn(generateEpisodeConciliationPdf);
+  const downloadPdf = async () => {
+    try {
+      const r = await pdfFn({ data: { episodeId } });
+      const bin = atob(r.base64); const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([arr], { type: "application/pdf" }));
+      const a = document.createElement("a"); a.href = url; a.download = r.filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Erreur PDF"); }
+  };
 
   const { data: latestRisk } = useQuery({
     queryKey: ["risk_score", episodeId],
