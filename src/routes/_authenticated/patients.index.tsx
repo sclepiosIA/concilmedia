@@ -147,13 +147,13 @@ function PatientsListPage() {
           <Card><CardContent className="py-12 text-center text-muted-foreground">Aucun patient</CardContent></Card>
         )}
         {filtered.map((p) => (
-          <Link
-            key={p.id}
-            to="/patients/$patientId"
-            params={{ patientId: p.id }}
-          >
-            <Card className="hover:bg-accent/50 transition cursor-pointer">
-              <CardContent className="py-4 flex items-center gap-4">
+          <Card key={p.id} className="hover:bg-accent/50 transition">
+            <CardContent className="py-4 flex items-center gap-4">
+              <Link
+                to="/patients/$patientId"
+                params={{ patientId: p.id }}
+                className="flex items-center gap-4 flex-1 cursor-pointer"
+              >
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-5 w-5 text-primary" />
                 </div>
@@ -164,11 +164,42 @@ function PatientsListPage() {
                     {p.sexe && ` • ${p.sexe}`}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </Link>
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setToDelete({ id: p.id, nom: p.nom, prenom: p.prenom })}
+                aria-label="Supprimer le patient"
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </CardContent>
+          </Card>
         ))}
       </div>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce patient ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {toDelete && `${toDelete.nom.toUpperCase()} ${toDelete.prenom} sera supprimé(e) définitivement, ainsi que tous ses épisodes, traitements, ordonnances et analyses associés. Cette action est irréversible.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (toDelete) deleteMut.mutate(toDelete.id);
+              }}
+              disabled={deleteMut.isPending}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
