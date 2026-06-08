@@ -123,7 +123,7 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
   const complexity = computeComplexity(labels);
   const risks = buildRiskProfile(labels);
   const vigilance = buildVigilance(labels);
-  const complexityTone: Tone = complexity.niveau === "eleve" ? "red" : complexity.niveau === "modere" ? "orange" : "green";
+  
 
   if (labels.length === 0 && allergies.length === 0) {
     return (
