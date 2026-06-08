@@ -118,7 +118,9 @@ function PatientsListPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+      <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} />
 
       <div className="relative mb-4">
         <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
