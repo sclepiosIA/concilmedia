@@ -99,6 +99,9 @@ function PatientDetailPage() {
             <Button variant="outline" onClick={() => setBulkOpen(true)}>
               <Sparkles className="h-4 w-4 mr-1" /> Importer PDF (IA)
             </Button>
+            <Button variant="outline" onClick={() => setSyntheseOpen(true)}>
+              <FileText className="h-4 w-4 mr-1" /> Synthèse patient
+            </Button>
             <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
               <FilePlus2 className="h-4 w-4 mr-1" /> Nouvel épisode
             </Button>
@@ -107,6 +110,7 @@ function PatientDetailPage() {
       </Card>
 
       <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} targetPatientId={patientId} />
+      <SynthesePatientDialog patientId={patientId} open={syntheseOpen} onOpenChange={setSyntheseOpen} />
 
       <Tabs defaultValue="antecedents">
         <TabsList className="grid grid-cols-6 w-full max-w-4xl">
