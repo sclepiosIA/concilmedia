@@ -106,7 +106,7 @@ function PatientDetailPage() {
       </Card>
 
       <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} targetPatientId={patientId} />
-      <SynthesePatientDialog patientId={patientId} open={syntheseOpen} onOpenChange={setSyntheseOpen} />
+      <HistoriqueConciliationsDialog patientId={patientId} open={historiqueOpen} onOpenChange={setHistoriqueOpen} />
 
       <div className="mb-6">
         <ClinicalProfileCard patientId={patientId} />
