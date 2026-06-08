@@ -103,8 +103,7 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <OrdonnanceUploader patientId={patientId} />
+      <div className="flex items-center justify-end gap-2 flex-wrap">
         {!open && (
           <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
             <Plus className="h-4 w-4 mr-1" /> Ajouter un traitement
