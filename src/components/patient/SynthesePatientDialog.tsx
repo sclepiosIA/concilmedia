@@ -181,11 +181,24 @@ export function SynthesePatientDialog({ patientId, open, onOpenChange, autoAnaly
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function SectionTable({ title, count, headers, children }: { title: string; count: number; headers: string[]; children: React.ReactNode }) {
   return (
     <div>
-      <div className="font-semibold text-xs uppercase text-muted-foreground mb-1">{title}</div>
-      <div className="space-y-0.5">{children}</div>
+      <div className="font-semibold text-xs uppercase text-muted-foreground mb-1">{title} ({count})</div>
+      {count === 0 ? (
+        <div className="text-xs text-muted-foreground italic border rounded px-3 py-2">Aucun</div>
+      ) : (
+        <div className="border rounded-md overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {headers.map((h) => <TableHead key={h} className="h-8 text-xs">{h}</TableHead>)}
+              </TableRow>
+            </TableHeader>
+            <TableBody>{children}</TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 }
