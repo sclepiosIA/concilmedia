@@ -121,7 +121,11 @@ function PatientDetailPage() {
         <section><h2 className="text-lg font-semibold mb-3">Antécédents</h2><AntecedentsSection patientId={patientId} /></section>
         <section><h2 className="text-lg font-semibold mb-3">Allergies</h2><AllergiesSection patientId={patientId} /></section>
         <section><h2 className="text-lg font-semibold mb-3">Comorbidités</h2><ComorbiditesSection patientId={patientId} /></section>
-        <section><h2 className="text-lg font-semibold mb-3">Traitements</h2><TraitementsHabituelsSection patientId={patientId} /></section>
+        <section>
+          <h2 className="text-lg font-semibold mb-3">Traitements</h2>
+          <div className="mb-3"><MedicationProfileCard patientId={patientId} /></div>
+          <TraitementsHabituelsSection patientId={patientId} />
+        </section>
         <section><h2 className="text-lg font-semibold mb-3">Biologie</h2><BiologieSection patientId={patientId} /></section>
         <section><h2 className="text-lg font-semibold mb-3">Épisodes</h2><EpisodesSection patientId={patientId} /></section>
       </div>
