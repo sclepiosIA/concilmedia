@@ -174,55 +174,60 @@ export const commitBulkImport = createServerFn({ method: "POST" })
           summary.updated++;
         }
 
-        if (item.antecedents.length) {
-          await supabase.from("antecedents").insert(item.antecedents.map((a) => ({
-            patient_id: patientId!,
-            type: a.type,
-            description: a.description,
-            date_evenement: a.date_evenement ?? null,
+        // Si patient existant : charger les entités déjà présentes pour dédoublonner
+        let existingAntecedents = new Set<string>();
+        let existingComorb = new Set<string>();
+        let existingAllergies = new Set<string>();
+        let existingTraitements = new Set<string>();
+        let existingBio = new Set<string>();
+        if (item.existing_patient_id) {
+          const [ea, ec, eal, et, eb] = await Promise.all([
+            supabase.from("antecedents").select("type, description").eq("patient_id", patientId!),
+            supabase.from("comorbidites").select("libelle").eq("patient_id", patientId!),
+            supabase.from("allergies").select("substance").eq("patient_id", patientId!),
+            supabase.from("traitements_habituels").select("dci").eq("patient_id", patientId!).eq("actif", true),
+            supabase.from("biologie_resultats").select("parametre, date_prelevement").eq("patient_id", patientId!),
+          ]);
+          existingAntecedents = new Set((ea.data ?? []).map((r) => `${r.type}|${(r.description ?? "").toLowerCase().trim()}`));
+          existingComorb = new Set((ec.data ?? []).map((r) => (r.libelle ?? "").toLowerCase().trim()));
+          existingAllergies = new Set((eal.data ?? []).map((r) => (r.substance ?? "").toLowerCase().trim()));
+          existingTraitements = new Set((et.data ?? []).map((r) => (r.dci ?? "").toLowerCase().trim()));
+          existingBio = new Set((eb.data ?? []).map((r) => `${(r.parametre ?? "").toLowerCase()}|${r.date_prelevement ?? ""}`));
+        }
+
+        const newAntecedents = item.antecedents.filter((a) => !existingAntecedents.has(`${a.type}|${a.description.toLowerCase().trim()}`));
+        if (newAntecedents.length) {
+          await supabase.from("antecedents").insert(newAntecedents.map((a) => ({
+            patient_id: patientId!, type: a.type, description: a.description, date_evenement: a.date_evenement ?? null,
           })) as never);
         }
-        if (item.comorbidites.length) {
-          await supabase.from("comorbidites").insert(item.comorbidites.map((c) => ({
-            patient_id: patientId!,
-            libelle: c.libelle,
-            statut: c.statut,
+        const newComorb = item.comorbidites.filter((c) => !existingComorb.has(c.libelle.toLowerCase().trim()));
+        if (newComorb.length) {
+          await supabase.from("comorbidites").insert(newComorb.map((c) => ({
+            patient_id: patientId!, libelle: c.libelle, statut: c.statut,
           })) as never);
         }
-        if (item.allergies.length) {
-          await supabase.from("allergies").insert(item.allergies.map((a) => ({
-            patient_id: patientId!,
-            substance: a.substance,
-            reaction: a.reaction ?? null,
-            severite: a.severite ?? null,
+        const newAllergies = item.allergies.filter((a) => !existingAllergies.has(a.substance.toLowerCase().trim()));
+        if (newAllergies.length) {
+          await supabase.from("allergies").insert(newAllergies.map((a) => ({
+            patient_id: patientId!, substance: a.substance, reaction: a.reaction ?? null, severite: a.severite ?? null,
           })) as never);
         }
-        if (item.biologie.length) {
-          await supabase.from("biologie_resultats").insert(item.biologie.map((b) => ({
-            patient_id: patientId!,
-            parametre: b.parametre,
-            valeur: b.valeur ?? null,
-            unite: b.unite ?? null,
-            valeur_texte: b.valeur_texte ?? null,
-            date_prelevement: b.date_prelevement ?? null,
-            source: "pdf_import",
+        const newBio = item.biologie.filter((b) => !existingBio.has(`${b.parametre.toLowerCase()}|${b.date_prelevement ?? ""}`));
+        if (newBio.length) {
+          await supabase.from("biologie_resultats").insert(newBio.map((b) => ({
+            patient_id: patientId!, parametre: b.parametre, valeur: b.valeur ?? null, unite: b.unite ?? null,
+            valeur_texte: b.valeur_texte ?? null, date_prelevement: b.date_prelevement ?? null, source: "pdf_import",
           })) as never);
         }
-        if (item.traitements.length) {
-          await supabase.from("traitements_habituels").insert(item.traitements.map((t) => ({
-            patient_id: patientId!,
-            dci: t.dci,
-            nom_commercial: t.nom_commercial ?? null,
-            dosage: t.dosage ?? null,
-            dosage_unite: t.dosage_unite ?? null,
-            voie_administration: t.voie_administration ?? null,
-            posologie_matin: t.posologie_matin ?? null,
-            posologie_midi: t.posologie_midi ?? null,
-            posologie_soir: t.posologie_soir ?? null,
-            posologie_coucher: t.posologie_coucher ?? null,
-            indication: t.indication ?? null,
-            source: "pdf_import",
-            actif: true,
+        const newTraitements = item.traitements.filter((t) => !existingTraitements.has((t.dci ?? "").toLowerCase().trim()));
+        if (newTraitements.length) {
+          await supabase.from("traitements_habituels").insert(newTraitements.map((t) => ({
+            patient_id: patientId!, dci: t.dci, nom_commercial: t.nom_commercial ?? null, dosage: t.dosage ?? null,
+            dosage_unite: t.dosage_unite ?? null, voie_administration: t.voie_administration ?? null,
+            posologie_matin: t.posologie_matin ?? null, posologie_midi: t.posologie_midi ?? null,
+            posologie_soir: t.posologie_soir ?? null, posologie_coucher: t.posologie_coucher ?? null,
+            indication: t.indication ?? null, source: "pdf_import", actif: true,
           })) as never);
         }
       } catch (e) {
