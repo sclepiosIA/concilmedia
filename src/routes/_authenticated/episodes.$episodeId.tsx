@@ -10,7 +10,7 @@ import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.fun
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
 import { PharmacistConciliationPanel } from "@/components/conciliation/PharmacistConciliationPanel";
 import { TraitementsDomicileColumn } from "@/components/conciliation/TraitementsDomicileColumn";
-import { PrescriptionsHospitalieresColumn } from "@/components/conciliation/PrescriptionsHospitalieresColumn";
+
 import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
 import { OrdonnanceHospitaliereDropzone } from "@/components/conciliation/OrdonnanceHospitaliereDropzone";
@@ -200,10 +200,9 @@ function EpisodeConciliationPage() {
         />
       </div>
 
-      {/* STEP 2 — COMPARISON 3 COLUMNS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+      {/* STEP 2 — COMPARISON 2 COLUMNS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <TraitementsDomicileColumn patientId={episode.patient_id} />
-        <PrescriptionsHospitalieresColumn episodeId={episodeId} patientId={episode.patient_id} />
         <DivergencesColumn conciliations={recon.conciliations} />
       </div>
 
