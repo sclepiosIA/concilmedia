@@ -8,6 +8,22 @@ const Input = z.object({ n: z.number().int().min(5).max(500).default(50) });
 const NOMS = ["Jean-Baptiste", "Marie-Louise", "Henri", "Joséphine", "Maxime", "Lucette", "Auguste", "Yvonne", "Camille", "Roger", "Yolande", "Frédéric", "Ginette"];
 const PRENOMS_F = ["CARRIERE", "PELLETIER", "LEROY", "MOREAU", "DUPONT", "MARTIN", "BERNARD", "LAMBERT", "JEAN-LOUIS", "ANTOINE"];
 
+interface BmoEntry {
+  dci: string;
+  dosage: string;
+  dosage_unite: string;
+  voie: string;
+  matin?: number;
+  midi?: number;
+  soir?: number;
+  coucher?: number;
+}
+interface Profil {
+  tag: string;
+  comorbidites: string[];
+  bmo: BmoEntry[];
+}
+
 const PROFILS = [
   {
     tag: "diabete_hta",
