@@ -2,19 +2,25 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Heart, Droplet, Activity, Scale, Brain, Wind, AlertTriangle } from "lucide-react";
-import { computeComplexity, generateClinicalProfile, COMPLEXITY_LABEL, type ComplexityLevel } from "@/lib/clinical/complexityScore";
+import {
+  Sparkles,
+  Activity,
+  ShieldCheck,
+  AlertTriangle,
+  HeartPulse,
+  Stethoscope,
+  ClipboardCheck,
+} from "lucide-react";
+import {
+  computeComplexity,
+  COMPLEXITY_LABEL,
+  type ComplexityLevel,
+} from "@/lib/clinical/complexityScore";
 
 const TONE: Record<ComplexityLevel, string> = {
   faible: "bg-green-100 text-green-800 border-green-200",
   modere: "bg-amber-100 text-amber-800 border-amber-200",
   eleve: "bg-red-100 text-red-800 border-red-200",
-};
-
-const RING: Record<ComplexityLevel, string> = {
-  faible: "text-green-500",
-  modere: "text-amber-500",
-  eleve: "text-red-500",
 };
 
 export function ComplexityBadge({ score, niveau }: { score: number; niveau: ComplexityLevel }) {
@@ -25,86 +31,80 @@ export function ComplexityBadge({ score, niveau }: { score: number; niveau: Comp
   );
 }
 
-function ComplexityGauge({ score, niveau }: { score: number; niveau: ComplexityLevel }) {
-  const max = 15;
-  const pct = Math.min(100, Math.round((score / max) * 100));
-  const r = 36;
-  const c = 2 * Math.PI * r;
-  const dash = (pct / 100) * c;
+type Tone = "green" | "orange" | "red";
+
+const TONE_STYLES: Record<Tone, { card: string; head: string; icon: string }> = {
+  green: {
+    card: "border-green-200 bg-green-50/60",
+    head: "text-green-900",
+    icon: "bg-green-100 text-green-700",
+  },
+  orange: {
+    card: "border-amber-200 bg-amber-50/60",
+    head: "text-amber-900",
+    icon: "bg-amber-100 text-amber-700",
+  },
+  red: {
+    card: "border-red-200 bg-red-50/60",
+    head: "text-red-900",
+    icon: "bg-red-100 text-red-700",
+  },
+};
+
+function ProfileTile({
+  tone,
+  icon: Icon,
+  title,
+  children,
+}: {
+  tone: Tone;
+  icon: typeof HeartPulse;
+  title: string;
+  children: React.ReactNode;
+}) {
+  const s = TONE_STYLES[tone];
   return (
-    <div className="flex items-center gap-3">
-      <div className="relative h-24 w-24">
-        <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-          <circle cx="50" cy="50" r={r} fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/30" />
-          <circle
-            cx="50"
-            cy="50"
-            r={r}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeDasharray={`${dash} ${c}`}
-            className={RING[niveau]}
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-xl font-bold leading-none">{score}</div>
-          <div className="text-[10px] text-muted-foreground">/ {max} pts</div>
-        </div>
+    <div className={`rounded-lg border ${s.card} p-3 space-y-2`}>
+      <div className={`flex items-center gap-2 text-sm font-semibold ${s.head}`}>
+        <span className={`h-7 w-7 rounded-full flex items-center justify-center ${s.icon}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+        {title}
       </div>
-      <div>
-        <div className="text-xs uppercase tracking-wide text-muted-foreground">Complexité</div>
-        <div className={`font-semibold ${RING[niveau]}`}>{COMPLEXITY_LABEL[niveau]}</div>
-      </div>
+      <div className="text-sm">{children}</div>
     </div>
   );
 }
 
-interface OrganTile {
-  key: string;
-  label: string;
-  icon: typeof Heart;
-  active: boolean;
-  match: string[];
+function normalize(s: string) {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-function OrganMap({ labels, imc }: { labels: string[]; imc: number | null }) {
-  const norm = labels.map((l) =>
-    l.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
-  );
-  const has = (kws: string[]) => kws.some((k) => norm.some((n) => n.includes(k)));
+function buildRiskProfile(comorb: string[]): string[] {
+  const set = comorb.map(normalize);
+  const has = (kw: string) => set.some((s) => s.includes(kw));
+  const risks: string[] = [];
+  if (has("hta") || has("hypertension") || has("coronar") || has("infarctus") || has("avc") || has("ait") || has("fibrillation") || has("insuffisance cardiaque")) {
+    risks.push("Risque cardiovasculaire élevé");
+  }
+  if (has("renal") || has("rein") || has("irc")) risks.push("Vigilance rénale");
+  if (has("diabete") || has("dyslipid") || has("cholesterol")) risks.push("Risque métabolique élevé");
+  if (has("obesite") || has("imc")) risks.push("Obésité");
+  if (has("bpco") || has("asthme")) risks.push("Vigilance respiratoire");
+  return risks;
+}
 
-  const tiles: (OrganTile & { detail?: string })[] = [
-    { key: "cv", label: "Cardiovasculaire", icon: Heart, match: ["hta", "hypertension", "coronar", "infarctus", "fibrillation", "insuffisance cardiaque"], active: false },
-    { key: "rein", label: "Rénal", icon: Droplet, match: ["renal", "rein", "irc"], active: false },
-    { key: "metab", label: "Métabolique", icon: Activity, match: ["diabete", "dyslipid", "cholesterol"], active: false },
-    { key: "poids", label: "Pondéral", icon: Scale, match: ["obesite", "imc"], active: false, detail: imc !== null ? `BMI ${imc.toFixed(1)}` : undefined },
-    { key: "neuro", label: "Neuro", icon: Brain, match: ["avc", "ait", "epilep", "parkinson", "demence"], active: false },
-    { key: "resp", label: "Respiratoire", icon: Wind, match: ["bpco", "asthme", "pneumo"], active: false },
-  ].map((t) => ({ ...t, active: has(t.match) }));
-
-  const visible = tiles.filter((t) => t.active);
-  if (visible.length === 0) return null;
-
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-      {visible.map((t) => {
-        const Icon = t.icon;
-        return (
-          <div key={t.key} className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50/60 p-2">
-            <div className="h-8 w-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
-              <Icon className="h-4 w-4" />
-            </div>
-            <div className="text-xs">
-              <div className="font-medium text-red-900">{t.label}</div>
-              <div className="text-red-700/80">{t.detail ?? "Atteint"}</div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+function buildVigilance(comorb: string[]): string[] {
+  const set = comorb.map(normalize);
+  const has = (kw: string) => set.some((s) => s.includes(kw));
+  const items: string[] = [];
+  if (has("diabete")) items.push("Vérifier les traitements antidiabétiques");
+  if (has("renal") || has("rein") || has("irc")) items.push("Vérifier les adaptations posologiques rénales");
+  if (has("hta") || has("hypertension") || has("insuffisance cardiaque")) items.push("Vérifier les traitements antihypertenseurs");
+  if (has("fibrillation") || has("avc") || has("ait")) items.push("Vérifier la couverture anticoagulante");
+  items.push("Vérifier les interactions potentielles");
+  items.push("Vérifier les médicaments manquants lors des transitions de soins");
+  return items;
 }
 
 export function ClinicalProfileCard({ patientId }: { patientId: string }) {
@@ -113,25 +113,23 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
     queryFn: async () =>
       (await supabase.from("comorbidites").select("*").eq("patient_id", patientId).eq("statut", "actif")).data ?? [],
   });
-  const { data: patient } = useQuery({
-    queryKey: ["patient", patientId, "imc"],
+  const { data: allergies = [] } = useQuery({
+    queryKey: ["allergies", patientId],
     queryFn: async () =>
-      (await supabase.from("patients").select("poids_kg, taille_cm").eq("id", patientId).maybeSingle()).data,
+      (await supabase.from("allergies").select("*").eq("patient_id", patientId)).data ?? [],
   });
-  const imc =
-    patient?.poids_kg && patient?.taille_cm
-      ? patient.poids_kg / Math.pow(patient.taille_cm / 100, 2)
-      : null;
 
   const labels = comorbidites.map((c) => c.libelle);
   const complexity = computeComplexity(labels);
-  const { vigilance } = generateClinicalProfile(labels);
+  const risks = buildRiskProfile(labels);
+  const vigilance = buildVigilance(labels);
+  const complexityTone: Tone = complexity.niveau === "eleve" ? "red" : complexity.niveau === "modere" ? "orange" : "green";
 
-  if (labels.length === 0) {
+  if (labels.length === 0 && allergies.length === 0) {
     return (
       <Card className="border-dashed">
         <CardContent className="py-4 text-sm text-muted-foreground">
-          Ajoutez des comorbidités pour générer le profil clinique IA et le score de complexité.
+          Ajoutez des comorbidités et allergies pour générer le profil patient et la vigilance médicamenteuse.
         </CardContent>
       </Card>
     );
@@ -140,37 +138,72 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
   return (
     <Card>
       <CardContent className="py-4 space-y-4">
-        <div className="flex items-center gap-2 font-medium text-sm">
-          <Sparkles className="h-4 w-4 text-primary" /> Profil clinique IA
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-[auto_1fr] items-start">
-          <ComplexityGauge score={complexity.score} niveau={complexity.niveau} />
-          <div className="space-y-2">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Comorbidités</div>
-            <div className="flex gap-1 flex-wrap">
-              {labels.map((l) => (
-                <Badge key={l} variant="secondary">{l}</Badge>
-              ))}
-            </div>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 font-semibold text-sm uppercase tracking-wide">
+            <Sparkles className="h-4 w-4 text-primary" />
+            Profil patient et vigilance médicamenteuse
           </div>
+          <ComplexityBadge score={complexity.score} niveau={complexity.niveau} />
         </div>
 
-        <div>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Organes & systèmes concernés</div>
-          <OrganMap labels={labels} imc={imc} />
-        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <ProfileTile tone="red" icon={HeartPulse} title="Comorbidités">
+            {labels.length === 0 ? (
+              <span className="text-muted-foreground">Aucune comorbidité renseignée</span>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {labels.map((l) => (
+                  <Badge key={l} variant="outline" className="bg-white border-red-200 text-red-800">{l}</Badge>
+                ))}
+              </div>
+            )}
+          </ProfileTile>
 
-        {vigilance.length > 0 && (
-          <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-1">
-            <div className="text-xs font-semibold text-amber-900 uppercase tracking-wide flex items-center gap-1">
-              <AlertTriangle className="h-3.5 w-3.5" /> Facteurs de vigilance
-            </div>
-            <ul className="text-sm text-amber-900 list-disc pl-5 space-y-0.5">
+          <ProfileTile
+            tone={allergies.length === 0 ? "green" : "red"}
+            icon={allergies.length === 0 ? ShieldCheck : AlertTriangle}
+            title="Allergies"
+          >
+            {allergies.length === 0 ? (
+              <span className="text-green-800">Aucune allergie connue</span>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {allergies.map((a) => (
+                  <Badge key={a.id} variant="outline" className="bg-white border-red-200 text-red-800">
+                    ⚠ {a.substance}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </ProfileTile>
+
+          <ProfileTile tone="orange" icon={Stethoscope} title="Profil de risque">
+            {risks.length === 0 ? (
+              <span className="text-muted-foreground">Aucun risque particulier identifié</span>
+            ) : (
+              <ul className="space-y-0.5 list-disc pl-5 text-amber-900">
+                {risks.map((r) => <li key={r}>{r}</li>)}
+              </ul>
+            )}
+          </ProfileTile>
+
+          <ProfileTile tone="orange" icon={ClipboardCheck} title="Points de vigilance pour la conciliation">
+            <ul className="space-y-0.5 list-disc pl-5 text-amber-900">
               {vigilance.map((v) => <li key={v}>{v}</li>)}
             </ul>
+          </ProfileTile>
+
+          <div className="md:col-span-2">
+            <ProfileTile tone={complexityTone} icon={Activity} title="Complexité patient">
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className={`text-base px-3 py-1 ${TONE[complexity.niveau]}`}>
+                  {COMPLEXITY_LABEL[complexity.niveau]}
+                </Badge>
+                <span className="text-sm text-muted-foreground">Score : <strong className="text-foreground">{complexity.score} pts</strong></span>
+              </div>
+            </ProfileTile>
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );
