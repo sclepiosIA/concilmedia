@@ -141,7 +141,7 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 font-semibold text-sm uppercase tracking-wide">
             <Sparkles className="h-4 w-4 text-primary" />
-            Profil patient et vigilance médicamenteuse
+            Profil patient
           </div>
           <ComplexityBadge score={complexity.score} niveau={complexity.niveau} />
         </div>
