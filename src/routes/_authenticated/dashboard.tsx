@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Users, FileText, AlertTriangle, Sparkles, ShieldAlert, BarChart3,
-  Loader2, CheckCircle2, Activity,
+  Users, FileText, ShieldAlert, Sparkles, BarChart3,
+  Loader2, Activity,
 } from "lucide-react";
 import { toast } from "sonner";
 import { seedSyntheticCohort } from "@/lib/conciliation/seedSynthetic.functions";
