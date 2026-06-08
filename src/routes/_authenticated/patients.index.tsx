@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { Plus, Search, User, Sparkles, Trash2 } from "lucide-react";
+import { Plus, Search, User, Sparkles, Trash2, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
 import { fr } from "date-fns/locale";
+import { seedDemoJeanMartin } from "@/lib/conciliation/seedDemoJeanMartin";
 
 export const Route = createFileRoute("/_authenticated/patients/")({
   head: () => ({ meta: [{ title: "Patients — Conciliation" }] }),
@@ -106,6 +107,21 @@ function PatientsListPage() {
           <p className="text-sm text-muted-foreground">{patients.length} patient(s)</p>
         </div>
         <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          onClick={async () => {
+            try {
+              const id = await seedDemoJeanMartin();
+              qc.invalidateQueries({ queryKey: ["patients"] });
+              toast.success("Patient démo Jean Martin créé");
+              window.location.href = `/patients/${id}`;
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Erreur");
+            }
+          }}
+        >
+          <FlaskConical className="h-4 w-4 mr-1" /> Démo Jean Martin
+        </Button>
         <Button variant="outline" onClick={() => setBulkOpen(true)}>
           <Sparkles className="h-4 w-4 mr-1" /> Import PDF en masse
         </Button>

@@ -13,6 +13,8 @@ import { TraitementsDomicileColumn } from "@/components/conciliation/Traitements
 import { PrescriptionsHospitalieresColumn } from "@/components/conciliation/PrescriptionsHospitalieresColumn";
 import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
+import { ClinicalRecommendationsCard } from "@/components/conciliation/ClinicalRecommendationsCard";
+import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
 import type { RiskResult } from "@/lib/conciliation/riskScore";
@@ -168,6 +170,8 @@ function EpisodeConciliationPage() {
           </Card>
         </div>
         <div className="lg:col-span-3 space-y-4">
+          <ClinicalProfileCard patientId={episode.patient_id} />
+          <ClinicalRecommendationsCard patientId={episode.patient_id} conciliations={recon.conciliations} />
           <PrescriptionsHospitalieresColumn episodeId={episodeId} patientId={episode.patient_id} />
           <AIAnalysisPanel episodeId={episodeId} />
         </div>
