@@ -109,12 +109,12 @@ export function SynthesePatientDialog({ patientId, open, onOpenChange, autoAnaly
             ))}
           </SectionTable>
 
-          <SectionTable title="Comorbidités" count={com.length} headers={["Libellé", "Statut", "Date diagnostic"]}>
+          <SectionTable title="Comorbidités" count={com.length} headers={["Libellé", "Statut", "Code CIM-10"]}>
             {com.map((c) => (
               <TableRow key={c.id}>
                 <TableCell className="font-medium">{c.libelle}</TableCell>
                 <TableCell><Badge variant="secondary" className="capitalize">{c.statut}</Badge></TableCell>
-                <TableCell className="text-muted-foreground">{c.date_diagnostic ?? "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{c.code_cim10 ?? "—"}</TableCell>
               </TableRow>
             ))}
           </SectionTable>
