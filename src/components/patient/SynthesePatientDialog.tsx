@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2, Download, AlertTriangle } from "lucide-react";
 import { analyzePatientSynthesis } from "@/lib/conciliation/analyzePatientSynthesis.functions";
+import { generatePatientSynthesisPdf } from "@/lib/conciliation/pdfExport.functions";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { toast } from "sonner";
 
