@@ -175,7 +175,7 @@ export type Database = {
       conciliation_ai_analyses: {
         Row: {
           created_at: string
-          episode_id: string
+          episode_id: string | null
           id: string
           model: string
           patient_id: string
@@ -183,7 +183,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          episode_id: string
+          episode_id?: string | null
           id?: string
           model: string
           patient_id: string
@@ -191,7 +191,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          episode_id?: string
+          episode_id?: string | null
           id?: string
           model?: string
           patient_id?: string
