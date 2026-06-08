@@ -43,8 +43,16 @@ export function SynthesePatientDialog({ patientId, open, onOpenChange }: { patie
   for (const b of bio) { const k = b.parametre.toLowerCase(); if (!bioLatest.has(k)) bioLatest.set(k, b); }
   const allergiesSeveres = all.filter((a) => a.severite === "severe" || a.severite === "anaphylaxie");
 
-  const downloadPdf = () => {
-    window.open(`/api/patients/${patientId}/synthese-pdf`, "_blank");
+  const downloadPdf = async () => {
+    try {
+      const r = await pdfFn({ data: { patientId } });
+      const bin = atob(r.base64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([arr], { type: "application/pdf" }));
+      const a = document.createElement("a"); a.href = url; a.download = r.filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Erreur PDF"); }
   };
 
   if (!patient) return null;
