@@ -25,6 +25,8 @@ function PatientsListPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [bulkTargetId, setBulkTargetId] = useState<string | undefined>(undefined);
   const [toDelete, setToDelete] = useState<{ id: string; nom: string; prenom: string } | null>(null);
 
   const { data: patients = [] } = useQuery({
