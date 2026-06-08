@@ -13,6 +13,8 @@ import { TraitementsDomicileColumn } from "@/components/conciliation/Traitements
 import { PrescriptionsHospitalieresColumn } from "@/components/conciliation/PrescriptionsHospitalieresColumn";
 import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
+import { OrdonnanceHospitaliereDropzone } from "@/components/conciliation/OrdonnanceHospitaliereDropzone";
+import { DivergencesColumn } from "@/components/conciliation/DivergencesColumn";
 
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
@@ -82,6 +84,11 @@ function EpisodeConciliationPage() {
     queryFn: async () => (await supabase.from("allergies").select("*").eq("patient_id", episode!.patient_id)).data ?? [],
   });
 
+  const { data: prescriptions = [] } = useQuery({
+    queryKey: ["prescriptions", episodeId],
+    queryFn: async () => (await supabase.from("prescriptions_hospitalieres").select("id").eq("episode_id", episodeId).eq("actif", true)).data ?? [],
+  });
+
   if (!episode) return <div className="container py-8">Chargement…</div>;
   const p = episode.patients;
   const age = p?.date_naissance ? Math.floor((Date.now() - new Date(p.date_naissance).getTime()) / 31557600000) : null;
@@ -90,11 +97,13 @@ function EpisodeConciliationPage() {
 
   const total = recon.stats.nonTraite + recon.stats.resolu;
   const reconRatio = total > 0 ? recon.stats.resolu / total : 0;
-  const bilanDone = !!(episode as { bilan_entree_completed_at?: string | null }).bilan_entree_completed_at;
+  const ordonnanceDone = prescriptions.length > 0;
+  const divergencesDone = recon.conciliations.length > 0;
   const validationDone = total > 0 && reconRatio === 1;
   const progressPct = Math.round(
-    (bilanDone ? 33 : 0) + reconRatio * 34 + (validationDone ? 33 : 0)
+    (ordonnanceDone ? 33 : 0) + (divergencesDone ? 33 : 0) + (validationDone ? 34 : 0)
   );
+
 
   return (
     <div className="container mx-auto px-4 py-4 max-w-[1600px]">
@@ -156,19 +165,19 @@ function EpisodeConciliationPage() {
           <div className="flex items-center gap-4 pt-4 border-t">
             <div className="flex-1">
               <div className="flex justify-between text-xs font-semibold uppercase tracking-wider mb-2">
-                <span className={bilanDone ? "text-emerald-600" : "text-muted-foreground"}>
-                  1. Bilan d'entrée
+                <span className={ordonnanceDone ? "text-emerald-600" : "text-muted-foreground"}>
+                  1. Ordonnance importée
                 </span>
-                <span className={total > 0 && !validationDone ? "text-primary" : "text-muted-foreground"}>
-                  2. Conciliation {total > 0 && !validationDone && "(en cours)"}
+                <span className={divergencesDone && !validationDone ? "text-primary" : divergencesDone ? "text-emerald-600" : "text-muted-foreground"}>
+                  2. Divergences détectées
                 </span>
                 <span className={validationDone ? "text-emerald-600" : "text-muted-foreground"}>
                   3. Validation
                 </span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden flex">
-                <div className="h-full bg-emerald-500 transition-all" style={{ width: bilanDone ? "33.3%" : "0%" }} />
-                <div className="h-full bg-primary transition-all" style={{ width: `${reconRatio * 33.3}%` }} />
+                <div className="h-full bg-emerald-500 transition-all" style={{ width: ordonnanceDone ? "33.3%" : "0%" }} />
+                <div className="h-full bg-primary transition-all" style={{ width: divergencesDone ? "33.3%" : "0%" }} />
                 <div className="h-full bg-emerald-500 transition-all" style={{ width: validationDone ? "33.4%" : "0%" }} />
               </div>
             </div>
@@ -181,36 +190,43 @@ function EpisodeConciliationPage() {
       </Card>
 
 
-      {/* MAIN 3-COLUMN WORKSPACE */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-3">
-          <TraitementsDomicileColumn patientId={episode.patient_id} />
-        </div>
-        <div className="lg:col-span-9">
-          <Card className="border-2 border-primary/15 shadow-sm">
-            <CardHeader className="pb-3 bg-primary/[0.03] border-b">
-              <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Conciliation médicamenteuse
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <PharmacistConciliationPanel
-                conciliations={recon.conciliations}
-                onUpdate={recon.updateConciliation}
-                onValidate={recon.validateConciliation}
-                isLoading={recon.isLoading}
-              />
-            </CardContent>
-          </Card>
-        </div>
+      {/* STEP 1 — UPLOAD ORDONNANCE */}
+      <div className="mb-4">
+        <OrdonnanceHospitaliereDropzone
+          episodeId={episodeId}
+          patientId={episode.patient_id}
+          hasPrescriptions={prescriptions.length > 0}
+          onImported={() => recon.detectDivergences()}
+        />
       </div>
 
-      {/* SECONDARY ROW: prescriptions hospitalières + analyse IA */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+      {/* STEP 2 — COMPARISON 3 COLUMNS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <TraitementsDomicileColumn patientId={episode.patient_id} />
         <PrescriptionsHospitalieresColumn episodeId={episodeId} patientId={episode.patient_id} />
-        <AIAnalysisPanel episodeId={episodeId} />
+        <DivergencesColumn conciliations={recon.conciliations} />
       </div>
+
+      {/* STEP 3 — VALIDATION PHARMACIEN */}
+      <Card className="border-2 border-primary/15 shadow-sm mb-4">
+        <CardHeader className="pb-3 bg-primary/[0.03] border-b">
+          <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            Validation pharmaceutique
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <PharmacistConciliationPanel
+            conciliations={recon.conciliations}
+            onUpdate={recon.updateConciliation}
+            onValidate={recon.validateConciliation}
+            isLoading={recon.isLoading}
+          />
+        </CardContent>
+      </Card>
+
+      {/* SECONDARY: AI ANALYSIS */}
+      <AIAnalysisPanel episodeId={episodeId} />
     </div>
   );
 }
