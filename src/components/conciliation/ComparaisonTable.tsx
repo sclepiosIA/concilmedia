@@ -17,13 +17,10 @@ function buildPosoDomicile(t: {
   posologie_soir?: number | string | null;
   posologie_coucher?: number | string | null;
 }) {
-  const parts = [
-    t.posologie_matin && `${t.posologie_matin} M`,
-    t.posologie_midi && `${t.posologie_midi} Mi`,
-    t.posologie_soir && `${t.posologie_soir} S`,
-    t.posologie_coucher && `${t.posologie_coucher} C`,
-  ].filter(Boolean);
-  return parts.length ? parts.join(" / ") : null;
+  const vals = [t.posologie_matin, t.posologie_midi, t.posologie_soir, t.posologie_coucher];
+  const hasAny = vals.some((v) => v !== null && v !== undefined && v !== "" && v !== 0);
+  if (!hasAny) return null;
+  return vals.map((v) => (v === null || v === undefined || v === "" ? "0" : String(v))).join("-");
 }
 
 function normalizeDci(s: string | null | undefined) {
