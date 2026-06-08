@@ -98,7 +98,8 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
     await supabase.from("conciliation_ai_analyses").insert({
       episode_id: data.episodeId,
       patient_id: patientId,
-      payload: payload as unknown as Record<string, unknown>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      payload: payload as any,
       model: "google/gemini-3-flash-preview",
     });
 
