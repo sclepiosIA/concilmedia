@@ -139,6 +139,7 @@ export function useMedicationReconciliation(episodeId: string) {
           indication: t.indication ?? undefined,
           source: t.source ?? undefined,
         };
+        const classe = classifyDci(domicile.dci);
         if (!match) {
           divergences.push({
             episode_id: episodeId,
@@ -154,6 +155,8 @@ export function useMedicationReconciliation(episodeId: string) {
             pharmacien_id: null,
             date_analyse: new Date().toISOString(),
             date_validation: null,
+            gravite: classifyDivergenceGravite(classe, "omission"),
+            classe_atc: classe,
           });
         } else if (t.dosage && match.dosage && t.dosage !== match.dosage) {
           divergences.push({
@@ -175,6 +178,8 @@ export function useMedicationReconciliation(episodeId: string) {
             pharmacien_id: null,
             date_analyse: new Date().toISOString(),
             date_validation: null,
+            gravite: classifyDivergenceGravite(classe, "modification_dose"),
+            classe_atc: classe,
           });
         }
       }
