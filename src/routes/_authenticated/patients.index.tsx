@@ -81,6 +81,10 @@ function PatientsListPage() {
           <h1 className="text-2xl font-bold">Patients</h1>
           <p className="text-sm text-muted-foreground">{patients.length} patient(s)</p>
         </div>
+        <div className="flex items-center gap-2">
+        <Button variant="outline" onClick={() => setBulkOpen(true)}>
+          <Sparkles className="h-4 w-4 mr-1" /> Import PDF en masse
+        </Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-1" /> Nouveau patient</Button>
