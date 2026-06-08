@@ -168,6 +168,11 @@ function EpisodeConciliationPage() {
       </div>
 
 
+      {/* TABLEAU DE SYNTHESE CLINIQUE ET MEDICAMENTEUSE */}
+      <div className="mb-4">
+        <TableauSyntheseClinique episodeId={episodeId} patientId={episode.patient_id} />
+      </div>
+
       {/* SECONDARY: AI ANALYSIS */}
       <AIAnalysisPanel episodeId={episodeId} />
     </div>
