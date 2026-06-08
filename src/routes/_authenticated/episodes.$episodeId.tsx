@@ -15,6 +15,7 @@ import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
 import { OrdonnanceHospitaliereDropzone } from "@/components/conciliation/OrdonnanceHospitaliereDropzone";
 import { DivergencesColumn } from "@/components/conciliation/DivergencesColumn";
+import { ComparaisonTable } from "@/components/conciliation/ComparaisonTable";
 
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
