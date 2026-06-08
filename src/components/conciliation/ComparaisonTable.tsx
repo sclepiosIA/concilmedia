@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GitCompareArrows, Home, Hospital, ArrowRight, AlertTriangle, CheckCircle2, Plus, Minus } from "lucide-react";
+import { GitCompareArrows, Home, Hospital, ArrowRight, AlertTriangle, CheckCircle2, Plus, Minus, ShieldAlert } from "lucide-react";
+import { classifyDci, HIGH_RISK_CLASSES } from "@/lib/conciliation/atcInteractions";
 
 type Row = {
   dci: string;
@@ -79,11 +80,26 @@ export function ComparaisonTable({ episodeId, patientId }: { episodeId: string; 
   const rows = [...map.values()].sort((a, b) => a.dci.localeCompare(b.dci));
 
   const statusFor = (r: Row) => {
-    if (r.domicile && !r.hopital) return { label: "Omission", icon: Minus, cls: "bg-destructive/15 text-destructive border-destructive/30" };
-    if (!r.domicile && r.hopital) return { label: "Ajout", icon: Plus, cls: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30" };
+    if (r.domicile && !r.hopital) return { label: "Omission", icon: Minus, cls: "bg-destructive/15 text-destructive border-destructive/30", kind: "omission" as const };
+    if (!r.domicile && r.hopital) return { label: "Ajout", icon: Plus, cls: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30", kind: "ajout" as const };
     const sameDose = (r.domicile?.dosage ?? "").trim().toLowerCase() === (r.hopital?.dosage ?? "").trim().toLowerCase();
-    if (!sameDose) return { label: "Dose modifiée", icon: AlertTriangle, cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30" };
-    return { label: "Identique", icon: CheckCircle2, cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30" };
+    if (!sameDose) return { label: "Dose modifiée", icon: AlertTriangle, cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30", kind: "dose" as const };
+    return { label: "Identique", icon: CheckCircle2, cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30", kind: "identique" as const };
+  };
+
+  const riskFor = (r: Row, kind: "omission" | "ajout" | "dose" | "identique") => {
+    if (kind === "identique") return null;
+    const isHighRisk = HIGH_RISK_CLASSES.includes(classifyDci(r.dci));
+    let level: "faible" | "modere" | "eleve";
+    if (kind === "omission") level = isHighRisk ? "eleve" : "modere";
+    else if (kind === "dose") level = isHighRisk ? "eleve" : "modere";
+    else level = isHighRisk ? "modere" : "faible";
+    const map = {
+      faible: { label: "Risque faible", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30" },
+      modere: { label: "Risque modéré", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30" },
+      eleve: { label: "Risque élevé", cls: "bg-destructive/15 text-destructive border-destructive/30" },
+    };
+    return map[level];
   };
 
   return (
@@ -113,12 +129,14 @@ export function ComparaisonTable({ episodeId, patientId }: { episodeId: string; 
                   </th>
                   <th className="text-left p-3 font-semibold">Hôpital — Posologie</th>
                   <th className="text-left p-3 font-semibold">Divergence</th>
+                  <th className="text-left p-3 font-semibold">Risque associé</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {rows.map((r, i) => {
                   const s = statusFor(r);
                   const Icon = s.icon;
+                  const risk = riskFor(r, s.kind);
                   return (
                     <tr key={i} className="hover:bg-muted/30">
                       <td className="p-3 font-medium">{r.dci}</td>
@@ -131,6 +149,15 @@ export function ComparaisonTable({ episodeId, patientId }: { episodeId: string; 
                         <Badge variant="outline" className={`text-[10px] ${s.cls}`}>
                           <Icon className="h-3 w-3 mr-1" /> {s.label}
                         </Badge>
+                      </td>
+                      <td className="p-3">
+                        {risk ? (
+                          <Badge variant="outline" className={`text-[10px] ${risk.cls}`}>
+                            <ShieldAlert className="h-3 w-3 mr-1" /> {risk.label}
+                          </Badge>
+                        ) : (
+                          <span className="opacity-40 text-xs">—</span>
+                        )}
                       </td>
                     </tr>
                   );
