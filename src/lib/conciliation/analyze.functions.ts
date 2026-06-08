@@ -31,13 +31,21 @@ export const analyzeConciliation = createServerFn({ method: "POST" })
     if (!episode) throw new Error("Épisode introuvable");
 
     const patientId = episode.patient_id;
-    const [allergies, antecedents, comorbidites, traitements, prescriptions] = await Promise.all([
+    const [allergies, antecedents, comorbidites, traitements, prescriptions, biologie] = await Promise.all([
       supabase.from("allergies").select("*").eq("patient_id", patientId),
       supabase.from("antecedents").select("*").eq("patient_id", patientId).eq("actif", true),
       supabase.from("comorbidites").select("*").eq("patient_id", patientId).eq("statut", "actif"),
       supabase.from("traitements_habituels").select("*").eq("patient_id", patientId).eq("actif", true),
       supabase.from("prescriptions_hospitalieres").select("*").eq("episode_id", data.episodeId).eq("actif", true),
+      supabase.from("biologie_resultats").select("parametre, valeur, unite, valeur_texte, date_prelevement").eq("patient_id", patientId).order("date_prelevement", { ascending: false, nullsFirst: false }).limit(50),
     ]);
+
+    // Garder le résultat le plus récent par paramètre
+    const bioLatest = new Map<string, { parametre: string; valeur: number | null; unite: string | null; valeur_texte: string | null; date_prelevement: string | null }>();
+    for (const b of biologie.data ?? []) {
+      const k = b.parametre.toLowerCase();
+      if (!bioLatest.has(k)) bioLatest.set(k, b);
+    }
 
     const dossier = {
       patient: {
@@ -50,6 +58,7 @@ export const analyzeConciliation = createServerFn({ method: "POST" })
       allergies: allergies.data ?? [],
       antecedents: antecedents.data ?? [],
       comorbidites: comorbidites.data ?? [],
+      biologie_recente: Array.from(bioLatest.values()),
       traitements_habituels: traitements.data ?? [],
       prescriptions_hospitalieres: prescriptions.data ?? [],
     };
@@ -60,16 +69,21 @@ export const analyzeConciliation = createServerFn({ method: "POST" })
     const model = gateway("google/gemini-3-flash-preview");
 
     const systemPrompt = `Tu es un pharmacien hospitalier clinicien expert en conciliation médicamenteuse.
-Analyse le dossier patient et produis STRICTEMENT un JSON valide avec cette structure :
+Analyse le dossier patient (incluant biologie_recente : DFG, créatinine, kaliémie, INR, hémoglobine, ASAT/ALAT, HbA1c…) et produis STRICTEMENT un JSON valide avec cette structure :
 {
-  "synthese": "texte court (3-4 phrases) résumant les points clés",
+  "synthese": "texte court (3-4 phrases) résumant les points clés, en mentionnant les valeurs biologiques pertinentes",
   "score_risque": entier 0-100,
   "interactions": [{"dci_1":"...","dci_2":"...","severite":"mineure|moderee|majeure|contre_indication","mecanisme":"...","recommandation":"..."}],
   "doublons_therapeutiques": [{"medicaments":["..."],"classe":"...","recommandation":"..."}],
-  "contre_indications": [{"medicament":"...","raison":"allergie/comorbidité","recommandation":"..."}],
+  "contre_indications": [{"medicament":"...","raison":"allergie/comorbidité/biologie","recommandation":"..."}],
   "redondances_classe": [{"classe":"...","medicaments":["..."]}],
-  "adaptations_posologiques": [{"medicament":"...","raison":"insuffisance rénale/hépatique/age","recommandation":"..."}]
+  "adaptations_posologiques": [{"medicament":"...","raison":"DFG=X mL/min / insuffisance hépatique / âge / hyperkaliémie / INR","recommandation":"..."}]
 }
+Règles cliniques :
+- Si DFG < 60 mL/min, vérifier systématiquement chaque médicament à élimination rénale (metformine, IEC/ARA2, AINS, anticoagulants, antibiotiques) et proposer adaptation.
+- Si INR > 4, alerter sur risque hémorragique des anticoagulants/antiagrégants.
+- Si K+ anormal, alerter sur IEC/ARA2/spironolactone/AINS.
+- Cite la valeur biologique précise dans le champ "raison".
 Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
 
     let result;
