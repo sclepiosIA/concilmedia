@@ -40,6 +40,14 @@ export function SynthesePatientDialog({ patientId, open, onOpenChange, autoAnaly
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur IA"),
   });
 
+  // Lance automatiquement l'analyse IA si demandée et qu'aucune analyse n'existe encore
+  useEffect(() => {
+    if (open && autoAnalyze && analysis === null && !mut.isPending && !mut.isSuccess) {
+      mut.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, autoAnalyze, analysis]);
+
   const payload = analysis?.payload as unknown as AIAnalysisPayload | undefined;
   const bioLatest = new Map<string, typeof bio[number]>();
   for (const b of bio) { const k = b.parametre.toLowerCase(); if (!bioLatest.has(k)) bioLatest.set(k, b); }
