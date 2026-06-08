@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Users, FileText, AlertTriangle, Sparkles, ShieldAlert, BarChart3,
-  Loader2, CheckCircle2, Activity,
+  Users, FileText, ShieldAlert, Sparkles, BarChart3,
+  Loader2, Activity,
 } from "lucide-react";
 import { toast } from "sonner";
 import { seedSyntheticCohort } from "@/lib/conciliation/seedSynthetic.functions";
@@ -229,12 +229,10 @@ function DashboardPage() {
       </Card>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
         <KPI icon={<Users className="h-5 w-5" />} label="Patients" value={patientsCount} />
         <KPI icon={<FileText className="h-5 w-5" />} label="Conciliations" value={conciliationsDone} />
-        <KPI icon={<AlertTriangle className="h-5 w-5" />} label="Divergences" value={realDivergences.length} />
         <KPI icon={<ShieldAlert className="h-5 w-5 text-destructive" />} label="Critiques" value={critiques} tone="critical" />
-        <KPI icon={<CheckCircle2 className="h-5 w-5 text-green-600" />} label="Taux validation" value={`${validationRate}%`} />
         <KPI icon={<Activity className="h-5 w-5 text-orange-600" />} label="Risque élevé" value={highRisk} />
       </div>
 
