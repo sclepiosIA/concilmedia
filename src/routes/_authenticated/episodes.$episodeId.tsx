@@ -13,8 +13,6 @@ import { TraitementsDomicileColumn } from "@/components/conciliation/Traitements
 import { PrescriptionsHospitalieresColumn } from "@/components/conciliation/PrescriptionsHospitalieresColumn";
 import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
-import { ClinicalRecommendationsCard } from "@/components/conciliation/ClinicalRecommendationsCard";
-import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { BilanEntreeSection } from "@/components/episode/BilanEntreeSection";
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
