@@ -117,22 +117,14 @@ function PatientDetailPage() {
         <ClinicalProfileCard patientId={patientId} />
       </div>
 
-      <Tabs defaultValue="antecedents">
-        <TabsList className="grid grid-cols-6 w-full max-w-4xl">
-          <TabsTrigger value="antecedents">Antécédents</TabsTrigger>
-          <TabsTrigger value="allergies">Allergies</TabsTrigger>
-          <TabsTrigger value="comorbidites">Comorbidités</TabsTrigger>
-          <TabsTrigger value="traitements">Traitements</TabsTrigger>
-          <TabsTrigger value="biologie">Biologie</TabsTrigger>
-          <TabsTrigger value="episodes">Épisodes</TabsTrigger>
-        </TabsList>
-        <TabsContent value="antecedents" className="mt-4"><AntecedentsSection patientId={patientId} /></TabsContent>
-        <TabsContent value="allergies" className="mt-4"><AllergiesSection patientId={patientId} /></TabsContent>
-        <TabsContent value="comorbidites" className="mt-4"><ComorbiditesSection patientId={patientId} /></TabsContent>
-        <TabsContent value="traitements" className="mt-4"><TraitementsHabituelsSection patientId={patientId} /></TabsContent>
-        <TabsContent value="biologie" className="mt-4"><BiologieSection patientId={patientId} /></TabsContent>
-        <TabsContent value="episodes" className="mt-4"><EpisodesSection patientId={patientId} /></TabsContent>
-      </Tabs>
+      <div className="space-y-6">
+        <section><h2 className="text-lg font-semibold mb-3">Antécédents</h2><AntecedentsSection patientId={patientId} /></section>
+        <section><h2 className="text-lg font-semibold mb-3">Allergies</h2><AllergiesSection patientId={patientId} /></section>
+        <section><h2 className="text-lg font-semibold mb-3">Comorbidités</h2><ComorbiditesSection patientId={patientId} /></section>
+        <section><h2 className="text-lg font-semibold mb-3">Traitements</h2><TraitementsHabituelsSection patientId={patientId} /></section>
+        <section><h2 className="text-lg font-semibold mb-3">Biologie</h2><BiologieSection patientId={patientId} /></section>
+        <section><h2 className="text-lg font-semibold mb-3">Épisodes</h2><EpisodesSection patientId={patientId} /></section>
+      </div>
     </div>
   );
 }
