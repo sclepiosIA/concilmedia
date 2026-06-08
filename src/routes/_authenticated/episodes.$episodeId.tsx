@@ -148,6 +148,8 @@ function EpisodeConciliationPage() {
         </CardContent>
       </Card>
 
+      <BilanEntreeSection episodeId={episodeId} />
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-3">
           <TraitementsDomicileColumn patientId={episode.patient_id} />
