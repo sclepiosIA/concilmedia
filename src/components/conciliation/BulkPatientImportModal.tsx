@@ -45,12 +45,13 @@ function fileToBase64(file: File): Promise<string> {
 
 export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: { open: boolean; onOpenChange: (v: boolean) => void; targetPatientId?: string }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const extract = useServerFn(extractPatientDossier);
   const commit = useServerFn(commitBulkImport);
   const [items, setItems] = useState<Item[]>([]);
   const [phase, setPhase] = useState<"upload" | "extracting" | "review" | "done">("upload");
   const [progress, setProgress] = useState(0);
-  const [summary, setSummary] = useState<{ created: number; updated: number; failed: { name: string; error: string }[] } | null>(null);
+  const [summary, setSummary] = useState<{ created: number; updated: number; failed: { name: string; error: string }[]; created_episode_ids: string[] } | null>(null);
 
   const onFiles = (e: ChangeEvent<HTMLInputElement>) => {
     const fs = Array.from(e.target.files ?? []);
