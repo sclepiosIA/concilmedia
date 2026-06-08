@@ -9,7 +9,7 @@ import { ChevronLeft, Sparkles, ScanSearch, ShieldAlert, Loader2, Download } fro
 import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.functions";
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
 import { PharmacistConciliationPanel } from "@/components/conciliation/PharmacistConciliationPanel";
-import { TraitementsDomicileColumn } from "@/components/conciliation/TraitementsDomicileColumn";
+
 
 import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
