@@ -130,6 +130,9 @@ function EpisodeConciliationPage() {
               {riskMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldAlert className="h-4 w-4 mr-1" />}
               Score de risque
             </Button>
+            <Button variant="outline" size="sm" onClick={downloadPdf}>
+              <Download className="h-4 w-4 mr-1" /> Export PDF
+            </Button>
             <Button
               variant="outline"
               size="sm"
