@@ -2,29 +2,40 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Sparkles, AlertTriangle, CheckCircle2, ClipboardList } from "lucide-react";
 import { computeComplexity, generateClinicalProfile } from "@/lib/clinical/complexityScore";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 
 type Level = "ok" | "warn" | "alert";
 
-const LEVEL_COLOR: Record<Level, string> = {
-  ok: "bg-emerald-500",
-  warn: "bg-amber-500",
-  alert: "bg-red-500",
+const LEVEL_BG: Record<Level, string> = {
+  ok: "bg-emerald-50/60 hover:bg-emerald-100/60",
+  warn: "bg-amber-50/60 hover:bg-amber-100/60",
+  alert: "bg-red-50/60 hover:bg-red-100/60",
 };
-const LEVEL_LABEL: Record<Level, string> = {
-  ok: "Faible",
-  warn: "Modéré",
-  alert: "Élevé",
+const LEVEL_BORDER: Record<Level, string> = {
+  ok: "border-emerald-200",
+  warn: "border-amber-200",
+  alert: "border-red-200",
+};
+const LEVEL_TEXT: Record<Level, string> = {
+  ok: "text-emerald-700",
+  warn: "text-amber-700",
+  alert: "text-red-700",
+};
+const LEVEL_BADGE: Record<Level, { variant: "default" | "secondary" | "destructive" | "outline"; className: string; label: string }> = {
+  ok: { variant: "default", className: "bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200", label: "Faible" },
+  warn: { variant: "default", className: "bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200", label: "Modéré" },
+  alert: { variant: "destructive", className: "bg-red-100 text-red-700 hover:bg-red-100 border-red-200", label: "Élevé" },
 };
 
-function LevelDot({ level }: { level: Level }) {
+function LevelBadge({ level }: { level: Level }) {
+  const cfg = LEVEL_BADGE[level];
   return (
-    <div className="flex items-center gap-2">
-      <span className={`inline-block h-2.5 w-2.5 rounded-full ${LEVEL_COLOR[level]}`} aria-label={LEVEL_LABEL[level]} />
-      <span className="text-xs text-muted-foreground">{LEVEL_LABEL[level]}</span>
-    </div>
+    <Badge variant={cfg.variant} className={`text-xs font-medium ${cfg.className}`}>
+      {cfg.label}
+    </Badge>
   );
 }
 
@@ -145,10 +156,10 @@ export function TableauSyntheseClinique({ episodeId, patientId }: { episodeId: s
             </TableHeader>
             <TableBody>
               {rows.map((r) => (
-                <TableRow key={r.label}>
+                <TableRow key={r.label} className={`${LEVEL_BG[r.level]} transition-colors`}>
                   <TableCell className="font-medium">{r.label}</TableCell>
-                  <TableCell>{r.value}</TableCell>
-                  <TableCell><LevelDot level={r.level} /></TableCell>
+                  <TableCell className={LEVEL_TEXT[r.level]}>{r.value}</TableCell>
+                  <TableCell><LevelBadge level={r.level} /></TableCell>
                 </TableRow>
               ))}
             </TableBody>
