@@ -98,13 +98,21 @@ Réponds UNIQUEMENT avec le JSON.`;
           role: "user",
           content: [
             { type: "text", text: "Voici l'ordonnance à analyser." },
-            { type: "file", data: `data:${data.mimeType};base64,${data.fileBase64}`, mediaType: data.mimeType },
+            {
+              type: "file",
+              data: `data:${data.mimeType};base64,${data.fileBase64}`,
+              mediaType: data.mimeType,
+            },
           ],
         },
       ],
     });
 
-    const raw = result.text.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "");
+    const raw = result.text
+      .trim()
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/```$/i, "");
     let parsed: ExtractOrdonnanceResult;
     try {
       parsed = JSON.parse(raw) as ExtractOrdonnanceResult;
