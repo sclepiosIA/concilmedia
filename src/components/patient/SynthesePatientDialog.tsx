@@ -99,44 +99,66 @@ export function SynthesePatientDialog({ patientId, open, onOpenChange, autoAnaly
             )}
           </div>
 
-          <Section title={`Antécédents (${ant.length})`}>
-            {ant.map((a) => <div key={a.id} className="text-xs">• [{a.type}] {a.description}{a.date_evenement ? ` (${a.date_evenement})` : ""}</div>)}
-            {ant.length === 0 && <div className="text-xs text-muted-foreground italic">Aucun</div>}
-          </Section>
-
-          <Section title={`Comorbidités (${com.length})`}>
-            {com.map((c) => <div key={c.id} className="text-xs">• {c.libelle}</div>)}
-            {com.length === 0 && <div className="text-xs text-muted-foreground italic">Aucune</div>}
-          </Section>
-
-          <Section title={`Allergies (${all.length})`}>
-            {all.map((a) => <div key={a.id} className="text-xs">• {a.substance}{a.reaction ? ` → ${a.reaction}` : ""}{a.severite ? ` (${a.severite})` : ""}</div>)}
-            {all.length === 0 && <div className="text-xs text-muted-foreground italic">Aucune</div>}
-          </Section>
-
-          <Section title={`Biologie récente (${bioLatest.size})`}>
-            <div className="grid grid-cols-2 gap-1">
-              {[...bioLatest.values()].map((b) => (
-                <div key={b.id} className="text-xs border rounded px-2 py-1">
-                  <strong>{b.parametre}</strong> {b.valeur ?? b.valeur_texte ?? "—"} {b.unite ?? ""}{" "}
-                  <span className="text-muted-foreground">{b.date_prelevement ? `(${b.date_prelevement})` : ""}</span>
-                </div>
-              ))}
-            </div>
-            {bioLatest.size === 0 && <div className="text-xs text-muted-foreground italic">Aucune valeur</div>}
-          </Section>
-
-          <Section title={`Traitements habituels (${trt.length})`}>
-            {trt.map((t) => (
-              <div key={t.id} className="text-xs">
-                • <strong>{t.dci}</strong> {t.dosage ?? ""}{t.dosage_unite ?? ""} {t.voie_administration ?? ""}
-                {(t.posologie_matin || t.posologie_midi || t.posologie_soir || t.posologie_coucher) &&
-                  ` — ${[t.posologie_matin, t.posologie_midi, t.posologie_soir, t.posologie_coucher].map((x) => x ?? "0").join("-")}`}
-                {t.indication && <span className="text-muted-foreground"> ({t.indication})</span>}
-              </div>
+          <SectionTable title="Antécédents" count={ant.length} headers={["Type", "Description", "Date"]}>
+            {ant.map((a) => (
+              <TableRow key={a.id}>
+                <TableCell className="font-medium capitalize">{a.type}</TableCell>
+                <TableCell>{a.description}</TableCell>
+                <TableCell className="text-muted-foreground">{a.date_evenement ?? "—"}</TableCell>
+              </TableRow>
             ))}
-            {trt.length === 0 && <div className="text-xs text-muted-foreground italic">Aucun</div>}
-          </Section>
+          </SectionTable>
+
+          <SectionTable title="Comorbidités" count={com.length} headers={["Libellé", "Statut", "Date diagnostic"]}>
+            {com.map((c) => (
+              <TableRow key={c.id}>
+                <TableCell className="font-medium">{c.libelle}</TableCell>
+                <TableCell><Badge variant="secondary" className="capitalize">{c.statut}</Badge></TableCell>
+                <TableCell className="text-muted-foreground">{c.date_diagnostic ?? "—"}</TableCell>
+              </TableRow>
+            ))}
+          </SectionTable>
+
+          <SectionTable title="Allergies" count={all.length} headers={["Substance", "Réaction", "Sévérité"]}>
+            {all.map((a) => (
+              <TableRow key={a.id}>
+                <TableCell className="font-medium">{a.substance}</TableCell>
+                <TableCell>{a.reaction ?? "—"}</TableCell>
+                <TableCell>
+                  {a.severite ? (
+                    <Badge variant={a.severite === "severe" || a.severite === "anaphylaxie" ? "destructive" : "secondary"} className="capitalize">{a.severite}</Badge>
+                  ) : "—"}
+                </TableCell>
+              </TableRow>
+            ))}
+          </SectionTable>
+
+          <SectionTable title="Biologie récente" count={bioLatest.size} headers={["Paramètre", "Valeur", "Unité", "Date"]}>
+            {[...bioLatest.values()].map((b) => (
+              <TableRow key={b.id}>
+                <TableCell className="font-medium">{b.parametre}</TableCell>
+                <TableCell>{b.valeur ?? b.valeur_texte ?? "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{b.unite ?? "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{b.date_prelevement ?? "—"}</TableCell>
+              </TableRow>
+            ))}
+          </SectionTable>
+
+          <SectionTable title="Traitements habituels" count={trt.length} headers={["DCI", "Dosage", "Voie", "M-Mi-S-C", "Indication"]}>
+            {trt.map((t) => (
+              <TableRow key={t.id}>
+                <TableCell className="font-medium">{t.dci}</TableCell>
+                <TableCell>{t.dosage ? `${t.dosage}${t.dosage_unite ?? ""}` : "—"}</TableCell>
+                <TableCell className="text-muted-foreground">{t.voie_administration ?? "—"}</TableCell>
+                <TableCell className="font-mono text-xs">
+                  {(t.posologie_matin || t.posologie_midi || t.posologie_soir || t.posologie_coucher)
+                    ? [t.posologie_matin, t.posologie_midi, t.posologie_soir, t.posologie_coucher].map((x) => x ?? "0").join("-")
+                    : "—"}
+                </TableCell>
+                <TableCell className="text-muted-foreground">{t.indication ?? "—"}</TableCell>
+              </TableRow>
+            ))}
+          </SectionTable>
 
           {payload && (
             <div className="border rounded p-3 bg-muted/30">
