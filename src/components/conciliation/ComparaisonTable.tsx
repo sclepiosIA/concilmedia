@@ -136,6 +136,7 @@ export function ComparaisonTable({ episodeId, patientId }: { episodeId: string; 
                 {rows.map((r, i) => {
                   const s = statusFor(r);
                   const Icon = s.icon;
+                  const risk = riskFor(r, s.kind);
                   return (
                     <tr key={i} className="hover:bg-muted/30">
                       <td className="p-3 font-medium">{r.dci}</td>
@@ -148,6 +149,15 @@ export function ComparaisonTable({ episodeId, patientId }: { episodeId: string; 
                         <Badge variant="outline" className={`text-[10px] ${s.cls}`}>
                           <Icon className="h-3 w-3 mr-1" /> {s.label}
                         </Badge>
+                      </td>
+                      <td className="p-3">
+                        {risk ? (
+                          <Badge variant="outline" className={`text-[10px] ${risk.cls}`}>
+                            <ShieldAlert className="h-3 w-3 mr-1" /> {risk.label}
+                          </Badge>
+                        ) : (
+                          <span className="opacity-40 text-xs">—</span>
+                        )}
                       </td>
                     </tr>
                   );
