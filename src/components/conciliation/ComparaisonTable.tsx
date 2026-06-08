@@ -11,10 +11,10 @@ type Row = {
 };
 
 function buildPosoDomicile(t: {
-  posologie_matin?: number | null;
-  posologie_midi?: number | null;
-  posologie_soir?: number | null;
-  posologie_coucher?: number | null;
+  posologie_matin?: number | string | null;
+  posologie_midi?: number | string | null;
+  posologie_soir?: number | string | null;
+  posologie_coucher?: number | string | null;
 }) {
   const parts = [
     t.posologie_matin && `${t.posologie_matin} M`,
