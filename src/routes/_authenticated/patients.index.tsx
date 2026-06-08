@@ -63,6 +63,19 @@ function PatientsListPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
   });
 
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("patients").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      toast.success("Patient supprimé");
+      setToDelete(null);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
+  });
+
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
