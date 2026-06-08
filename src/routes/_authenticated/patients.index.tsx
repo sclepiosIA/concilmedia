@@ -16,6 +16,7 @@ import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImp
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { fr } from "date-fns/locale";
 import { seedDemoJeanMartin } from "@/lib/conciliation/seedDemoJeanMartin";
+import { PatientPriorityBadge, usePatientPriority } from "@/components/patient/PatientPriorityBadge";
 
 export const Route = createFileRoute("/_authenticated/patients/")({
   head: () => ({ meta: [{ title: "Patients — Conciliation" }] }),
@@ -236,36 +237,15 @@ function PatientsListPage() {
         {filtered.length === 0 && (
           <Card><CardContent className="py-12 text-center text-muted-foreground">Aucun patient</CardContent></Card>
         )}
-        {filtered.map((p) => (
-          <Card key={p.id} className="hover:bg-accent/50 transition">
-            <CardContent className="py-4 flex items-center gap-4">
-              <Link
-                to="/patients/$patientId"
-                params={{ patientId: p.id }}
-                className="flex items-center gap-4 flex-1 cursor-pointer"
-              >
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium">{p.nom.toUpperCase()} {p.prenom}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {p.date_naissance && `Né(e) le ${format(new Date(p.date_naissance), "d MMM yyyy", { locale: fr })}`}
-                    {p.sexe && ` • ${p.sexe}`}
-                  </div>
-                </div>
-              </Link>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setToDelete({ id: p.id, nom: p.nom, prenom: p.prenom })}
-                aria-label="Supprimer le patient"
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+        {[...filtered]
+          .map((p) => p)
+          .map((p) => (
+            <PatientRow
+              key={p.id}
+              patient={p}
+              onDelete={() => setToDelete({ id: p.id, nom: p.nom, prenom: p.prenom })}
+            />
+          ))}
       </div>
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
@@ -291,5 +271,51 @@ function PatientsListPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+type PatientLite = {
+  id: string;
+  nom: string;
+  prenom: string;
+  date_naissance: string | null;
+  sexe: string | null;
+};
+
+function PatientRow({ patient: p, onDelete }: { patient: PatientLite; onDelete: () => void }) {
+  const { data: priority } = usePatientPriority(p.id);
+  void priority;
+  return (
+    <Card className="hover:bg-accent/50 transition">
+      <CardContent className="py-4 flex items-center gap-4">
+        <Link
+          to="/patients/$patientId"
+          params={{ patientId: p.id }}
+          className="flex items-center gap-4 flex-1 cursor-pointer"
+        >
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <User className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium">{p.nom.toUpperCase()} {p.prenom}</span>
+              <PatientPriorityBadge patientId={p.id} />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {p.date_naissance && `Né(e) le ${format(new Date(p.date_naissance), "d MMM yyyy", { locale: fr })}`}
+              {p.sexe && ` • ${p.sexe}`}
+            </div>
+          </div>
+        </Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onDelete}
+          aria-label="Supprimer le patient"
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

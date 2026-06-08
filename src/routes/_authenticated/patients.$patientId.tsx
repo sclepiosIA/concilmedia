@@ -17,6 +17,7 @@ import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImp
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { MedicationProfileCard } from "@/components/patient/MedicationProfileCard";
+import { PatientPriorityBadge } from "@/components/patient/PatientPriorityBadge";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
@@ -86,13 +87,12 @@ function PatientDetailPage() {
               {patient.poids_kg && ` • ${patient.poids_kg} kg`}
               {patient.taille_cm && ` • ${patient.taille_cm} cm`}
             </div>
-            {allergiesSeveres.length > 0 && (
-              <div className="mt-2 flex gap-1 flex-wrap">
-                {allergiesSeveres.map((a) => (
-                  <Badge key={a.id} variant="destructive">⚠ {a.substance}</Badge>
-                ))}
-              </div>
-            )}
+            <div className="mt-2 flex gap-1 flex-wrap items-center">
+              <PatientPriorityBadge patientId={patientId} />
+              {allergiesSeveres.map((a) => (
+                <Badge key={a.id} variant="destructive">⚠ {a.substance}</Badge>
+              ))}
+            </div>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={() => setBulkOpen(true)}>
