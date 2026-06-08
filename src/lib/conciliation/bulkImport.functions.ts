@@ -55,13 +55,30 @@ const TraitementSchema = z.object({
   indication: z.string().optional().nullable(),
 });
 
+const PrescriptionHospiSchema = z.object({
+  medicament: z.string(),
+  dosage: z.string().optional().nullable(),
+  posologie: z.string().optional().nullable(),
+  voie_administration: z.string().optional().nullable(),
+  indication: z.string().optional().nullable(),
+});
+
+const EpisodeContextSchema = z.object({
+  motif: z.string().optional().nullable(),
+  service: z.string().optional().nullable(),
+  date_admission: z.string().optional().nullable(),
+}).optional().nullable();
+
 const DossierSchema = z.object({
+  document_type: z.enum(["ordonnance_ville", "ordonnance_hospitaliere", "compte_rendu", "bilan_bio", "autre"]).default("autre"),
   patient: PatientSchema,
   antecedents: z.array(AntecedentSchema).default([]),
   comorbidites: z.array(ComorbiditeSchema).default([]),
   allergies: z.array(AllergieSchema).default([]),
   biologie: z.array(BiologieSchema).default([]),
   traitements: z.array(TraitementSchema).default([]),
+  prescriptions_hospitalieres: z.array(PrescriptionHospiSchema).default([]),
+  episode_context: EpisodeContextSchema,
 });
 
 export type ExtractedDossier = z.infer<typeof DossierSchema> & {
@@ -83,25 +100,28 @@ export const extractPatientDossier = createServerFn({ method: "POST" })
     const model = gateway("google/gemini-3-flash-preview");
 
     const systemPrompt = `Tu es un assistant médical expert en lecture de dossiers patients.
-Analyse le document fourni (PDF / image d'un dossier patient, compte-rendu, ordonnance + bilan) et extrais TOUTES les informations cliniques.
+Analyse le document fourni (PDF / image) et CLASSIFIE-LE puis extrais TOUTES les informations cliniques.
 Réponds STRICTEMENT en JSON valide (aucun texte avant/après, pas de markdown) selon ce schéma :
 {
-  "patient": {
-    "nom": "...", "prenom": "...",
-    "date_naissance": "YYYY-MM-DD",
-    "sexe": "M" | "F" | "autre",
-    "poids_kg": number, "taille_cm": number
-  },
-  "antecedents": [{ "type": "medical|chirurgical|familial|obstetrical|autre", "description": "...", "date_evenement": "YYYY-MM-DD" }],
-  "comorbidites": [{ "libelle": "HTA", "statut": "actif|resolu|suspect" }],
-  "allergies": [{ "substance": "Pénicilline", "reaction": "urticaire", "severite": "legere|moderee|severe|anaphylaxie" }],
-  "biologie": [{ "parametre": "DFG", "valeur": 45, "unite": "mL/min/1,73m²", "date_prelevement": "YYYY-MM-DD" }],
-  "traitements": [{ "dci": "Metformine", "nom_commercial": "Glucophage", "dosage": "500", "dosage_unite": "mg", "voie_administration": "PO", "posologie_matin": "1", "posologie_soir": "1", "indication": "diabète" }]
+  "document_type": "ordonnance_ville" | "ordonnance_hospitaliere" | "compte_rendu" | "bilan_bio" | "autre",
+  "patient": { "nom":"...", "prenom":"...", "date_naissance":"YYYY-MM-DD", "sexe":"M|F|autre", "poids_kg":number, "taille_cm":number },
+  "antecedents": [{ "type":"medical|chirurgical|familial|obstetrical|autre", "description":"...", "date_evenement":"YYYY-MM-DD" }],
+  "comorbidites": [{ "libelle":"HTA", "statut":"actif|resolu|suspect" }],
+  "allergies": [{ "substance":"Pénicilline", "reaction":"urticaire", "severite":"legere|moderee|severe|anaphylaxie" }],
+  "biologie": [{ "parametre":"DFG", "valeur":45, "unite":"mL/min/1,73m²", "date_prelevement":"YYYY-MM-DD" }],
+  "traitements": [{ "dci":"Metformine", "nom_commercial":"Glucophage", "dosage":"500", "dosage_unite":"mg", "voie_administration":"PO", "posologie_matin":"1", "posologie_soir":"1", "indication":"diabète" }],
+  "prescriptions_hospitalieres": [{ "medicament":"Enoxaparine 4000 UI", "dosage":"4000 UI", "posologie":"1 inj/j SC", "voie_administration":"SC", "indication":"thromboprophylaxie" }],
+  "episode_context": { "motif":"...", "service":"...", "date_admission":"YYYY-MM-DD" }
 }
-Règles :
-- Privilégie la DCI au nom commercial.
-- Pour la biologie, extrais en priorité : DFG, créatinine, kaliémie, natrémie, INR, TP, hémoglobine, plaquettes, leucocytes, ASAT, ALAT, glycémie, HbA1c, CRP.
-- Omets les champs inconnus, n'invente rien.
+Règles CRUCIALES de classification :
+- "ordonnance_hospitaliere" = prescription rédigée PENDANT une hospitalisation (en-tête hôpital/service, date d'admission, ordonnance de séjour) → met les lignes dans "prescriptions_hospitalieres" ET remplis "episode_context".
+- "ordonnance_ville" = ordonnance de médecin traitant / sortie / traitement habituel → met les lignes dans "traitements".
+- "compte_rendu" = CRH, lettre de consultation → extrais antécédents/comorbidités/allergies/traitements habituels mentionnés.
+- "bilan_bio" = laboratoire → remplis surtout "biologie".
+- Si le document liste à la fois traitement habituel ET nouvelles prescriptions hospi, sépare-les correctement.
+- Privilégie la DCI au nom commercial dans "traitements"; dans "prescriptions_hospitalieres" garde le libellé tel qu'écrit.
+- Biologie prioritaire : DFG, créatinine, kaliémie, natrémie, INR, TP, hémoglobine, plaquettes, leucocytes, ASAT, ALAT, glycémie, HbA1c, CRP.
+- Omets les champs inconnus, n'invente rien. Renvoie [] pour les sections vides.
 - Ne renvoie QUE le JSON.`;
 
     const result = await generateText({
@@ -144,6 +164,7 @@ const CommitInput = z.object({
     existing_patient_id: z.string().uuid().nullable().optional(),
     source_file: z.string().optional(),
   })).min(1).max(20),
+  auto_create_episode: z.boolean().optional().default(true),
 });
 
 export const commitBulkImport = createServerFn({ method: "POST" })
@@ -151,7 +172,16 @@ export const commitBulkImport = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => CommitInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const summary = { created: 0, updated: 0, failed: [] as { name: string; error: string }[] };
+    const summary = {
+      created: 0,
+      updated: 0,
+      failed: [] as { name: string; error: string }[],
+      created_episode_ids: [] as string[],
+    };
+
+    // Groupe les items par patient (existant ou nouveau) pour agréger les prescriptions hospi
+    type PendingHospi = { patientId: string; prescriptions: typeof data.items[number]["prescriptions_hospitalieres"]; context: { motif?: string | null; service?: string | null; date_admission?: string | null } };
+    const hospiByPatient = new Map<string, PendingHospi>();
 
     for (const item of data.items) {
       const displayName = `${item.patient.nom ?? "?"} ${item.patient.prenom ?? ""}`.trim();
@@ -174,7 +204,7 @@ export const commitBulkImport = createServerFn({ method: "POST" })
           summary.updated++;
         }
 
-        // Si patient existant : charger les entités déjà présentes pour dédoublonner
+        // Dédup si patient existant
         let existingAntecedents = new Set<string>();
         let existingComorb = new Set<string>();
         let existingAllergies = new Set<string>();
@@ -230,9 +260,68 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             indication: t.indication ?? null, source: "pdf_import", actif: true,
           })) as never);
         }
+
+        // Agréger prescriptions hospi pour ce patient
+        const hasHospiSignal = item.document_type === "ordonnance_hospitaliere" || (item.prescriptions_hospitalieres?.length ?? 0) > 0;
+        if (data.auto_create_episode && hasHospiSignal && patientId) {
+          const existing = hospiByPatient.get(patientId) ?? {
+            patientId,
+            prescriptions: [],
+            context: { motif: null, service: null, date_admission: null },
+          };
+          existing.prescriptions.push(...(item.prescriptions_hospitalieres ?? []));
+          if (item.episode_context) {
+            existing.context.motif = existing.context.motif ?? item.episode_context.motif ?? null;
+            existing.context.service = existing.context.service ?? item.episode_context.service ?? null;
+            existing.context.date_admission = existing.context.date_admission ?? item.episode_context.date_admission ?? null;
+          }
+          hospiByPatient.set(patientId, existing);
+        }
       } catch (e) {
         summary.failed.push({ name: displayName || item.source_file || "?", error: e instanceof Error ? e.message : String(e) });
       }
     }
+
+    // Créer les épisodes + insérer prescriptions hospi
+    for (const pending of hospiByPatient.values()) {
+      if (pending.prescriptions.length === 0) continue;
+      try {
+        const { data: ep, error } = await supabase.from("episodes").insert({
+          patient_id: pending.patientId,
+          motif: pending.context.motif ?? "Hospitalisation – import PDF",
+          service: pending.context.service ?? "Médecine",
+          date_entree: pending.context.date_admission ? new Date(pending.context.date_admission).toISOString() : new Date().toISOString(),
+        } as never).select("id").single();
+        if (error || !ep) throw new Error(error?.message ?? "Création épisode échouée");
+        const episodeId = (ep as { id: string }).id;
+
+        // Dédup par medicament (lowercase)
+        const seen = new Set<string>();
+        const rows = pending.prescriptions
+          .filter((p) => {
+            const k = p.medicament.toLowerCase().trim();
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          })
+          .map((p) => ({
+            patient_id: pending.patientId,
+            episode_id: episodeId,
+            medicament: p.medicament,
+            dosage: p.dosage ?? null,
+            posologie: p.posologie ?? null,
+            voie_administration: p.voie_administration ?? null,
+            indication: p.indication ?? null,
+            actif: true,
+          }));
+        if (rows.length) {
+          await supabase.from("prescriptions_hospitalieres").insert(rows as never);
+        }
+        summary.created_episode_ids.push(episodeId);
+      } catch (e) {
+        summary.failed.push({ name: `Épisode patient ${pending.patientId}`, error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+
     return summary;
   });
