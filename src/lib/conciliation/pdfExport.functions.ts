@@ -136,13 +136,26 @@ export const generateEpisodeConciliationPdf = createServerFn({ method: "POST" })
     const patient = episode.patients as { nom: string; prenom: string; date_naissance: string | null; sexe: string | null; poids_kg: number | null; taille_cm: number | null };
     const patientId = episode.patient_id;
 
-    const [trt, presc, conc, ai, all] = await Promise.all([
+    const [trt, presc, conc, ai, all, com] = await Promise.all([
       supabase.from("traitements_habituels").select("*").eq("patient_id", patientId).eq("actif", true),
       supabase.from("prescriptions_hospitalieres").select("*").eq("episode_id", data.episodeId).eq("actif", true),
       supabase.from("conciliation_medicaments").select("*").eq("episode_id", data.episodeId),
       supabase.from("conciliation_ai_analyses").select("*").eq("episode_id", data.episodeId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("allergies").select("*").eq("patient_id", patientId),
+      supabase.from("comorbidites").select("*").eq("patient_id", patientId).eq("statut", "actif"),
     ]);
+    const { computeComplexity, COMPLEXITY_LABEL, generateClinicalProfile, generateRecommendations, GRAVITE_LABEL } = await import("@/lib/clinical/complexityScore");
+    const comLabels = (com.data ?? []).map((c) => c.libelle);
+    const complexity = computeComplexity(comLabels);
+    const profile = generateClinicalProfile(comLabels);
+    const recs = generateRecommendations({
+      comorbidities: comLabels,
+      divergences: (conc.data ?? []).map((c) => ({
+        dci: (c.medication_domicile as { dci?: string } | null)?.dci ?? "",
+        classe: c.classe_atc ?? undefined,
+        type: c.type_divergence,
+      })),
+    });
 
     const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
     const pdf = await PDFDocument.create();
@@ -197,9 +210,16 @@ export const generateEpisodeConciliationPdf = createServerFn({ method: "POST" })
     section(`Prescriptions hospitalières (${presc.data?.length ?? 0})`);
     for (const p of presc.data ?? []) writeLine(`• ${p.medicament} ${p.dosage ?? ""} ${p.voie_administration ?? ""} ${p.posologie ? `— ${p.posologie}` : ""}${p.indication ? ` (${p.indication})` : ""}`);
 
+    section(`Profil clinique — Complexité ${COMPLEXITY_LABEL[complexity.niveau]} (${complexity.score} pts)`);
+    if (comLabels.length) writeLine(`Comorbidités : ${comLabels.join(", ")}`);
+    writeLine(profile.profile);
+    if (profile.vigilance.length) { writeLine("Facteurs de vigilance :", { font: bold }); for (const v of profile.vigilance) writeLine(`  • ${v}`); }
+    if (recs.length) { y -= 3; writeLine("Recommandations cliniques :", { font: bold }); for (const r of recs) writeLine(`  • ${r}`); }
+
     section(`Divergences (${conc.data?.length ?? 0})`);
     for (const c of conc.data ?? []) {
-      writeLine(`• [${c.type_divergence}] ${c.intention} — ${c.statut}`, { font: bold });
+      const gr = c.gravite ? ` [${GRAVITE_LABEL[c.gravite as keyof typeof GRAVITE_LABEL] ?? c.gravite}]` : "";
+      writeLine(`• [${c.type_divergence}]${gr} ${c.intention} — ${c.statut}`, { font: bold });
       if (c.justification) writeLine(`    Justif: ${c.justification}`);
       if (c.action_corrective) writeLine(`    Action: ${c.action_corrective}`);
     }
