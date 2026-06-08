@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, FilePlus2, Sparkles } from "lucide-react";
+import { ChevronLeft, FilePlus2, Sparkles, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { TraitementsHabituelsSection } from "@/components/patient/TraitementsHab
 import { EpisodesSection } from "@/components/patient/EpisodesSection";
 import { BiologieSection } from "@/components/patient/BiologieSection";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
+import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
