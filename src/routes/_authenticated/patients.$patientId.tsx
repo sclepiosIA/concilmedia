@@ -15,7 +15,7 @@ import { ComorbiditesSection } from "@/components/patient/ComorbiditesSection";
 import { TraitementsHabituelsSection } from "@/components/patient/TraitementsHabituelsSection";
 import { EpisodesSection } from "@/components/patient/EpisodesSection";
 
-export const Route = createFileRoute("/_authenticated/patients/$patientId")({
+export const Route = createFileRoute("/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
   component: PatientDetailPage,
 });
@@ -52,7 +52,7 @@ function PatientDetailPage() {
     onSuccess: (ep) => {
       qc.invalidateQueries({ queryKey: ["episodes", patientId] });
       toast.success("Épisode créé");
-      navigate({ to: "/_authenticated/episodes/$episodeId", params: { episodeId: ep.id } });
+      navigate({ to: "/episodes/$episodeId", params: { episodeId: ep.id } });
     },
   });
 
@@ -65,7 +65,7 @@ function PatientDetailPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
-      <Link to="/_authenticated/patients" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-3">
+      <Link to="/patients" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-3">
         <ChevronLeft className="h-4 w-4" /> Retour
       </Link>
 

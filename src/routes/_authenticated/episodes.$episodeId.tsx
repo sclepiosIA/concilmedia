@@ -16,7 +16,7 @@ import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
 import type { RiskResult } from "@/lib/conciliation/riskScore";
 
-export const Route = createFileRoute("/_authenticated/episodes/$episodeId")({
+export const Route = createFileRoute("/episodes/$episodeId")({
   head: () => ({ meta: [{ title: "Conciliation médicamenteuse" }] }),
   component: EpisodeConciliationPage,
 });
@@ -77,7 +77,7 @@ function EpisodeConciliationPage() {
   return (
     <div className="container mx-auto px-4 py-4 max-w-[1400px]">
       <Link
-        to="/_authenticated/patients/$patientId"
+        to="/patients/$patientId"
         params={{ patientId: episode.patient_id }}
         className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-3"
       >
