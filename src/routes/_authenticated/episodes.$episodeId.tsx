@@ -16,6 +16,7 @@ import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
 import { OrdonnanceHospitaliereDropzone } from "@/components/conciliation/OrdonnanceHospitaliereDropzone";
 
 import { ComparaisonTable } from "@/components/conciliation/ComparaisonTable";
+import { TableauSyntheseClinique } from "@/components/conciliation/TableauSyntheseClinique";
 
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
@@ -166,6 +167,11 @@ function EpisodeConciliationPage() {
         <ComparaisonTable episodeId={episodeId} patientId={episode.patient_id} />
       </div>
 
+
+      {/* TABLEAU DE SYNTHESE CLINIQUE ET MEDICAMENTEUSE */}
+      <div className="mb-4">
+        <TableauSyntheseClinique episodeId={episodeId} patientId={episode.patient_id} />
+      </div>
 
       {/* SECONDARY: AI ANALYSIS */}
       <AIAnalysisPanel episodeId={episodeId} />
