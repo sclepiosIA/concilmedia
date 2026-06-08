@@ -95,7 +95,7 @@ function PatientDetailPage() {
             <Button variant="outline" onClick={() => setBulkOpen(true)}>
               <Sparkles className="h-4 w-4 mr-1" /> Importer PDF (IA)
             </Button>
-            <Button variant="outline" onClick={() => setSyntheseOpen(true)}>
+            <Button variant="outline" onClick={() => setHistoriqueOpen(true)}>
               <FileText className="h-4 w-4 mr-1" /> Historique
             </Button>
             <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
