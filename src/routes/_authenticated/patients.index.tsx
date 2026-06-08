@@ -13,6 +13,7 @@ import { Plus, Search, User, Sparkles, Trash2, FlaskConical } from "lucide-react
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
+import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { fr } from "date-fns/locale";
 import { seedDemoJeanMartin } from "@/lib/conciliation/seedDemoJeanMartin";
 
