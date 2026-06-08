@@ -42,6 +42,20 @@ function PatientDetailPage() {
     queryFn: async () => (await supabase.from("allergies").select("*").eq("patient_id", patientId)).data ?? [],
   });
 
+  const { data: latestEpisode } = useQuery({
+    queryKey: ["latest-episode", patientId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("episodes")
+        .select("motif, service, date_entree")
+        .eq("patient_id", patientId)
+        .order("date_entree", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+
   if (!patient) return <div className="container py-8">Chargement…</div>;
 
   const age = patient.date_naissance
@@ -66,6 +80,12 @@ function PatientDetailPage() {
               {patient.poids_kg && ` • ${patient.poids_kg} kg`}
               {patient.taille_cm && ` • ${patient.taille_cm} cm`}
             </div>
+            {latestEpisode?.motif && (
+              <div className="text-sm font-medium text-foreground mt-1">
+                Motif de venue : {latestEpisode.motif}
+                {latestEpisode.service && ` — ${latestEpisode.service}`}
+              </div>
+            )}
             <div className="mt-2 flex gap-1 flex-wrap items-center">
               <PatientPriorityBadge patientId={patientId} />
               {allergiesSeveres.map((a) => (
