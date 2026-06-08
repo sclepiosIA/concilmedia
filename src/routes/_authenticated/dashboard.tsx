@@ -11,7 +11,7 @@ import { seedSyntheticCohort } from "@/lib/conciliation/seedSynthetic.functions"
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
 import type { RiskResult } from "@/lib/conciliation/riskScore";
 
-export const Route = createFileRoute("/_authenticated/dashboard")({
+export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard mémoire" }] }),
   component: DashboardPage,
 });
@@ -66,7 +66,7 @@ function DashboardPage() {
             {seedMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
             Générer 20 patients synthétiques
           </Button>
-          <Link to="/_authenticated/evaluation"><Button><BarChart3 className="h-4 w-4 mr-1" /> Évaluation</Button></Link>
+          <Link to="/evaluation"><Button><BarChart3 className="h-4 w-4 mr-1" /> Évaluation</Button></Link>
         </div>
       </div>
 
@@ -89,7 +89,7 @@ function DashboardPage() {
             const ep = r.episodes as { motif?: string; service?: string; patient_id?: string; patients?: { nom?: string; prenom?: string } } | null;
             const pat = ep?.patients;
             return (
-              <Link key={r.id} to="/_authenticated/episodes/$episodeId" params={{ episodeId: r.episode_id }}>
+              <Link key={r.id} to="/episodes/$episodeId" params={{ episodeId: r.episode_id }}>
                 <div className="flex items-center justify-between border rounded-md p-3 hover:bg-accent">
                   <div>
                     <div className="font-medium">{pat?.nom?.toUpperCase()} {pat?.prenom}</div>

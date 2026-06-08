@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-export const Route = createFileRoute("/_authenticated/patients/")({
+export const Route = createFileRoute("/patients/")({
   head: () => ({ meta: [{ title: "Patients — Conciliation" }] }),
   component: PatientsListPage,
 });
@@ -126,7 +126,7 @@ function PatientsListPage() {
         {filtered.map((p) => (
           <Link
             key={p.id}
-            to="/_authenticated/patients/$patientId"
+            to="/patients/$patientId"
             params={{ patientId: p.id }}
           >
             <Card className="hover:bg-accent/50 transition cursor-pointer">

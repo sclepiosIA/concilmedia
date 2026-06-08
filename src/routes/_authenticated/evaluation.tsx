@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { evaluatePrecision, type EvaluationMetrics } from "@/lib/conciliation/evaluate.functions";
 import { EvaluationMatrix } from "@/components/conciliation/EvaluationMatrix";
 
-export const Route = createFileRoute("/_authenticated/evaluation")({
+export const Route = createFileRoute("/evaluation")({
   head: () => ({ meta: [{ title: "Évaluation précision" }] }),
   component: EvaluationPage,
 });
@@ -25,7 +25,7 @@ function EvaluationPage() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-5xl">
-      <Link to="/_authenticated/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-3">
+      <Link to="/dashboard" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-3">
         <ChevronLeft className="h-4 w-4" /> Retour dashboard
       </Link>
 

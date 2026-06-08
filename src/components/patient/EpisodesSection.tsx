@@ -16,7 +16,7 @@ export function EpisodesSection({ patientId }: { patientId: string }) {
   return (
     <div className="space-y-2">
       {data.map((e) => (
-        <Link key={e.id} to="/_authenticated/episodes/$episodeId" params={{ episodeId: e.id }}>
+        <Link key={e.id} to="/episodes/$episodeId" params={{ episodeId: e.id }}>
           <Card className="hover:bg-accent/50 cursor-pointer">
             <CardContent className="py-3 flex items-center justify-between">
               <div>
