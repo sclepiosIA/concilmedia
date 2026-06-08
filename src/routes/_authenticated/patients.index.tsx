@@ -136,13 +136,41 @@ function PatientsListPage() {
                 <div><Label>Poids (kg)</Label><Input name="poids" type="number" step="0.1" /></div>
                 <div><Label>Taille (cm)</Label><Input name="taille" type="number" /></div>
               </div>
+              <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Documents sources pour conciliation (optionnel)
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ajoutez des PDF (ordonnances, comptes-rendus, bilans…). L'IA les analysera après création.
+                </p>
+                <Input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  multiple
+                  onChange={(e) => setPendingFiles(Array.from(e.target.files ?? []))}
+                />
+                {pendingFiles.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    {pendingFiles.length} fichier(s) sélectionné(s) : {pendingFiles.map((f) => f.name).join(", ")}
+                  </div>
+                )}
+              </div>
               <Button type="submit" className="w-full" disabled={createMut.isPending}>Créer</Button>
             </form>
           </DialogContent>
         </Dialog>
         </div>
       </div>
-      <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} />
+      <BulkPatientImportModal
+        open={bulkOpen}
+        onOpenChange={(v) => {
+          setBulkOpen(v);
+          if (!v) { setPendingFiles([]); setBulkTargetId(undefined); }
+        }}
+        targetPatientId={bulkTargetId}
+        initialFiles={bulkTargetId ? pendingFiles : undefined}
+      />
 
       <div className="relative mb-4">
         <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
