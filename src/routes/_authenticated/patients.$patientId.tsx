@@ -19,6 +19,7 @@ import { BiologieSection } from "@/components/patient/BiologieSection";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
+import { MedicationProfileCard } from "@/components/patient/MedicationProfileCard";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
