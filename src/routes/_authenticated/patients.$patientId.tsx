@@ -80,6 +80,12 @@ function PatientDetailPage() {
               {patient.poids_kg && ` • ${patient.poids_kg} kg`}
               {patient.taille_cm && ` • ${patient.taille_cm} cm`}
             </div>
+            {latestEpisode?.motif && (
+              <div className="text-sm font-medium text-foreground mt-1">
+                Motif de venue : {latestEpisode.motif}
+                {latestEpisode.service && ` — ${latestEpisode.service}`}
+              </div>
+            )}
             <div className="mt-2 flex gap-1 flex-wrap items-center">
               <PatientPriorityBadge patientId={patientId} />
               {allergiesSeveres.map((a) => (
