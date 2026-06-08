@@ -165,19 +165,19 @@ function EpisodeConciliationPage() {
           <div className="flex items-center gap-4 pt-4 border-t">
             <div className="flex-1">
               <div className="flex justify-between text-xs font-semibold uppercase tracking-wider mb-2">
-                <span className={bilanDone ? "text-emerald-600" : "text-muted-foreground"}>
-                  1. Bilan d'entrée
+                <span className={ordonnanceDone ? "text-emerald-600" : "text-muted-foreground"}>
+                  1. Ordonnance importée
                 </span>
-                <span className={total > 0 && !validationDone ? "text-primary" : "text-muted-foreground"}>
-                  2. Conciliation {total > 0 && !validationDone && "(en cours)"}
+                <span className={divergencesDone && !validationDone ? "text-primary" : divergencesDone ? "text-emerald-600" : "text-muted-foreground"}>
+                  2. Divergences détectées
                 </span>
                 <span className={validationDone ? "text-emerald-600" : "text-muted-foreground"}>
                   3. Validation
                 </span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden flex">
-                <div className="h-full bg-emerald-500 transition-all" style={{ width: bilanDone ? "33.3%" : "0%" }} />
-                <div className="h-full bg-primary transition-all" style={{ width: `${reconRatio * 33.3}%` }} />
+                <div className="h-full bg-emerald-500 transition-all" style={{ width: ordonnanceDone ? "33.3%" : "0%" }} />
+                <div className="h-full bg-primary transition-all" style={{ width: divergencesDone ? "33.3%" : "0%" }} />
                 <div className="h-full bg-emerald-500 transition-all" style={{ width: validationDone ? "33.4%" : "0%" }} />
               </div>
             </div>
