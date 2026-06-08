@@ -99,11 +99,25 @@ function EpisodeConciliationPage() {
                 ))}
               </div>
             )}
+            {latestRisk && (
+              <div className="mt-2">
+                <RiskScoreBadge score={latestRisk.score} niveau={latestRisk.niveau as RiskResult["niveau"]} />
+              </div>
+            )}
           </div>
           <div className="flex gap-2 flex-wrap">
             <div className="text-xs px-3 py-1.5 rounded-md bg-muted">
               {recon.stats.nonTraite} non traitée(s) • {recon.stats.resolu} résolue(s)
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => riskMut.mutate()}
+              disabled={riskMut.isPending}
+            >
+              {riskMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldAlert className="h-4 w-4 mr-1" />}
+              Score de risque
+            </Button>
             <Button
               variant="outline"
               size="sm"
