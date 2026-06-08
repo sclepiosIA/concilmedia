@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,11 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, FilePlus2, Sparkles, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { toast } from "sonner";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { BiologieSection } from "@/components/patient/BiologieSection";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
 import { HistoriqueConciliationsDialog } from "@/components/patient/HistoriqueConciliationsDialog";
+import { NouvelleConciliationDialog } from "@/components/conciliation/NouvelleConciliationDialog";
 import { PatientPriorityBadge } from "@/components/patient/PatientPriorityBadge";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
@@ -23,10 +23,9 @@ export const Route = createFileRoute("/_authenticated/patients/$patientId")({
 
 function PatientDetailPage() {
   const { patientId } = Route.useParams();
-  const navigate = useNavigate();
-  const qc = useQueryClient();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [historiqueOpen, setHistoriqueOpen] = useState(false);
+  const [nouvelleOpen, setNouvelleOpen] = useState(false);
 
 
   const { data: patient } = useQuery({
@@ -41,23 +40,6 @@ function PatientDetailPage() {
   const { data: allergies = [] } = useQuery({
     queryKey: ["allergies", patientId],
     queryFn: async () => (await supabase.from("allergies").select("*").eq("patient_id", patientId)).data ?? [],
-  });
-
-  const createEpisode = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase
-        .from("episodes")
-        .insert({ patient_id: patientId, motif: "Nouvel épisode", service: "Médecine" })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (ep) => {
-      qc.invalidateQueries({ queryKey: ["episodes", patientId] });
-      toast.success("Épisode créé");
-      navigate({ to: "/episodes/$episodeId", params: { episodeId: ep.id } });
-    },
   });
 
   if (!patient) return <div className="container py-8">Chargement…</div>;
@@ -98,7 +80,7 @@ function PatientDetailPage() {
             <Button variant="outline" onClick={() => setHistoriqueOpen(true)}>
               <FileText className="h-4 w-4 mr-1" /> Historique
             </Button>
-            <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
+            <Button onClick={() => setNouvelleOpen(true)}>
               <FilePlus2 className="h-4 w-4 mr-1" /> Nouvelle conciliation
             </Button>
           </div>
@@ -107,6 +89,7 @@ function PatientDetailPage() {
 
       <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} targetPatientId={patientId} />
       <HistoriqueConciliationsDialog patientId={patientId} open={historiqueOpen} onOpenChange={setHistoriqueOpen} />
+      <NouvelleConciliationDialog patientId={patientId} open={nouvelleOpen} onOpenChange={setNouvelleOpen} />
 
       <div className="mb-6">
         <ClinicalProfileCard patientId={patientId} />
