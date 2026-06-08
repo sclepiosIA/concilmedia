@@ -213,7 +213,20 @@ function PatientsListPage() {
         }}
         targetPatientId={bulkTargetId}
         initialFiles={bulkTargetId ? pendingFiles : undefined}
+        onCompleted={(patientIds) => {
+          const id = bulkTargetId ?? patientIds[0];
+          if (id) setSyntheseFor(id);
+        }}
       />
+
+      {syntheseFor && (
+        <SynthesePatientDialog
+          patientId={syntheseFor}
+          open={!!syntheseFor}
+          onOpenChange={(v) => { if (!v) setSyntheseFor(null); }}
+          autoAnalyze
+        />
+      )}
 
       <div className="relative mb-4">
         <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
