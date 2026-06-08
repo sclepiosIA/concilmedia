@@ -294,38 +294,92 @@ export type Database = {
       }
       episodes: {
         Row: {
+          autonomie_gir: number | null
+          bilan_entree_completed_at: string | null
+          bmo_notes: string | null
+          bmo_sources: string[] | null
+          contexte_social: string | null
           created_at: string
           date_entree: string
           date_sortie: string | null
+          etat_general: string | null
+          eva_douleur: number | null
+          fc: number | null
+          fr: number | null
           id: string
+          mode_admission: string | null
           motif: string | null
+          observance_habituelle: string | null
           patient_id: string
+          poids_entree_kg: number | null
+          provenance: string | null
           service: string | null
+          spo2: number | null
           statut: string
+          ta_diastolique: number | null
+          ta_systolique: number | null
+          taille_entree_cm: number | null
+          temperature: number | null
           updated_at: string
           via_urgences: boolean
         }
         Insert: {
+          autonomie_gir?: number | null
+          bilan_entree_completed_at?: string | null
+          bmo_notes?: string | null
+          bmo_sources?: string[] | null
+          contexte_social?: string | null
           created_at?: string
           date_entree?: string
           date_sortie?: string | null
+          etat_general?: string | null
+          eva_douleur?: number | null
+          fc?: number | null
+          fr?: number | null
           id?: string
+          mode_admission?: string | null
           motif?: string | null
+          observance_habituelle?: string | null
           patient_id: string
+          poids_entree_kg?: number | null
+          provenance?: string | null
           service?: string | null
+          spo2?: number | null
           statut?: string
+          ta_diastolique?: number | null
+          ta_systolique?: number | null
+          taille_entree_cm?: number | null
+          temperature?: number | null
           updated_at?: string
           via_urgences?: boolean
         }
         Update: {
+          autonomie_gir?: number | null
+          bilan_entree_completed_at?: string | null
+          bmo_notes?: string | null
+          bmo_sources?: string[] | null
+          contexte_social?: string | null
           created_at?: string
           date_entree?: string
           date_sortie?: string | null
+          etat_general?: string | null
+          eva_douleur?: number | null
+          fc?: number | null
+          fr?: number | null
           id?: string
+          mode_admission?: string | null
           motif?: string | null
+          observance_habituelle?: string | null
           patient_id?: string
+          poids_entree_kg?: number | null
+          provenance?: string | null
           service?: string | null
+          spo2?: number | null
           statut?: string
+          ta_diastolique?: number | null
+          ta_systolique?: number | null
+          taille_entree_cm?: number | null
+          temperature?: number | null
           updated_at?: string
           via_urgences?: boolean
         }
