@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, Sparkles, Loader2, Check } from "lucide-react";
+import { Upload, FileText, Sparkles, Loader2, Check, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { extractOrdonnance, importExtractedMedications, type ExtractedMedication } from "@/lib/conciliation/extractOrdonnance.functions";
@@ -27,18 +27,27 @@ export function OrdonnanceUploader({ patientId }: { patientId: string }) {
   const [meds, setMeds] = useState<ExtractedMedication[]>([]);
   const [prescripteur, setPrescripteur] = useState<string | undefined>();
   const [date, setDate] = useState<string | undefined>();
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
 
   const extractMut = useMutation({
-    mutationFn: async (f: File) => {
-      const b64 = await fileToBase64(f);
-      return extract({ data: { patientId, fileBase64: b64, mimeType: f.type, fileName: f.name } });
+    mutationFn: async (fs: File[]) => {
+      const all: ExtractedMedication[] = [];
+      let firstPrescripteur: string | undefined;
+      let firstDate: string | undefined;
+      for (const f of fs) {
+        const b64 = await fileToBase64(f);
+        const r = await extract({ data: { patientId, fileBase64: b64, mimeType: f.type, fileName: f.name } });
+        all.push(...r.medications);
+        if (!firstPrescripteur) firstPrescripteur = r.prescripteur;
+        if (!firstDate) firstDate = r.date_prescription;
+      }
+      return { medications: all, prescripteur: firstPrescripteur, date_prescription: firstDate };
     },
     onSuccess: (r) => {
       setMeds(r.medications);
       setPrescripteur(r.prescripteur);
       setDate(r.date_prescription);
-      toast.success(`${r.medications.length} médicament(s) extrait(s)`);
+      toast.success(`${r.medications.length} médicament(s) extrait(s) sur ${files.length} fichier(s)`);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur d'extraction"),
   });
@@ -47,16 +56,22 @@ export function OrdonnanceUploader({ patientId }: { patientId: string }) {
     mutationFn: async () => importMeds({ data: { patientId, medications: meds as unknown as Record<string, unknown>[] } }),
     onSuccess: (r) => {
       toast.success(`${r.inserted} traitement(s) importé(s) au BMO`);
-      setMeds([]); setFile(null);
+      setMeds([]); setFiles([]);
       qc.invalidateQueries({ queryKey: ["traitements", patientId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur d'import"),
   });
 
   const onFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setFile(f);
+    const fs = Array.from(e.target.files ?? []);
+    if (fs.length === 0) return;
+    setFiles((prev) => [...prev, ...fs]);
+    setMeds([]);
+    e.target.value = "";
+  };
+
+  const removeFile = (idx: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
     setMeds([]);
   };
 
@@ -64,24 +79,40 @@ export function OrdonnanceUploader({ patientId }: { patientId: string }) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" /> Importer une ordonnance (OCR IA)
+          <Sparkles className="h-4 w-4 text-primary" /> Importer une ou plusieurs ordonnances (OCR IA)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center gap-2">
           <label className="flex-1">
-            <input type="file" accept="image/*,application/pdf" onChange={onFile} className="hidden" />
+            <input type="file" accept="image/*,application/pdf" multiple onChange={onFile} className="hidden" />
             <div className="border-2 border-dashed rounded-md px-3 py-4 text-center text-sm text-muted-foreground hover:bg-accent cursor-pointer flex items-center justify-center gap-2">
-              <Upload className="h-4 w-4" /> {file ? file.name : "Choisir PDF / photo"}
+              <Upload className="h-4 w-4" /> {files.length > 0 ? `Ajouter d'autres fichiers (${files.length} sélectionné(s))` : "Choisir PDF / photos"}
             </div>
           </label>
           <Button
-            onClick={() => file && extractMut.mutate(file)}
-            disabled={!file || extractMut.isPending}
+            onClick={() => files.length > 0 && extractMut.mutate(files)}
+            disabled={files.length === 0 || extractMut.isPending}
           >
             {extractMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Analyser"}
           </Button>
         </div>
+
+        {files.length > 0 && (
+          <div className="border rounded-md divide-y">
+            {files.map((f, i) => (
+              <div key={i} className="flex items-center justify-between p-2 text-sm">
+                <div className="flex items-center gap-2 truncate">
+                  <FileText className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{f.name}</span>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => removeFile(i)} disabled={extractMut.isPending}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {meds.length > 0 && (
           <div className="space-y-2">
