@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -6,20 +5,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ScanSearch, Sparkles } from "lucide-react";
+import { ChevronLeft, Sparkles, ScanSearch, ShieldAlert, Loader2, Download } from "lucide-react";
 import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.functions";
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
-import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
-
-
-
+import { PharmacistConciliationPanel } from "@/components/conciliation/PharmacistConciliationPanel";
+import { TraitementsDomicileColumn } from "@/components/conciliation/TraitementsDomicileColumn";
+import { PrescriptionsHospitalieresColumn } from "@/components/conciliation/PrescriptionsHospitalieresColumn";
 import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
-import { OrdonnanceHospitaliereDropzone } from "@/components/conciliation/OrdonnanceHospitaliereDropzone";
-
-import { ComparaisonTable } from "@/components/conciliation/ComparaisonTable";
-import { TableauSyntheseClinique } from "@/components/conciliation/TableauSyntheseClinique";
-
+import { ClinicalRecommendationsCard } from "@/components/conciliation/ClinicalRecommendationsCard";
+import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
+import { BilanEntreeSection } from "@/components/episode/BilanEntreeSection";
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
 import type { RiskResult } from "@/lib/conciliation/riskScore";
@@ -32,7 +28,6 @@ export const Route = createFileRoute("/_authenticated/episodes/$episodeId")({
 function EpisodeConciliationPage() {
   const { episodeId } = Route.useParams();
   const recon = useMedicationReconciliation(episodeId);
-  const [syntheseOpen, setSyntheseOpen] = useState(false);
   const qc = useQueryClient();
   const computeRisk = useServerFn(computePrioritization);
   const pdfFn = useServerFn(generateEpisodeConciliationPdf);
@@ -89,24 +84,13 @@ function EpisodeConciliationPage() {
     queryFn: async () => (await supabase.from("allergies").select("*").eq("patient_id", episode!.patient_id)).data ?? [],
   });
 
-  const { data: prescriptions = [] } = useQuery({
-    queryKey: ["prescriptions", episodeId],
-    queryFn: async () => (await supabase.from("prescriptions_hospitalieres").select("id").eq("episode_id", episodeId).eq("actif", true)).data ?? [],
-  });
-
   if (!episode) return <div className="container py-8">Chargement…</div>;
   const p = episode.patients;
   const age = p?.date_naissance ? Math.floor((Date.now() - new Date(p.date_naissance).getTime()) / 31557600000) : null;
   const allergiesCritiques = allergies.filter((a) => a.severite === "severe" || a.severite === "anaphylaxie");
-  const initials = `${p?.nom?.[0] ?? ""}${p?.prenom?.[0] ?? ""}`.toUpperCase();
-
-  const total = recon.stats.nonTraite + recon.stats.resolu;
-  const reconRatio = total > 0 ? recon.stats.resolu / total : 0;
-  const validationDone = total > 0 && reconRatio === 1;
-
 
   return (
-    <div className="container mx-auto px-4 py-4 max-w-[1600px]">
+    <div className="container mx-auto px-4 py-4 max-w-[1400px]">
       <Link
         to="/patients/$patientId"
         params={{ patientId: episode.patient_id }}
@@ -115,83 +99,86 @@ function EpisodeConciliationPage() {
         <ChevronLeft className="h-4 w-4" /> Retour patient
       </Link>
 
-      {/* HEADER: patient + actions */}
       <Card className="mb-4">
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
-            <div className="flex items-center gap-4 min-w-0">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-base shrink-0">
-                {initials || "—"}
+        <CardContent className="py-4 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-xl font-bold">
+              {p?.nom.toUpperCase()} {p?.prenom}
+              {age !== null && <span className="text-sm font-normal text-muted-foreground ml-2">• {age} ans • {p?.sexe}</span>}
+            </h1>
+            <div className="text-sm text-muted-foreground">{episode.motif} — {episode.service}</div>
+            {allergiesCritiques.length > 0 && (
+              <div className="mt-2 flex gap-1 flex-wrap">
+                {allergiesCritiques.map((a) => (
+                  <Badge key={a.id} variant="destructive">⚠ {a.substance}</Badge>
+                ))}
               </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl font-bold truncate">{p?.nom?.toUpperCase()} {p?.prenom}</h1>
-                  {age !== null && (
-                    <span className="text-sm text-muted-foreground">• {age} ans • {p?.sexe}</span>
-                  )}
-                  {latestRisk && (
-                    <RiskScoreBadge score={latestRisk.score} niveau={latestRisk.niveau as RiskResult["niveau"]} />
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground truncate">
-                  {episode.motif} — {episode.service}
-                </p>
-                {allergiesCritiques.length > 0 && (
-                  <div className="mt-1.5 flex gap-1 flex-wrap">
-                    {allergiesCritiques.map((a) => (
-                      <Badge key={a.id} variant="destructive" className="text-[10px]">⚠ {a.substance}</Badge>
-                    ))}
-                  </div>
-                )}
+            )}
+            {latestRisk && (
+              <div className="mt-2">
+                <RiskScoreBadge score={latestRisk.score} niveau={latestRisk.niveau as RiskResult["niveau"]} />
               </div>
+            )}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <div className="text-xs px-3 py-1.5 rounded-md bg-muted">
+              {recon.stats.nonTraite} non traitée(s) • {recon.stats.resolu} résolue(s)
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button size="sm" onClick={() => recon.detectDivergences()} disabled={recon.isDetecting}>
-                <ScanSearch className="h-4 w-4 mr-1" /> Détecter divergences
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => riskMut.mutate()}
+              disabled={riskMut.isPending}
+            >
+              {riskMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldAlert className="h-4 w-4 mr-1" />}
+              Score de risque
+            </Button>
+            <Button variant="outline" size="sm" onClick={downloadPdf}>
+              <Download className="h-4 w-4 mr-1" /> Export PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => recon.detectDivergences()}
+              disabled={recon.isDetecting}
+            >
+              <ScanSearch className="h-4 w-4 mr-1" /> Détecter divergences
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <BilanEntreeSection episodeId={episodeId} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-3">
+          <TraitementsDomicileColumn patientId={episode.patient_id} />
         </div>
-      </CardContent>
-    </Card>
-
-
-      {/* STEP 1 — UPLOAD ORDONNANCE */}
-      <div className="mb-4">
-        <OrdonnanceHospitaliereDropzone
-          episodeId={episodeId}
-          patientId={episode.patient_id}
-          hasPrescriptions={prescriptions.length > 0}
-          onImported={() => recon.detectDivergences()}
-        />
+        <div className="lg:col-span-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Conciliation médicamenteuse
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PharmacistConciliationPanel
+                conciliations={recon.conciliations}
+                onUpdate={recon.updateConciliation}
+                onValidate={recon.validateConciliation}
+                isLoading={recon.isLoading}
+              />
+            </CardContent>
+          </Card>
+        </div>
+        <div className="lg:col-span-3 space-y-4">
+          <ClinicalProfileCard patientId={episode.patient_id} />
+          <ClinicalRecommendationsCard patientId={episode.patient_id} conciliations={recon.conciliations} />
+          <PrescriptionsHospitalieresColumn episodeId={episodeId} patientId={episode.patient_id} />
+          <AIAnalysisPanel episodeId={episodeId} />
+        </div>
       </div>
-
-      {/* COMPARISON TABLE — DCI / dosage / posologie side by side */}
-      <div className="mb-4">
-        <ComparaisonTable episodeId={episodeId} patientId={episode.patient_id} />
-      </div>
-
-      {/* CTA — valider et générer la synthèse IA pour le dossier patient */}
-      <div className="mb-4 flex justify-center">
-        <Button size="lg" onClick={() => setSyntheseOpen(true)} className="gap-2">
-          <Sparkles className="h-4 w-4" />
-          Valider et générer la synthèse IA du dossier patient
-        </Button>
-      </div>
-
-      <SynthesePatientDialog
-        patientId={episode.patient_id}
-        open={syntheseOpen}
-        onOpenChange={setSyntheseOpen}
-        autoAnalyze
-      />
-
-      {/* TABLEAU DE SYNTHESE CLINIQUE ET MEDICAMENTEUSE */}
-      <div className="mb-4">
-        <TableauSyntheseClinique episodeId={episodeId} patientId={episode.patient_id} />
-      </div>
-
-      {/* SECONDARY: AI ANALYSIS */}
-      <AIAnalysisPanel episodeId={episodeId} />
     </div>
   );
 }

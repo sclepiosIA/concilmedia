@@ -22,11 +22,7 @@ export function TraitementsDomicileColumn({ patientId }: { patientId: string }) 
               {t.voie_administration && <Badge variant="secondary" className="text-xs">{t.voie_administration}</Badge>}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              {(() => {
-                const vals = [t.posologie_matin, t.posologie_midi, t.posologie_soir, t.posologie_coucher];
-                const hasAny = vals.some((v) => v !== null && v !== undefined && v !== "" && String(v) !== "0");
-                return hasAny ? vals.map((v) => (v === null || v === undefined || v === "" ? "0" : String(v))).join("-") : "";
-              })()}
+              {[t.posologie_matin && `${t.posologie_matin} M`, t.posologie_midi && `${t.posologie_midi} Mi`, t.posologie_soir && `${t.posologie_soir} S`, t.posologie_coucher && `${t.posologie_coucher} C`].filter(Boolean).join(" / ")}
             </div>
           </div>
         ))}

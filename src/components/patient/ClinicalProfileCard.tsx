@@ -141,7 +141,7 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 font-semibold text-sm uppercase tracking-wide">
             <Sparkles className="h-4 w-4 text-primary" />
-            Profil patient
+            Profil patient et vigilance médicamenteuse
           </div>
           <ComplexityBadge score={complexity.score} niveau={complexity.niveau} />
         </div>
@@ -193,6 +193,16 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
             </ul>
           </ProfileTile>
 
+          <div className="md:col-span-2">
+            <ProfileTile tone={complexityTone} icon={Activity} title="Complexité patient">
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className={`text-base px-3 py-1 ${TONE[complexity.niveau]}`}>
+                  {COMPLEXITY_LABEL[complexity.niveau]}
+                </Badge>
+                <span className="text-sm text-muted-foreground">Score : <strong className="text-foreground">{complexity.score} pts</strong></span>
+              </div>
+            </ProfileTile>
+          </div>
         </div>
       </CardContent>
     </Card>

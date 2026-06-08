@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,12 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, FilePlus2, Sparkles, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
+import { toast } from "sonner";
+import { TraitementsHabituelsSection } from "@/components/patient/TraitementsHabituelsSection";
+import { EpisodesSection } from "@/components/patient/EpisodesSection";
 import { BiologieSection } from "@/components/patient/BiologieSection";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
-import { HistoriqueConciliationsDialog } from "@/components/patient/HistoriqueConciliationsDialog";
-import { NouvelleConciliationDialog } from "@/components/conciliation/NouvelleConciliationDialog";
-import { PatientPriorityBadge } from "@/components/patient/PatientPriorityBadge";
+import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
+import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
+import { MedicationProfileCard } from "@/components/patient/MedicationProfileCard";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
@@ -23,9 +25,10 @@ export const Route = createFileRoute("/_authenticated/patients/$patientId")({
 
 function PatientDetailPage() {
   const { patientId } = Route.useParams();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [historiqueOpen, setHistoriqueOpen] = useState(false);
-  const [nouvelleOpen, setNouvelleOpen] = useState(false);
+  const [syntheseOpen, setSyntheseOpen] = useState(false);
 
 
   const { data: patient } = useQuery({
@@ -42,17 +45,20 @@ function PatientDetailPage() {
     queryFn: async () => (await supabase.from("allergies").select("*").eq("patient_id", patientId)).data ?? [],
   });
 
-  const { data: latestEpisode } = useQuery({
-    queryKey: ["latest-episode", patientId],
-    queryFn: async () => {
-      const { data } = await supabase
+  const createEpisode = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase
         .from("episodes")
-        .select("motif, service, date_entree")
-        .eq("patient_id", patientId)
-        .order("date_entree", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .insert({ patient_id: patientId, motif: "Nouvel épisode", service: "Médecine" })
+        .select()
+        .single();
+      if (error) throw error;
       return data;
+    },
+    onSuccess: (ep) => {
+      qc.invalidateQueries({ queryKey: ["episodes", patientId] });
+      toast.success("Épisode créé");
+      navigate({ to: "/episodes/$episodeId", params: { episodeId: ep.id } });
     },
   });
 
@@ -80,43 +86,43 @@ function PatientDetailPage() {
               {patient.poids_kg && ` • ${patient.poids_kg} kg`}
               {patient.taille_cm && ` • ${patient.taille_cm} cm`}
             </div>
-            {latestEpisode?.motif && (
-              <div className="text-sm font-medium text-foreground mt-1">
-                Motif de venue : {latestEpisode.motif}
-                {latestEpisode.service && ` — ${latestEpisode.service}`}
+            {allergiesSeveres.length > 0 && (
+              <div className="mt-2 flex gap-1 flex-wrap">
+                {allergiesSeveres.map((a) => (
+                  <Badge key={a.id} variant="destructive">⚠ {a.substance}</Badge>
+                ))}
               </div>
             )}
-            <div className="mt-2 flex gap-1 flex-wrap items-center">
-              <PatientPriorityBadge patientId={patientId} />
-              {allergiesSeveres.map((a) => (
-                <Badge key={a.id} variant="destructive">⚠ {a.substance}</Badge>
-              ))}
-            </div>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={() => setBulkOpen(true)}>
               <Sparkles className="h-4 w-4 mr-1" /> Importer PDF (IA)
             </Button>
-            <Button variant="outline" onClick={() => setHistoriqueOpen(true)}>
-              <FileText className="h-4 w-4 mr-1" /> Historique
+            <Button variant="outline" onClick={() => setSyntheseOpen(true)}>
+              <FileText className="h-4 w-4 mr-1" /> Synthèse patient
             </Button>
-            <Button onClick={() => setNouvelleOpen(true)}>
-              <FilePlus2 className="h-4 w-4 mr-1" /> Nouvelle conciliation
+            <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
+              <FilePlus2 className="h-4 w-4 mr-1" /> Nouvel épisode
             </Button>
           </div>
         </CardContent>
       </Card>
 
       <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} targetPatientId={patientId} />
-      <HistoriqueConciliationsDialog patientId={patientId} open={historiqueOpen} onOpenChange={setHistoriqueOpen} />
-      <NouvelleConciliationDialog patientId={patientId} open={nouvelleOpen} onOpenChange={setNouvelleOpen} />
+      <SynthesePatientDialog patientId={patientId} open={syntheseOpen} onOpenChange={setSyntheseOpen} />
 
       <div className="mb-6">
         <ClinicalProfileCard patientId={patientId} />
       </div>
 
       <div className="space-y-6">
+        <section>
+          <h2 className="text-lg font-semibold mb-3">Traitements</h2>
+          <div className="mb-3"><MedicationProfileCard patientId={patientId} /></div>
+          <TraitementsHabituelsSection patientId={patientId} />
+        </section>
         <section><h2 className="text-lg font-semibold mb-3">Biologie</h2><BiologieSection patientId={patientId} /></section>
+        <section><h2 className="text-lg font-semibold mb-3">Épisodes</h2><EpisodesSection patientId={patientId} /></section>
       </div>
     </div>
   );

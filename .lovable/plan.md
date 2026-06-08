@@ -1,77 +1,75 @@
-# Plan — Conciliation guidée par upload d'ordonnance
-
 ## Objectif
 
-Refondre l'écran épisode (`/episodes/$episodeId`) pour qu'un médecin/pharmacien puisse réaliser une conciliation **en 3 gestes évidents** :
+Depuis la fiche patient, importer plusieurs PDF en une fois → produire :
+1. **Toujours** : enrichissement du dossier patient (ATCD / comorbidités / allergies / biologie / traitements habituels) avec dédup (déjà en place).
+2. **Toujours** : **Fiche de synthèse patient** (vue + export PDF) regroupant identité, ATCD, comorbidités, allergies, bio récente, traitements habituels, et analyse IA (interactions, doublons, adaptations DFG).
+3. **Si une ordonnance hospitalière est détectée** dans les PDF : création auto d'un **épisode** avec les prescriptions hospitalières + lancement détection divergences + analyse IA → conciliation complète accessible depuis la fiche patient.
+4. **Export PDF** des deux livrables (synthèse patient & fiche de conciliation d'épisode).
 
-1. **Uploader** l'ordonnance hospitalière (photo / PDF)
-2. **Visualiser** automatiquement les divergences vs traitement habituel
-3. **Valider** chaque divergence
+## Plan technique
 
-L'upload devient le point d'entrée central et déclenche toute la chaîne (extraction OCR → enregistrement prescriptions → détection divergences).
+### 1. Extraction : classifier le type de document et capter les prescriptions hospi
+Fichier : `src/lib/conciliation/bulkImport.functions.ts`
+- Étendre `DossierSchema` :
+  - `document_type`: `"ordonnance_ville" | "ordonnance_hospitaliere" | "compte_rendu" | "bilan_bio" | "autre"`
+  - `prescriptions_hospitalieres`: tableau (mêmes champs que `TraitementSchema` + `voie`, `frequence`, `duree`, `motif`)
+  - `episode_context` optionnel : `{ motif, service, date_admission }`
+- Mettre à jour le system prompt pour :
+  - classifier le document
+  - distinguer "traitements habituels du patient" (→ `traitements`) vs "prescription faite à l'hôpital pendant ce séjour" (→ `prescriptions_hospitalieres`)
+  - capter motif / service / date admission si présents
 
-## Nouveau layout de l'écran épisode
+### 2. Commit : créer un épisode si ordo hospi détectée
+Fichier : `src/lib/conciliation/bulkImport.functions.ts` (`commitBulkImport`)
+- Ajouter param `auto_create_episode: boolean` (default true quand `targetPatientId` fourni).
+- Après ingestion des entités du patient :
+  - Agréger toutes les `prescriptions_hospitalieres` de tous les items pour ce patient.
+  - S'il y en a ≥1 OU si un item a `document_type === "ordonnance_hospitaliere"` : créer un épisode (`motif` = premier `episode_context.motif` trouvé sinon "Hospitalisation – import PDF", `service` idem sinon "Médecine") et insérer toutes les prescriptions dans `prescriptions_hospitalieres` (avec dédup sur `dci`).
+  - Retourner `created_episode_ids: string[]` dans le summary.
 
-```text
-┌──────────────────────────────────────────────────────────┐
-│ HEADER patient (inchangé) + stepper 3 étapes             │
-├──────────────────────────────────────────────────────────┤
-│  ÉTAPE 1 — UPLOAD ORDONNANCE  (grande dropzone centrale) │
-│  [📄 Glissez l'ordonnance ici ou cliquez]                │
-│  → extraction IA en cours… → N médicaments détectés      │
-├──────────────────────────────────────────────────────────┤
-│  ÉTAPE 2 — COMPARAISON 3 colonnes                        │
-│  ┌────────────┬────────────────┬────────────────────┐    │
-│  │ DOMICILE   │ HOSPITALIER    │ DIVERGENCES        │    │
-│  │ (lecture)  │ (extrait OCR + │ (auto-détectées,   │    │
-│  │            │  éditable)     │  badges gravité)   │    │
-│  └────────────┴────────────────┴────────────────────┘    │
-├──────────────────────────────────────────────────────────┤
-│  ÉTAPE 3 — VALIDATION (panel pharmacien actuel, compacté)│
-└──────────────────────────────────────────────────────────┘
-```
+### 3. UI : feedback dans le modal d'import
+Fichier : `src/components/conciliation/BulkPatientImportModal.tsx`
+- Onglet review : badge "Ordo hospi" / "Bilan bio" / "Ordo ville" selon `document_type`.
+- 5e onglet "Prescriptions hospi" listant les prescriptions extraites (éditable comme les traitements).
+- Écran final "done" : si `created_episode_ids.length > 0`, bouton **"Ouvrir la conciliation →"** qui navigue vers `/episodes/{id}`.
 
-## Changements concrets
+### 4. Fiche de synthèse patient (vue + export PDF)
+Nouveau fichier : `src/components/patient/SynthesePatientCard.tsx`
+- Composant affichable dans un dialog/onglet de la fiche patient, regroupant :
+  - bandeau identité + alertes (allergies sévères, DFG bas, INR haut)
+  - sections compactes ATCD / Comorbidités / Allergies / Bio récente (1 valeur/paramètre) / Traitements habituels actifs
+  - bloc Analyse IA (si présente — sinon bouton "Lancer l'analyse" qui appelle une nouvelle serverFn `analyzePatientSynthesis` patient-only, sans épisode)
+- Nouveau serverFn : `src/lib/conciliation/analyzePatientSynthesis.functions.ts` (clone de `analyzeConciliation` mais sans `prescriptions_hospitalieres`, persiste dans une nouvelle colonne `patient_synthesis_analyses` ou réutilise `conciliation_ai_analyses` avec `episode_id NULL`).
 
-### 1. Zone d'upload mise en avant
-- Nouveau composant `OrdonnanceDropzone` (grand, centré, drag&drop visible) en tête de l'espace de travail, **avant** les colonnes.
-- Réutilise `extractOrdonnance.functions.ts` + `OrdonnanceUploader` existants mais avec une UI proéminente (icône, CTA, états : vide / extraction / succès).
-- Après extraction : insertion automatique en lot dans `prescriptions_hospitalieres`, puis appel automatique de `detectDivergences()`.
-- Lorsque ≥1 prescription existe déjà, la dropzone se replie en bandeau compact "+ Ajouter une autre ordonnance".
+Bouton "Synthèse patient" ajouté dans `src/routes/_authenticated/patients.$patientId.tsx` à côté de "Nouvel épisode".
 
-### 2. Vue 3 colonnes synchronisée
-- **Col 1 — Domicile** : `TraitementsDomicileColumn` existant (lecture seule, compact).
-- **Col 2 — Hospitalier** : `PrescriptionsHospitalieresColumn` existant, mais items issus de l'OCR badgés "📄 OCR" pour montrer la provenance.
-- **Col 3 — Divergences** : nouveau composant `DivergencesColumn` qui affiche les divergences détectées en cartes synthétiques (gravité + type + DCI), avec lien vers la ligne correspondante dans le panel de validation en dessous.
+### 5. Export PDF
+Route serveur : `src/routes/api/patients.$patientId.synthese-pdf.ts` (GET)
+- Charge le patient + toutes les entités + dernière analyse IA.
+- Génère un PDF (lib JS pure compatible Worker : **`pdf-lib`**, déjà compatible Cloudflare) avec mise en page A4 :
+  - en-tête : identité + date du jour + alertes
+  - sections tabulaires (ATCD, comorb, allergies, bio, traitements)
+  - encart "Analyse pharmaceutique IA"
+- Renvoie `application/pdf` en téléchargement.
+- Bouton "Exporter PDF" sur `SynthesePatientCard`.
 
-### 3. Stepper réellement piloté
-Le stepper du header reflète l'avancement réel :
-1. **Ordonnance importée** (≥1 prescription_hospitaliere) ✅
-2. **Divergences détectées** (≥1 conciliation_medicaments) ✅
-3. **Validation terminée** (toutes résolues) ✅
+Idem pour épisode : `src/routes/api/episodes.$episodeId.conciliation-pdf.ts`
+- Identité + contexte épisode
+- Tableau **BMO domicile vs Prescription hospi** côte à côte
+- Tableau des divergences avec statut / justification
+- Encart analyse IA
+- Bouton "Exporter PDF" sur la page `episodes.$episodeId.tsx`.
 
-### 4. Suppression / déplacement
-- Le bloc "Détecter divergences" (bouton manuel) devient secondaire : déclenchement automatique post-upload, bouton reste disponible mais discret.
-- `PharmacistConciliationPanel` reste dessous, en pleine largeur, pour la phase de validation.
-- `AIAnalysisPanel` déplacé en bas (secondaire).
+⚠️ `pdf-lib` ne fait pas la mise en page haut niveau → on génère manuellement (texte + tables simples). Pas de dépendance Node-only.
 
-## Fichiers touchés
-
-- **Nouveau** `src/components/conciliation/OrdonnanceDropzone.tsx` — zone hero d'upload + états.
-- **Nouveau** `src/components/conciliation/DivergencesColumn.tsx` — colonne synthèse divergences.
-- **Modifié** `src/routes/_authenticated/episodes.$episodeId.tsx` — nouveau layout (hero upload + grid 3 colonnes + panel validation + analyse IA en pied).
-- **Modifié** `src/components/conciliation/PrescriptionsHospitalieresColumn.tsx` — badge "OCR" sur items issus d'extraction.
-- Réutilisés sans changement : `useMedicationReconciliation`, `extractOrdonnance.functions.ts`, `PharmacistConciliationPanel`, `TraitementsDomicileColumn`, `RiskScoreBadge`, `AIAnalysisPanel`.
-
-## Détails techniques
-
-- L'extraction OCR existante renvoie déjà une liste structurée → insertion bulk dans `prescriptions_hospitalieres` (mutation déjà disponible côté hook ou à ajouter).
-- Pour tracer la provenance OCR sans migration DB : marquer via un champ existant (`source` ou commentaire) si présent ; sinon ajouter colonne `source TEXT` à `prescriptions_hospitalieres` dans une petite migration avec les GRANTs.
-- Après insertion bulk : `await recon.detectDivergences()` puis `qc.invalidateQueries`.
-- Aucun changement RLS, aucun nouveau secret.
+### 6. Migration mineure
+Si on choisit `conciliation_ai_analyses` avec `episode_id NULL` pour les analyses patient-only : ALTER la colonne `episode_id` en nullable. Sinon, créer table `patient_synthesis_analyses(patient_id, payload, model, created_at)` avec GRANT + RLS via `owns_patient`.
+Décision : **rendre `episode_id` nullable** (1 ligne SQL, pas de nouvelle table).
 
 ## Hors scope
+- OCR de PDF scannés (déjà géré par Gemini multimodal).
+- Réconciliation cross-épisodes (historique).
+- Signature électronique du PDF.
 
-- Pas de refonte du profil patient (déjà validé).
-- Pas de mode présentation plein écran / slides.
-- Pas de modification des scores de risque ni de l'analyse IA.
+## Questions ouvertes
+Aucune — on lance l'implémentation au feu vert.
