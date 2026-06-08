@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { BiologieSection } from "@/components/patient/BiologieSection";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
-import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
+import { HistoriqueConciliationsDialog } from "@/components/patient/HistoriqueConciliationsDialog";
 import { PatientPriorityBadge } from "@/components/patient/PatientPriorityBadge";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
