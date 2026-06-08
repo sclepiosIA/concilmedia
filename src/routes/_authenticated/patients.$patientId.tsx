@@ -23,10 +23,9 @@ export const Route = createFileRoute("/_authenticated/patients/$patientId")({
 
 function PatientDetailPage() {
   const { patientId } = Route.useParams();
-  const navigate = useNavigate();
-  const qc = useQueryClient();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [historiqueOpen, setHistoriqueOpen] = useState(false);
+  const [nouvelleOpen, setNouvelleOpen] = useState(false);
 
 
   const { data: patient } = useQuery({
@@ -41,23 +40,6 @@ function PatientDetailPage() {
   const { data: allergies = [] } = useQuery({
     queryKey: ["allergies", patientId],
     queryFn: async () => (await supabase.from("allergies").select("*").eq("patient_id", patientId)).data ?? [],
-  });
-
-  const createEpisode = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase
-        .from("episodes")
-        .insert({ patient_id: patientId, motif: "Nouvel épisode", service: "Médecine" })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (ep) => {
-      qc.invalidateQueries({ queryKey: ["episodes", patientId] });
-      toast.success("Épisode créé");
-      navigate({ to: "/episodes/$episodeId", params: { episodeId: ep.id } });
-    },
   });
 
   if (!patient) return <div className="container py-8">Chargement…</div>;
