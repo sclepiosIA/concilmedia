@@ -119,15 +119,15 @@ export function ComparaisonTable({ episodeId, patientId }: { episodeId: string; 
               <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th className="text-left p-3 font-semibold">DCI</th>
-                  <th className="text-left p-3 font-semibold">
+                  <th className="text-left p-3 font-semibold bg-sky-500/10 text-sky-700 dark:text-sky-300">
                     <span className="inline-flex items-center gap-1"><Home className="h-3 w-3" /> Domicile — Dosage</span>
                   </th>
-                  <th className="text-left p-3 font-semibold">Domicile — Posologie</th>
+                  <th className="text-left p-3 font-semibold bg-sky-500/10 text-sky-700 dark:text-sky-300">Domicile — Posologie</th>
                   <th className="w-6 p-0"></th>
-                  <th className="text-left p-3 font-semibold">
+                  <th className="text-left p-3 font-semibold bg-violet-500/10 text-violet-700 dark:text-violet-300">
                     <span className="inline-flex items-center gap-1"><Hospital className="h-3 w-3" /> Hôpital — Dosage</span>
                   </th>
-                  <th className="text-left p-3 font-semibold">Hôpital — Posologie</th>
+                  <th className="text-left p-3 font-semibold bg-violet-500/10 text-violet-700 dark:text-violet-300">Hôpital — Posologie</th>
                   <th className="text-left p-3 font-semibold">Divergence</th>
                   <th className="text-left p-3 font-semibold">Risque associé</th>
                 </tr>
@@ -140,11 +140,12 @@ export function ComparaisonTable({ episodeId, patientId }: { episodeId: string; 
                   return (
                     <tr key={i} className="hover:bg-muted/30">
                       <td className="p-3 font-medium">{r.dci}</td>
-                      <td className="p-3 text-muted-foreground">{r.domicile?.dosage ?? <span className="opacity-40">—</span>}</td>
-                      <td className="p-3 text-muted-foreground">{r.domicile?.posologie ?? <span className="opacity-40">—</span>}</td>
+                      <td className="p-3 text-muted-foreground bg-sky-500/5">{r.domicile?.dosage ?? <span className="opacity-40">—</span>}</td>
+                      <td className="p-3 text-muted-foreground bg-sky-500/5">{r.domicile?.posologie ?? <span className="opacity-40">—</span>}</td>
                       <td className="p-0 text-muted-foreground"><ArrowRight className="h-3.5 w-3.5 mx-auto opacity-50" /></td>
-                      <td className="p-3 text-muted-foreground">{r.hopital?.dosage ?? <span className="opacity-40">—</span>}</td>
-                      <td className="p-3 text-muted-foreground">{r.hopital?.posologie ?? <span className="opacity-40">—</span>}</td>
+                      <td className="p-3 text-muted-foreground bg-violet-500/5">{r.hopital?.dosage ?? <span className="opacity-40">—</span>}</td>
+                      <td className="p-3 text-muted-foreground bg-violet-500/5">{r.hopital?.posologie ?? <span className="opacity-40">—</span>}</td>
+
                       <td className="p-3">
                         <Badge variant="outline" className={`text-[10px] ${s.cls}`}>
                           <Icon className="h-3 w-3 mr-1" /> {s.label}
