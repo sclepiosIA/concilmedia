@@ -1,101 +1,133 @@
-## Objectif
 
-Créer une app autonome dédiée à la conciliation médicamenteuse, en reprenant la logique et l'UI du module présent dans DPI POINT. (table `conciliation_medicaments`, hook `useMedicationReconciliation`, `PharmacistConciliationPanel`, ATCD / allergies / traitements habituels / prescriptions).
+# Prototype mémoire — Conciliation Médicamenteuse assistée par IA
 
-## Stack
+Extension du module existant pour couvrir les 4 piliers du sujet de mémoire de Clémentine Carrière Pelletier (DU IA Santé Hospitalière, 2026).
 
-- TanStack Start (déjà en place), Tailwind v4, shadcn.
-- Lovable Cloud (DB + auth) — activé en début de build.
-- Lovable AI Gateway (Gemini) pour l'analyse pharmaceutique IA.
-- TanStack Query côté front, `createServerFn` pour l'IA.
-
-## Schéma de base de données (repris de DPI)
-
-Tables (toutes en `public`, avec GRANT + RLS scopée `auth.uid()`):
-
-- `patients` — identité (nom, prénom, ddn, sexe, poids, taille, NIR optionnel, créé par user).
-- `allergies` — patient_id, substance, réaction, sévérité, date.
-- `antecedents` — patient_id, type (medical/chirurgical/familial/obstétrical), description, date, actif.
-- `comorbidites` — patient_id, libellé, code CIM-10 optionnel, statut.
-- `traitements_habituels` — patient_id, dci, nom_commercial, dosage, dosage_unite, voie_administration, posologie_matin/midi/soir/coucher, indication, source (ordonnance/patient/MT/pharmacie), actif.
-- `prescriptions_hospitalieres` — patient_id, episode_id, medicament (DCI), dosage, posologie, voie_administration, date_debut, date_fin, prescripteur.
-- `episodes` — patient_id, motif, date_entree, date_sortie, service.
-- `conciliation_medicaments` — schéma identique à DPI (phase entrée/sortie, medication_domicile jsonb, medication_hospitalisation jsonb, type_divergence, intention, justification, action_corrective, statut, pharmacien_id, dates).
-- `conciliation_ai_analyses` — episode_id, payload (interactions, doublons, contre-indications, redondances, score), model, créé le.
-
-Policies: `auth.uid() = created_by` (ou via `episode → patient → created_by`). `service_role` pour edge.
-
-## Architecture front
-
-Routes (TanStack file-based):
+## Architecture cible (pipeline 3 couches)
 
 ```text
-src/routes/
-  index.tsx                       -> dashboard (liste épisodes + KPIs conciliation)
-  _authenticated/
-    patients.index.tsx            -> liste patients
-    patients.$id.tsx              -> fiche patient (onglets ATCD/allergies/traitements/comorbidités)
-    episodes.$id.conciliation.tsx -> écran principal de conciliation
-  auth.tsx                        -> login (email+password)
+┌──────────────────────────────────────────────────────────────────┐
+│ COUCHE 1 — OCR/NLP                                               │
+│ Upload ordonnance (PDF/photo) → Lovable AI Vision (Gemini)       │
+│ → extraction structurée DCI / dosage / posologie / voie          │
+│ → pré-remplissage du Bilan Médicamenteux Optimisé (BMO)          │
+├──────────────────────────────────────────────────────────────────┤
+│ COUCHE 2 — Score de priorisation (risque DNI)                    │
+│ Variables : âge, polypharmacie, classes ATC à risque, urgences,  │
+│ comorbidités, insuffisance rénale, anticoagulants…               │
+│ → score 0-100 + classification (faible / modéré / élevé)         │
+│ Approche : règles pondérées inspirées modèle CHU Reims + IA      │
+├──────────────────────────────────────────────────────────────────┤
+│ COUCHE 3 — Détection de divergences                              │
+│ BMO vs prescription d'admission → DNI / DID / DIND               │
+│ Gravité : classes ATC, règles STOPP/START, interactions          │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+              ┌──────────────────────────────┐
+              │ Dashboard mémoire            │
+              │ • File priorisée patients    │
+              │ • Métriques (précision DNI)  │
+              │ • Dataset 200-500 synthétique│
+              └──────────────────────────────┘
 ```
 
-Composants réutilisés du DPI (portés tels quels, adaptés aux imports locaux) :
+## Détails techniques
 
-- `PharmacistConciliationPanel` — tableau divergences, filtres statut/type, actions valider/justifier.
-- `MedicationConciliationItemRow`, `DivergenceBadge`, `IntentionSelector`, `JustificationDialog`.
-- Sections fiche patient : `AntecedentsSection`, `AllergiesSection`, `TraitementsHabituelsSection`, `ComorbiditesSection`, `PrescriptionsActivesSection` (extraites de `PatientSynthesisConfigurable`).
+### 1. OCR ordonnances (Couche 1)
 
-## Hooks
+- Composant `OrdonnanceUploader` (ville) sur la fiche patient et dans le panneau de conciliation.
+- ServerFn `extractOrdonnance` : reçoit fichier PDF/image (base64), appelle `google/gemini-3-flash-preview` en mode vision avec `Output.object` Zod → renvoie liste structurée `{ medicament, dosage, posologie, voie, frequence, prescripteur?, date? }`.
+- Bouton « Importer ces médicaments » qui crée en batch les `traitements_habituels` du patient.
+- Storage bucket privé `ordonnances` (RLS owner) pour conserver les sources.
 
-- `useMedicationReconciliation(episodeId)` — copie quasi conforme du hook DPI (query + 4 mutations: add/update/validate/detectDivergences). Adaptation: `passage_id` → `episode_id`.
-- `usePatientFile(patientId)` — récupère antécédents, allergies, comorbidités, traitements habituels en parallèle.
-- `useAIConciliationAnalysis(episodeId)` — lance l'analyse IA et lit le dernier rapport.
+### 2. Score de priorisation (Couche 2)
 
-## Analyse IA (Lovable AI Gateway)
+- Nouvelle table `risk_scores` (episode_id, score 0-100, niveau, variables_jsonb, computed_at).
+- Module `src/lib/conciliation/riskScore.ts` (règles pondérées) :
+  - âge ≥ 75 : +20 / 65-74 : +10
+  - polypharmacie ≥ 5 médicaments : +15 / ≥ 10 : +25
+  - anticoagulants / antidiabétiques / cardio à marge étroite : +10/classe
+  - insuffisance rénale, hépatique (comorbidités) : +10
+  - admission via urgences : +15
+  - ≥ 3 comorbidités : +10
+- ServerFn `computePrioritization` calcule + persiste.
+- Possibilité d'un « avis IA » optionnel (gemini-3-flash) pour ajustement contextuel.
 
-`src/lib/conciliation/analyze.functions.ts` — `createServerFn` POST :
+### 3. Détection DNI/DID/DIND (Couche 3)
 
-- Input: `episodeId`.
-- Charge patient + antécédents + allergies + comorbidités + traitements habituels + prescriptions + conciliations.
-- Prompt système pharmacien clinicien (FR) demandant un JSON structuré (`Output.object` zod) :
-  - `interactions` (paires DCI, sévérité, mécanisme, recommandation)
-  - `doublons_therapeutiques`
-  - `contre_indications` (vs allergies/comorbidités)
-  - `redondances_classe`
-  - `adaptations_posologiques` (insuffisance rénale/hépatique si comorbidité présente)
-  - `score_risque` 0-100 + `synthese` texte.
-- Modèle: `google/gemini-3-flash-preview` via le provider helper (`createLovableAiGatewayProvider`).
-- Persiste le résultat dans `conciliation_ai_analyses`.
-- Gestion explicite 429 / 402.
+- Renommage du résultat actuel (`divergences`) en classification trois classes :
+  - **DNI** — divergence non intentionnelle (erreur)
+  - **DID** — intentionnelle documentée
+  - **DIND** — intentionnelle non documentée (à clarifier)
+- Champ `intention` (`intentionnelle | non_intentionnelle | a_clarifier`) + `documentation` (texte justification clinicien) sur `conciliation_medicaments`.
+- Algorithme + appel IA enrichis : règles STOPP/START locales (top 20 critères gériatriques) + détection interactions par classe ATC.
+- Gravité : `mineur | modere | majeur | critique` (mapping ATC + règles).
 
-UI : bouton "Lancer l'analyse IA" sur l'écran conciliation, panneau dépliable affichant interactions/doublons/CI/score + bouton "Créer divergence" qui pré-remplit le formulaire.
+### 4. Dataset synthétique + Dashboard évaluation
 
-## Écran de conciliation (episodes/$id/conciliation)
+- Page `/dashboard` (mémoire) :
+  - KPI : nb patients, nb épisodes, % épisodes à risque élevé, précision DNI vs ground-truth.
+  - File priorisée (top 20 par score) avec lien direct vers conciliation.
+  - Bouton « Générer dataset synthétique » → ServerFn `seedSyntheticCohort(n)` qui crée n=200 patients réalistes (profils Antilles : diabète, HTA, drépanocytose, polypharmacie) avec BMO + prescriptions d'admission contenant des DNI étiquetées (`ground_truth_label`).
+- Table `ground_truth_dnis` pour stocker l'étiquetage attendu (par médicament/épisode).
+- ServerFn `evaluatePrecision` : compare `divergences` détectées vs `ground_truth_dnis` → précision, rappel, F1, matrice de confusion.
 
-Layout 3 colonnes (identique DPI) :
+## Schéma BDD — migrations à ajouter
 
-1. **Gauche** — Traitement domicile (BMO) : liste `traitements_habituels` + ajout rapide.
-2. **Centre** — Tableau de conciliation (PharmacistConciliationPanel) avec filtres phase entrée/sortie, statut, type divergence, actions inline.
-3. **Droite** — Prescriptions hospitalières actives + panneau d'analyse IA.
+- `ALTER TABLE conciliation_medicaments` : `intention`, `documentation`, `gravite`, `classe_atc`, `is_synthetic`.
+- `CREATE TABLE risk_scores`.
+- `CREATE TABLE ground_truth_dnis`.
+- `ALTER TABLE patients` : `is_synthetic boolean default false`, `cohort_tag text`.
+- Bucket Storage `ordonnances` (privé) + policies owner.
 
-Header : bandeau patient (nom, âge, allergies critiques en rouge, comorbidités), boutons "Détecter divergences" (algorithmique) et "Analyse IA".
+## Nouvelles routes
+
+```text
+/dashboard                 # KPI + file priorisée + évaluation (mémoire)
+/patients/$id              # +OrdonnanceUploader
+/episodes/$id              # +badge score, +intention/gravité par ligne
+/evaluation                # détail métriques + matrice de confusion
+```
+
+## Fichiers principaux à créer / modifier
+
+```text
+src/lib/conciliation/
+  ├─ riskScore.ts                  (règles pondérées)
+  ├─ stoppStart.ts                 (top 20 critères)
+  ├─ atcInteractions.ts            (table classes à risque)
+  ├─ extractOrdonnance.functions.ts (vision IA)
+  ├─ prioritize.functions.ts        (score + persist)
+  ├─ evaluate.functions.ts          (précision/rappel)
+  └─ seedSynthetic.functions.ts     (dataset 200 pts)
+
+src/components/conciliation/
+  ├─ OrdonnanceUploader.tsx
+  ├─ RiskScoreBadge.tsx
+  ├─ DivergenceClassifier.tsx       (DNI/DID/DIND)
+  └─ EvaluationMatrix.tsx
+
+src/routes/_authenticated/
+  ├─ dashboard.tsx
+  └─ evaluation.tsx
+```
 
 ## Étapes d'implémentation
 
-1. Activer Lovable Cloud + provisionner `LOVABLE_API_KEY`.
-2. Migration SQL : tables + GRANT + RLS + trigger `updated_at`.
-3. Page auth (email/password, redirection post-login).
-4. CRUD patients (liste + création + fiche avec onglets).
-5. Sections ATCD / allergies / comorbidités / traitements habituels (formulaires + listes).
-6. Module épisodes (création depuis fiche patient).
-7. Prescriptions hospitalières (formulaire dans l'épisode).
-8. Hook `useMedicationReconciliation` + écran conciliation 3 colonnes.
-9. PharmacistConciliationPanel + dialogs justification/intention.
-10. Détection algorithmique des divergences (omission / modif dose).
-11. ServerFn d'analyse IA + UI panneau IA + persistance.
-12. Dashboard d'accueil (KPIs : épisodes ouverts, divergences non traitées, score risque moyen).
-13. Seed démo (1 patient, ATCD, allergies, 5 traitements, 1 épisode, prescriptions générant divergences).
+1. Migration BDD (colonnes intention/gravité, tables risk_scores + ground_truth_dnis, bucket storage)
+2. Référentiels locaux : `atcInteractions.ts`, `stoppStart.ts`
+3. Module `riskScore.ts` + ServerFn `computePrioritization` + badge
+4. ServerFn `extractOrdonnance` (vision Gemini) + composant `OrdonnanceUploader`
+5. Enrichir classification divergences (intention + gravité) + UI panneau
+6. ServerFn `seedSyntheticCohort` (200 patients avec DNI étiquetées)
+7. ServerFn `evaluatePrecision` + page `/evaluation`
+8. Page `/dashboard` (KPI + file priorisée + bouton seed)
+9. Test bout-en-bout : seed → priorisation → upload ordonnance → conciliation → évaluation
 
-## Hors périmètre (confirmé)
+## Hors périmètre (réservé itérations futures)
 
-Pas de gestion patient avancée, pas de workflow pharmacien étendu (interventions, traçabilité, export BMO/BME PDF) — réservé à une itération ultérieure.
+- Vrai entraînement ML (regression logistique scikit) — on simule via règles pondérées + IA, ce que le sujet autorise pour le prototype.
+- Connexion DPI réel (MIMIC-III, Thériaque API) — on utilise des seeds synthétiques.
+- Export BMO/BME PDF, intervention pharmaceutique formalisée.
+- Fine-tuning CamemBERT-bio — on utilise Gemini multimodal directement.
