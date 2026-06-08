@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Hospital, Plus, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { toast } from "sonner";
-import { accentForDci } from "./medAccent";
 
 export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { episodeId: string; patientId: string }) {
   const qc = useQueryClient();
@@ -54,37 +54,19 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
           </form>
         )}
         {data.length === 0 && <p className="text-xs text-muted-foreground">Aucune prescription</p>}
-        {data.map((p) => {
-          const accent = accentForDci(p.medicament);
-          return (
-            <div
-              key={p.id}
-              className="border rounded-md pl-2.5 pr-1 py-1.5 border-l-[3px] bg-card hover:bg-accent/30 transition-colors flex items-start gap-1"
-              style={{ borderLeftColor: accent }}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between gap-2">
-                  <div className="font-semibold text-sm leading-tight truncate">{p.medicament}</div>
-                  {p.dosage && (
-                    <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-muted whitespace-nowrap">
-                      {p.dosage}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
-                  {p.voie_administration && <span className="uppercase tracking-wide">{p.voie_administration}</span>}
-                  {p.posologie && <span className="font-mono truncate">{p.posologie}</span>}
-                </div>
-                {p.indication && (
-                  <div className="text-[11px] text-muted-foreground/80 italic mt-0.5 truncate">{p.indication}</div>
-                )}
+        {data.map((p) => (
+          <div key={p.id} className="border rounded-md p-2 flex items-start justify-between">
+            <div className="flex-1">
+              <div className="font-medium text-sm">{p.medicament}</div>
+              <div className="flex gap-1 flex-wrap mt-1">
+                {p.dosage && <Badge variant="outline" className="text-xs">{p.dosage}</Badge>}
+                {p.voie_administration && <Badge variant="secondary" className="text-xs">{p.voie_administration}</Badge>}
               </div>
-              <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => del.mutate(p.id)}>
-                <Trash2 className="h-3 w-3" />
-              </Button>
+              {p.posologie && <div className="text-xs text-muted-foreground mt-1">{p.posologie}</div>}
             </div>
-          );
-        })}
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => del.mutate(p.id)}><Trash2 className="h-3 w-3" /></Button>
+          </div>
+        ))}
       </CardContent>
     </Card>
   );
