@@ -28,7 +28,7 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
 
   const labels = comorbidites.map((c) => c.libelle);
   const complexity = computeComplexity(labels);
-  const { profile, vigilance } = generateClinicalProfile(labels);
+  const { vigilance } = generateClinicalProfile(labels);
 
   if (labels.length === 0) {
     return (
