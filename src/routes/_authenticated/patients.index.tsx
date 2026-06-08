@@ -23,6 +23,7 @@ function PatientsListPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const { data: patients = [] } = useQuery({
     queryKey: ["patients"],
