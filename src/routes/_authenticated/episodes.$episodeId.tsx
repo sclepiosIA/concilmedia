@@ -15,6 +15,7 @@ import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
 import { ClinicalRecommendationsCard } from "@/components/conciliation/ClinicalRecommendationsCard";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
+import { BilanEntreeSection } from "@/components/episode/BilanEntreeSection";
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
 import type { RiskResult } from "@/lib/conciliation/riskScore";
@@ -146,6 +147,8 @@ function EpisodeConciliationPage() {
           </div>
         </CardContent>
       </Card>
+
+      <BilanEntreeSection episodeId={episodeId} />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-3">
