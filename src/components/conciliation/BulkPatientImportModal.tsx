@@ -257,11 +257,12 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: 
 function DossierEditor({ dossier, onChange }: { dossier: ExtractedDossier; onChange: (p: (d: ExtractedDossier) => ExtractedDossier) => void }) {
   return (
     <Tabs defaultValue="identite" className="w-full">
-      <TabsList className="grid grid-cols-4 w-full">
+      <TabsList className="grid grid-cols-5 w-full">
         <TabsTrigger value="identite">Identité</TabsTrigger>
-        <TabsTrigger value="clinique">ATCD/Comorb/Allergies ({dossier.antecedents.length + dossier.comorbidites.length + dossier.allergies.length})</TabsTrigger>
-        <TabsTrigger value="biologie">Biologie ({dossier.biologie.length})</TabsTrigger>
-        <TabsTrigger value="traitements">Traitements ({dossier.traitements.length})</TabsTrigger>
+        <TabsTrigger value="clinique">ATCD/Co/Allg ({dossier.antecedents.length + dossier.comorbidites.length + dossier.allergies.length})</TabsTrigger>
+        <TabsTrigger value="biologie">Bio ({dossier.biologie.length})</TabsTrigger>
+        <TabsTrigger value="traitements">Trt habituels ({dossier.traitements.length})</TabsTrigger>
+        <TabsTrigger value="hospi">Presc. hospi ({dossier.prescriptions_hospitalieres.length})</TabsTrigger>
       </TabsList>
 
       <TabsContent value="identite" className="space-y-2 pt-3">
@@ -273,6 +274,12 @@ function DossierEditor({ dossier, onChange }: { dossier: ExtractedDossier; onCha
           <div><Label>Poids (kg)</Label><Input type="number" value={dossier.patient.poids_kg ?? ""} onChange={(e) => onChange((d) => ({ ...d, patient: { ...d.patient, poids_kg: e.target.value ? Number(e.target.value) : null } }))} /></div>
           <div><Label>Taille (cm)</Label><Input type="number" value={dossier.patient.taille_cm ?? ""} onChange={(e) => onChange((d) => ({ ...d, patient: { ...d.patient, taille_cm: e.target.value ? Number(e.target.value) : null } }))} /></div>
         </div>
+        {dossier.episode_context && (dossier.episode_context.motif || dossier.episode_context.service || dossier.episode_context.date_admission) && (
+          <div className="text-xs bg-blue-50 text-blue-800 p-2 rounded">
+            <strong>Contexte d'épisode détecté :</strong>{" "}
+            {dossier.episode_context.motif ?? ""} {dossier.episode_context.service ? `• ${dossier.episode_context.service}` : ""} {dossier.episode_context.date_admission ? `• admis le ${dossier.episode_context.date_admission}` : ""}
+          </div>
+        )}
         {dossier.existing_patient_id && (
           <div className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded">
             ⚠ Un patient existant correspond. L'import ajoutera ces données au dossier existant.
@@ -292,6 +299,11 @@ function DossierEditor({ dossier, onChange }: { dossier: ExtractedDossier; onCha
 
       <TabsContent value="traitements" className="pt-3">
         <ListSection title="Traitements habituels" items={dossier.traitements} render={(t) => `${t.dci}${t.dosage ? ` ${t.dosage}${t.dosage_unite ?? ""}` : ""}${t.voie_administration ? ` ${t.voie_administration}` : ""}`} onRemove={(idx) => onChange((d) => ({ ...d, traitements: d.traitements.filter((_, i) => i !== idx) }))} />
+      </TabsContent>
+
+      <TabsContent value="hospi" className="pt-3">
+        <ListSection title="Prescriptions hospitalières" items={dossier.prescriptions_hospitalieres} render={(p) => `${p.medicament}${p.dosage ? ` ${p.dosage}` : ""}${p.posologie ? ` — ${p.posologie}` : ""}${p.voie_administration ? ` (${p.voie_administration})` : ""}`} onRemove={(idx) => onChange((d) => ({ ...d, prescriptions_hospitalieres: d.prescriptions_hospitalieres.filter((_, i) => i !== idx) }))} />
+        <div className="text-xs text-muted-foreground mt-2">Si ≥ 1 ligne, un épisode sera créé automatiquement et la conciliation lancée.</div>
       </TabsContent>
     </Tabs>
   );
