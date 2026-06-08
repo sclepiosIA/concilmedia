@@ -29,7 +29,6 @@ export async function seedDemoJeanMartin(): Promise<string> {
     "Diabète type 2",
     "Insuffisance rénale chronique",
     "Obésité",
-    "Fibrillation auriculaire",
   ].map((libelle) => ({ patient_id: patientId, libelle }));
   await supabase.from("comorbidites").insert(comorbidites);
 
@@ -37,8 +36,7 @@ export async function seedDemoJeanMartin(): Promise<string> {
     { dci: "Metformine", dosage: "1000", dosage_unite: "mg", posologie_matin: "1", posologie_soir: "1", voie_administration: "PO", indication: "Diabète" },
     { dci: "Ramipril", dosage: "10", dosage_unite: "mg", posologie_matin: "1", voie_administration: "PO", indication: "HTA" },
     { dci: "Amlodipine", dosage: "10", dosage_unite: "mg", posologie_matin: "1", voie_administration: "PO", indication: "HTA" },
-    { dci: "Furosemide", dosage: "40", dosage_unite: "mg", posologie_matin: "1", voie_administration: "PO", indication: "IC" },
-    { dci: "Apixaban", dosage: "5", dosage_unite: "mg", posologie_matin: "1", posologie_soir: "1", voie_administration: "PO", indication: "FA" },
+    { dci: "Furosemide", dosage: "40", dosage_unite: "mg", posologie_matin: "1", voie_administration: "PO", indication: "Oedèmes / IRC" },
     { dci: "Atorvastatine", dosage: "40", dosage_unite: "mg", posologie_soir: "1", voie_administration: "PO", indication: "Dyslipidémie" },
   ].map((t) => ({ ...t, patient_id: patientId, source: "patient", actif: true }));
   await supabase.from("traitements_habituels").insert(traitements);
@@ -47,8 +45,8 @@ export async function seedDemoJeanMartin(): Promise<string> {
     .from("episodes")
     .insert({
       patient_id: patientId,
-      motif: "Décompensation cardiaque",
-      service: "Cardiologie",
+      motif: "Déséquilibre métabolique / poussée hypertensive",
+      service: "Médecine interne",
     })
     .select("id")
     .single();
