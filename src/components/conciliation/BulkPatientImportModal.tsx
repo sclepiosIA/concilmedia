@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +10,17 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Trash2, Sparkles, Loader2, Check, AlertTriangle, X } from "lucide-react";
+import { Upload, Trash2, Sparkles, Loader2, Check, AlertTriangle, X, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { extractPatientDossier, commitBulkImport, type ExtractedDossier } from "@/lib/conciliation/bulkImport.functions";
+
+const docTypeLabel: Record<string, string> = {
+  ordonnance_ville: "Ordo ville",
+  ordonnance_hospitaliere: "Ordo hospi",
+  compte_rendu: "Compte-rendu",
+  bilan_bio: "Bilan bio",
+  autre: "Autre",
+};
 
 const MAX_FILES = 20;
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -36,12 +45,13 @@ function fileToBase64(file: File): Promise<string> {
 
 export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: { open: boolean; onOpenChange: (v: boolean) => void; targetPatientId?: string }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const extract = useServerFn(extractPatientDossier);
   const commit = useServerFn(commitBulkImport);
   const [items, setItems] = useState<Item[]>([]);
   const [phase, setPhase] = useState<"upload" | "extracting" | "review" | "done">("upload");
   const [progress, setProgress] = useState(0);
-  const [summary, setSummary] = useState<{ created: number; updated: number; failed: { name: string; error: string }[] } | null>(null);
+  const [summary, setSummary] = useState<{ created: number; updated: number; failed: { name: string; error: string }[]; created_episode_ids: string[] } | null>(null);
 
   const onFiles = (e: ChangeEvent<HTMLInputElement>) => {
     const fs = Array.from(e.target.files ?? []);
@@ -104,8 +114,10 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: 
         qc.invalidateQueries({ queryKey: ["allergies", targetPatientId] });
         qc.invalidateQueries({ queryKey: ["traitements", targetPatientId] });
         qc.invalidateQueries({ queryKey: ["biologie", targetPatientId] });
+        qc.invalidateQueries({ queryKey: ["episodes", targetPatientId] });
       }
-      toast.success(targetPatientId ? `Données ajoutées (${r.updated})` : `${r.created} créé(s), ${r.updated} mis à jour`);
+      const epMsg = r.created_episode_ids.length > 0 ? ` • ${r.created_episode_ids.length} épisode(s) créé(s)` : "";
+      toast.success(targetPatientId ? `Données ajoutées${epMsg}` : `${r.created} créé(s), ${r.updated} mis à jour${epMsg}`);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur import"),
   });
@@ -172,10 +184,11 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: 
               {items.map((i) => (
                 <AccordionItem key={i.id} value={i.id} className="border rounded-md px-3">
                   <AccordionTrigger className="hover:no-underline">
-                    <div className="flex items-center gap-2 flex-1 text-left">
+                    <div className="flex items-center gap-2 flex-1 text-left flex-wrap">
                       {i.status === "ready" && i.dossier?.existing_patient_id && <Badge variant="outline" className="border-yellow-500 text-yellow-700"><AlertTriangle className="h-3 w-3 mr-1" />Doublon</Badge>}
                       {i.status === "ready" && !i.dossier?.existing_patient_id && <Badge variant="outline" className="border-green-500 text-green-700"><Check className="h-3 w-3 mr-1" />Prêt</Badge>}
                       {i.status === "error" && <Badge variant="destructive">Erreur</Badge>}
+                      {i.dossier?.document_type && <Badge variant="secondary">{docTypeLabel[i.dossier.document_type] ?? i.dossier.document_type}</Badge>}
                       <span className="font-medium">
                         {i.dossier?.patient.nom?.toUpperCase()} {i.dossier?.patient.prenom}
                       </span>
@@ -197,7 +210,15 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: 
               <div className="text-lg font-medium">Import terminé</div>
               <div className="text-sm text-muted-foreground">
                 {summary.created} patient(s) créé(s), {summary.updated} mis à jour
+                {summary.created_episode_ids.length > 0 && ` • ${summary.created_episode_ids.length} épisode(s) créé(s)`}
               </div>
+              {summary.created_episode_ids.length > 0 && (
+                <div className="flex justify-center">
+                  <Button onClick={() => { const id = summary.created_episode_ids[0]; close(); navigate({ to: "/episodes/$episodeId", params: { episodeId: id } }); }}>
+                    Ouvrir la conciliation <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              )}
               {summary.failed.length > 0 && (
                 <div className="border rounded-md p-3 text-left text-sm">
                   <div className="font-medium text-destructive mb-1">{summary.failed.length} échec(s)</div>
@@ -236,11 +257,12 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: 
 function DossierEditor({ dossier, onChange }: { dossier: ExtractedDossier; onChange: (p: (d: ExtractedDossier) => ExtractedDossier) => void }) {
   return (
     <Tabs defaultValue="identite" className="w-full">
-      <TabsList className="grid grid-cols-4 w-full">
+      <TabsList className="grid grid-cols-5 w-full">
         <TabsTrigger value="identite">Identité</TabsTrigger>
-        <TabsTrigger value="clinique">ATCD/Comorb/Allergies ({dossier.antecedents.length + dossier.comorbidites.length + dossier.allergies.length})</TabsTrigger>
-        <TabsTrigger value="biologie">Biologie ({dossier.biologie.length})</TabsTrigger>
-        <TabsTrigger value="traitements">Traitements ({dossier.traitements.length})</TabsTrigger>
+        <TabsTrigger value="clinique">ATCD/Co/Allg ({dossier.antecedents.length + dossier.comorbidites.length + dossier.allergies.length})</TabsTrigger>
+        <TabsTrigger value="biologie">Bio ({dossier.biologie.length})</TabsTrigger>
+        <TabsTrigger value="traitements">Trt habituels ({dossier.traitements.length})</TabsTrigger>
+        <TabsTrigger value="hospi">Presc. hospi ({dossier.prescriptions_hospitalieres.length})</TabsTrigger>
       </TabsList>
 
       <TabsContent value="identite" className="space-y-2 pt-3">
@@ -252,6 +274,12 @@ function DossierEditor({ dossier, onChange }: { dossier: ExtractedDossier; onCha
           <div><Label>Poids (kg)</Label><Input type="number" value={dossier.patient.poids_kg ?? ""} onChange={(e) => onChange((d) => ({ ...d, patient: { ...d.patient, poids_kg: e.target.value ? Number(e.target.value) : null } }))} /></div>
           <div><Label>Taille (cm)</Label><Input type="number" value={dossier.patient.taille_cm ?? ""} onChange={(e) => onChange((d) => ({ ...d, patient: { ...d.patient, taille_cm: e.target.value ? Number(e.target.value) : null } }))} /></div>
         </div>
+        {dossier.episode_context && (dossier.episode_context.motif || dossier.episode_context.service || dossier.episode_context.date_admission) && (
+          <div className="text-xs bg-blue-50 text-blue-800 p-2 rounded">
+            <strong>Contexte d'épisode détecté :</strong>{" "}
+            {dossier.episode_context.motif ?? ""} {dossier.episode_context.service ? `• ${dossier.episode_context.service}` : ""} {dossier.episode_context.date_admission ? `• admis le ${dossier.episode_context.date_admission}` : ""}
+          </div>
+        )}
         {dossier.existing_patient_id && (
           <div className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded">
             ⚠ Un patient existant correspond. L'import ajoutera ces données au dossier existant.
@@ -271,6 +299,11 @@ function DossierEditor({ dossier, onChange }: { dossier: ExtractedDossier; onCha
 
       <TabsContent value="traitements" className="pt-3">
         <ListSection title="Traitements habituels" items={dossier.traitements} render={(t) => `${t.dci}${t.dosage ? ` ${t.dosage}${t.dosage_unite ?? ""}` : ""}${t.voie_administration ? ` ${t.voie_administration}` : ""}`} onRemove={(idx) => onChange((d) => ({ ...d, traitements: d.traitements.filter((_, i) => i !== idx) }))} />
+      </TabsContent>
+
+      <TabsContent value="hospi" className="pt-3">
+        <ListSection title="Prescriptions hospitalières" items={dossier.prescriptions_hospitalieres} render={(p) => `${p.medicament}${p.dosage ? ` ${p.dosage}` : ""}${p.posologie ? ` — ${p.posologie}` : ""}${p.voie_administration ? ` (${p.voie_administration})` : ""}`} onRemove={(idx) => onChange((d) => ({ ...d, prescriptions_hospitalieres: d.prescriptions_hospitalieres.filter((_, i) => i !== idx) }))} />
+        <div className="text-xs text-muted-foreground mt-2">Si ≥ 1 ligne, un épisode sera créé automatiquement et la conciliation lancée.</div>
       </TabsContent>
     </Tabs>
   );

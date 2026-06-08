@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, FilePlus2, Sparkles } from "lucide-react";
+import { ChevronLeft, FilePlus2, Sparkles, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { TraitementsHabituelsSection } from "@/components/patient/TraitementsHab
 import { EpisodesSection } from "@/components/patient/EpisodesSection";
 import { BiologieSection } from "@/components/patient/BiologieSection";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
+import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
@@ -28,6 +29,7 @@ function PatientDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [syntheseOpen, setSyntheseOpen] = useState(false);
 
 
   const { data: patient } = useQuery({
@@ -97,6 +99,9 @@ function PatientDetailPage() {
             <Button variant="outline" onClick={() => setBulkOpen(true)}>
               <Sparkles className="h-4 w-4 mr-1" /> Importer PDF (IA)
             </Button>
+            <Button variant="outline" onClick={() => setSyntheseOpen(true)}>
+              <FileText className="h-4 w-4 mr-1" /> Synthèse patient
+            </Button>
             <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
               <FilePlus2 className="h-4 w-4 mr-1" /> Nouvel épisode
             </Button>
@@ -105,6 +110,7 @@ function PatientDetailPage() {
       </Card>
 
       <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} targetPatientId={patientId} />
+      <SynthesePatientDialog patientId={patientId} open={syntheseOpen} onOpenChange={setSyntheseOpen} />
 
       <Tabs defaultValue="antecedents">
         <TabsList className="grid grid-cols-6 w-full max-w-4xl">

@@ -5,7 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Sparkles, ScanSearch, ShieldAlert, Loader2 } from "lucide-react";
+import { ChevronLeft, Sparkles, ScanSearch, ShieldAlert, Loader2, Download } from "lucide-react";
+import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.functions";
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
 import { PharmacistConciliationPanel } from "@/components/conciliation/PharmacistConciliationPanel";
 import { TraitementsDomicileColumn } from "@/components/conciliation/TraitementsDomicileColumn";
@@ -26,6 +27,17 @@ function EpisodeConciliationPage() {
   const recon = useMedicationReconciliation(episodeId);
   const qc = useQueryClient();
   const computeRisk = useServerFn(computePrioritization);
+  const pdfFn = useServerFn(generateEpisodeConciliationPdf);
+  const downloadPdf = async () => {
+    try {
+      const r = await pdfFn({ data: { episodeId } });
+      const bin = atob(r.base64); const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      const url = URL.createObjectURL(new Blob([arr], { type: "application/pdf" }));
+      const a = document.createElement("a"); a.href = url; a.download = r.filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Erreur PDF"); }
+  };
 
   const { data: latestRisk } = useQuery({
     queryKey: ["risk_score", episodeId],
@@ -117,6 +129,9 @@ function EpisodeConciliationPage() {
             >
               {riskMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldAlert className="h-4 w-4 mr-1" />}
               Score de risque
+            </Button>
+            <Button variant="outline" size="sm" onClick={downloadPdf}>
+              <Download className="h-4 w-4 mr-1" /> Export PDF
             </Button>
             <Button
               variant="outline"

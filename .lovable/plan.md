@@ -1,80 +1,75 @@
-# Import PDF en masse — extraction IA structurée
-
 ## Objectif
-Un modal accessible depuis la liste des patients permet de déposer 5–20 PDF en une fois. L'IA (Gemini vision via Lovable AI) lit chaque PDF, extrait identité + ATCD + comorbidités + allergies + biologie + traitements, puis affiche un tableau de validation patient par patient avant import.
 
-## Flux utilisateur
-1. Bouton « Import en masse » sur `/patients`
-2. Modal : drop zone multi-fichiers (PDF/images, max 20)
-3. Bouton « Analyser » → barre de progression (1 PDF à la fois)
-4. Tableau récap : 1 ligne / patient extrait, statut (✓ prêt / ⚠ doublon potentiel / ✗ erreur)
-5. Ligne dépliable → onglets Identité / ATCD-Comorb-Allergies / Biologie / Traitements, champs éditables, cases à cocher par item
-6. Bouton « Importer N patients » → création atomique en base, toast récap, fermeture
+Depuis la fiche patient, importer plusieurs PDF en une fois → produire :
+1. **Toujours** : enrichissement du dossier patient (ATCD / comorbidités / allergies / biologie / traitements habituels) avec dédup (déjà en place).
+2. **Toujours** : **Fiche de synthèse patient** (vue + export PDF) regroupant identité, ATCD, comorbidités, allergies, bio récente, traitements habituels, et analyse IA (interactions, doublons, adaptations DFG).
+3. **Si une ordonnance hospitalière est détectée** dans les PDF : création auto d'un **épisode** avec les prescriptions hospitalières + lancement détection divergences + analyse IA → conciliation complète accessible depuis la fiche patient.
+4. **Export PDF** des deux livrables (synthèse patient & fiche de conciliation d'épisode).
 
-## Base de données (1 migration)
+## Plan technique
 
-Nouvelle table `biologie_resultats` :
-- `patient_id`, `date_prelevement`, `parametre` (text), `valeur` (numeric), `unite`, `valeur_texte` (fallback), `source` (`pdf_import` / `manuel`)
-- RLS scoped via `owns_patient(patient_id)`
-- GRANT authenticated + service_role
+### 1. Extraction : classifier le type de document et capter les prescriptions hospi
+Fichier : `src/lib/conciliation/bulkImport.functions.ts`
+- Étendre `DossierSchema` :
+  - `document_type`: `"ordonnance_ville" | "ordonnance_hospitaliere" | "compte_rendu" | "bilan_bio" | "autre"`
+  - `prescriptions_hospitalieres`: tableau (mêmes champs que `TraitementSchema` + `voie`, `frequence`, `duree`, `motif`)
+  - `episode_context` optionnel : `{ motif, service, date_admission }`
+- Mettre à jour le system prompt pour :
+  - classifier le document
+  - distinguer "traitements habituels du patient" (→ `traitements`) vs "prescription faite à l'hôpital pendant ce séjour" (→ `prescriptions_hospitalieres`)
+  - capter motif / service / date admission si présents
 
-## Serveur
+### 2. Commit : créer un épisode si ordo hospi détectée
+Fichier : `src/lib/conciliation/bulkImport.functions.ts` (`commitBulkImport`)
+- Ajouter param `auto_create_episode: boolean` (default true quand `targetPatientId` fourni).
+- Après ingestion des entités du patient :
+  - Agréger toutes les `prescriptions_hospitalieres` de tous les items pour ce patient.
+  - S'il y en a ≥1 OU si un item a `document_type === "ordonnance_hospitaliere"` : créer un épisode (`motif` = premier `episode_context.motif` trouvé sinon "Hospitalisation – import PDF", `service` idem sinon "Médecine") et insérer toutes les prescriptions dans `prescriptions_hospitalieres` (avec dédup sur `dci`).
+  - Retourner `created_episode_ids: string[]` dans le summary.
 
-### `src/lib/conciliation/bulkImport.functions.ts`
-- `extractPatientDossier({ fileBase64, mimeType, fileName })` — server fn protégée
-  - Upload PDF dans bucket `ordonnances` (réutilisé) sous `bulk/{userId}/{ts}_{name}`
-  - Appel Gemini 3 Flash vision avec un prompt structuré demandant JSON :
-    ```
-    { patient:{nom,prenom,date_naissance,sexe,poids_kg,taille_cm},
-      antecedents:[{type,libelle,date,details}],
-      comorbidites:[{libelle,actif}],
-      allergies:[{substance,reaction,gravite}],
-      biologie:[{date,parametre,valeur,unite}],
-      traitements:[{dci,nom_commercial,dosage,dosage_unite,voie,posologie_*}] }
-    ```
-  - Détection doublon : SELECT patients WHERE nom ILIKE + prenom ILIKE + date_naissance → renvoie `existing_patient_id?`
-  - Retourne dossier extrait + path storage
+### 3. UI : feedback dans le modal d'import
+Fichier : `src/components/conciliation/BulkPatientImportModal.tsx`
+- Onglet review : badge "Ordo hospi" / "Bilan bio" / "Ordo ville" selon `document_type`.
+- 5e onglet "Prescriptions hospi" listant les prescriptions extraites (éditable comme les traitements).
+- Écran final "done" : si `created_episode_ids.length > 0`, bouton **"Ouvrir la conciliation →"** qui navigue vers `/episodes/{id}`.
 
-- `commitBulkImport({ items: ExtractedDossier[] })` — server fn protégée
-  - Pour chaque item validé : INSERT patient (ou réutiliser existing_patient_id), puis batch INSERT dans `antecedents`, `comorbidites`, `allergies`, `biologie_resultats`, `traitements_habituels` (source = `pdf_import`)
-  - Wrapping try/catch par patient, renvoie `{ created, updated, failed:[{name,error}] }`
+### 4. Fiche de synthèse patient (vue + export PDF)
+Nouveau fichier : `src/components/patient/SynthesePatientCard.tsx`
+- Composant affichable dans un dialog/onglet de la fiche patient, regroupant :
+  - bandeau identité + alertes (allergies sévères, DFG bas, INR haut)
+  - sections compactes ATCD / Comorbidités / Allergies / Bio récente (1 valeur/paramètre) / Traitements habituels actifs
+  - bloc Analyse IA (si présente — sinon bouton "Lancer l'analyse" qui appelle une nouvelle serverFn `analyzePatientSynthesis` patient-only, sans épisode)
+- Nouveau serverFn : `src/lib/conciliation/analyzePatientSynthesis.functions.ts` (clone de `analyzeConciliation` mais sans `prescriptions_hospitalieres`, persiste dans une nouvelle colonne `patient_synthesis_analyses` ou réutilise `conciliation_ai_analyses` avec `episode_id NULL`).
 
-## UI
+Bouton "Synthèse patient" ajouté dans `src/routes/_authenticated/patients.$patientId.tsx` à côté de "Nouvel épisode".
 
-### `src/components/conciliation/BulkPatientImportModal.tsx`
-- `Dialog` plein écran (max-w-5xl)
-- Étapes contrôlées : `idle` → `extracting` → `review` → `importing` → `done`
-- `useMutation` séquentielle (Promise chain pour ne pas saturer la gateway)
-- État local : `Map<fileId, { status, data, selected: { atcd:bool[], comorb:bool[]... } }>`
-- Sous-composants :
-  - `BulkUploadDropzone` (drag & drop, liste fichiers + retirer)
-  - `BulkReviewTable` (Accordion par patient avec onglets shadcn `Tabs`)
-  - `BulkImportSummary` (résultats finaux)
+### 5. Export PDF
+Route serveur : `src/routes/api/patients.$patientId.synthese-pdf.ts` (GET)
+- Charge le patient + toutes les entités + dernière analyse IA.
+- Génère un PDF (lib JS pure compatible Worker : **`pdf-lib`**, déjà compatible Cloudflare) avec mise en page A4 :
+  - en-tête : identité + date du jour + alertes
+  - sections tabulaires (ATCD, comorb, allergies, bio, traitements)
+  - encart "Analyse pharmaceutique IA"
+- Renvoie `application/pdf` en téléchargement.
+- Bouton "Exporter PDF" sur `SynthesePatientCard`.
 
-### Intégration
-- Ajouter bouton « Import PDF en masse » dans le header de `src/routes/_authenticated/patients.index.tsx`
-- À la fermeture succès : `qc.invalidateQueries({queryKey:['patients']})`
+Idem pour épisode : `src/routes/api/episodes.$episodeId.conciliation-pdf.ts`
+- Identité + contexte épisode
+- Tableau **BMO domicile vs Prescription hospi** côte à côte
+- Tableau des divergences avec statut / justification
+- Encart analyse IA
+- Bouton "Exporter PDF" sur la page `episodes.$episodeId.tsx`.
 
-## Détails techniques
+⚠️ `pdf-lib` ne fait pas la mise en page haut niveau → on génère manuellement (texte + tables simples). Pas de dépendance Node-only.
 
-- Limite : 20 PDF / lot (DoS guard + coût Gemini)
-- Taille max par fichier : 10 MB (validé côté serveur)
-- Schéma Zod côté serveur pour valider la sortie IA (champs optionnels tolérants)
-- Si JSON IA invalide → item marqué `failed` avec message, n'interrompt pas le batch
-- Réutilisation existante : pattern `fileToBase64` de `OrdonnanceUploader`, helper `createLovableAiGatewayProvider`
+### 6. Migration mineure
+Si on choisit `conciliation_ai_analyses` avec `episode_id NULL` pour les analyses patient-only : ALTER la colonne `episode_id` en nullable. Sinon, créer table `patient_synthesis_analyses(patient_id, payload, model, created_at)` avec GRANT + RLS via `owns_patient`.
+Décision : **rendre `episode_id` nullable** (1 ligne SQL, pas de nouvelle table).
 
-## Fichiers
-**Nouveaux**
-- `supabase/migrations/<ts>_biologie_resultats.sql`
-- `src/lib/conciliation/bulkImport.functions.ts`
-- `src/components/conciliation/BulkPatientImportModal.tsx`
-- `src/components/conciliation/BulkUploadDropzone.tsx`
-- `src/components/conciliation/BulkReviewTable.tsx`
+## Hors scope
+- OCR de PDF scannés (déjà géré par Gemini multimodal).
+- Réconciliation cross-épisodes (historique).
+- Signature électronique du PDF.
 
-**Modifiés**
-- `src/routes/_authenticated/patients.index.tsx` (bouton + modal)
-
-## Hors-scope
-- OCR multi-pages > 50 pages (limite Gemini)
-- Édition fine de la biologie après import (créer page dédiée plus tard)
-- Réconciliation automatique avec patient existant (proposition manuelle seulement)
+## Questions ouvertes
+Aucune — on lance l'implémentation au feu vert.
