@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { BiologieSection } from "@/components/patient/BiologieSection";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
-import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
+import { HistoriqueConciliationsDialog } from "@/components/patient/HistoriqueConciliationsDialog";
 import { PatientPriorityBadge } from "@/components/patient/PatientPriorityBadge";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
@@ -26,7 +26,7 @@ function PatientDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [syntheseOpen, setSyntheseOpen] = useState(false);
+  const [historiqueOpen, setHistoriqueOpen] = useState(false);
 
 
   const { data: patient } = useQuery({
@@ -95,7 +95,7 @@ function PatientDetailPage() {
             <Button variant="outline" onClick={() => setBulkOpen(true)}>
               <Sparkles className="h-4 w-4 mr-1" /> Importer PDF (IA)
             </Button>
-            <Button variant="outline" onClick={() => setSyntheseOpen(true)}>
+            <Button variant="outline" onClick={() => setHistoriqueOpen(true)}>
               <FileText className="h-4 w-4 mr-1" /> Historique
             </Button>
             <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
@@ -106,7 +106,7 @@ function PatientDetailPage() {
       </Card>
 
       <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} targetPatientId={patientId} />
-      <SynthesePatientDialog patientId={patientId} open={syntheseOpen} onOpenChange={setSyntheseOpen} />
+      <HistoriqueConciliationsDialog patientId={patientId} open={historiqueOpen} onOpenChange={setHistoriqueOpen} />
 
       <div className="mb-6">
         <ClinicalProfileCard patientId={patientId} />
