@@ -85,65 +85,6 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
     <div className="space-y-3">
       <OrdonnanceUploader patientId={patientId} />
 
-      {open && (
-        <Card>
-          <CardContent className="py-4">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const fd = new FormData(e.currentTarget);
-                const v: Record<string, string> = {};
-                [
-                  "dci",
-                  "nom_commercial",
-                  "dosage",
-                  "dosage_unite",
-                  "voie_administration",
-                  "posologie_matin",
-                  "posologie_midi",
-                  "posologie_soir",
-                  "posologie_coucher",
-                  "indication",
-                  "source",
-                ].forEach((k) => {
-                  const val = fd.get(k);
-                  if (val) v[k] = String(val);
-                });
-                add.mutate(v);
-              }}
-              className="grid grid-cols-2 md:grid-cols-4 gap-3"
-            >
-              <div className="col-span-2"><Label>DCI</Label><Input name="dci" required /></div>
-              <div className="col-span-2"><Label>Nom commercial</Label><Input name="nom_commercial" /></div>
-              <div><Label>Dosage</Label><Input name="dosage" /></div>
-              <div><Label>Unité</Label><Input name="dosage_unite" placeholder="mg" /></div>
-              <div><Label>Voie</Label><Input name="voie_administration" placeholder="PO" /></div>
-              <div>
-                <Label>Source</Label>
-                <Select name="source" defaultValue="patient">
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ordonnance">Ordonnance</SelectItem>
-                    <SelectItem value="patient">Patient</SelectItem>
-                    <SelectItem value="MT">Médecin traitant</SelectItem>
-                    <SelectItem value="pharmacie">Pharmacie</SelectItem>
-                    <SelectItem value="autre">Autre</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>Matin</Label><Input name="posologie_matin" placeholder="1" /></div>
-              <div><Label>Midi</Label><Input name="posologie_midi" placeholder="0" /></div>
-              <div><Label>Soir</Label><Input name="posologie_soir" placeholder="1" /></div>
-              <div><Label>Coucher</Label><Input name="posologie_coucher" placeholder="0" /></div>
-              <div className="col-span-2 md:col-span-4"><Label>Indication</Label><Input name="indication" /></div>
-              <div className="col-span-2 md:col-span-4 flex gap-2">
-                <Button type="submit" size="sm">Enregistrer</Button>
-                <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       {data.length === 0 ? (
         <Card>
