@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { Plus, Search, User, Sparkles } from "lucide-react";
+import { Plus, Search, User, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
@@ -24,6 +25,7 @@ function PatientsListPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [toDelete, setToDelete] = useState<{ id: string; nom: string; prenom: string } | null>(null);
 
   const { data: patients = [] } = useQuery({
     queryKey: ["patients"],
@@ -57,6 +59,19 @@ function PatientsListPage() {
       qc.invalidateQueries({ queryKey: ["patients"] });
       toast.success("Patient créé");
       setOpen(false);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("patients").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      toast.success("Patient supprimé");
+      setToDelete(null);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
   });
@@ -132,13 +147,13 @@ function PatientsListPage() {
           <Card><CardContent className="py-12 text-center text-muted-foreground">Aucun patient</CardContent></Card>
         )}
         {filtered.map((p) => (
-          <Link
-            key={p.id}
-            to="/patients/$patientId"
-            params={{ patientId: p.id }}
-          >
-            <Card className="hover:bg-accent/50 transition cursor-pointer">
-              <CardContent className="py-4 flex items-center gap-4">
+          <Card key={p.id} className="hover:bg-accent/50 transition">
+            <CardContent className="py-4 flex items-center gap-4">
+              <Link
+                to="/patients/$patientId"
+                params={{ patientId: p.id }}
+                className="flex items-center gap-4 flex-1 cursor-pointer"
+              >
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="h-5 w-5 text-primary" />
                 </div>
@@ -149,11 +164,42 @@ function PatientsListPage() {
                     {p.sexe && ` • ${p.sexe}`}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </Link>
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setToDelete({ id: p.id, nom: p.nom, prenom: p.prenom })}
+                aria-label="Supprimer le patient"
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </CardContent>
+          </Card>
         ))}
       </div>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce patient ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {toDelete && `${toDelete.nom.toUpperCase()} ${toDelete.prenom} sera supprimé(e) définitivement, ainsi que tous ses épisodes, traitements, ordonnances et analyses associés. Cette action est irréversible.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (toDelete) deleteMut.mutate(toDelete.id);
+              }}
+              disabled={deleteMut.isPending}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
