@@ -147,16 +147,6 @@ function EpisodeConciliationPage() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="text-xs px-3 py-1.5 rounded-md bg-muted text-muted-foreground">
-                {recon.stats.nonTraite} non traitée(s) • {recon.stats.resolu} résolue(s)
-              </div>
-              <Button variant="outline" size="sm" onClick={() => riskMut.mutate()} disabled={riskMut.isPending}>
-                {riskMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShieldAlert className="h-4 w-4 mr-1" />}
-                Score de risque
-              </Button>
-              <Button variant="outline" size="sm" onClick={downloadPdf}>
-                <Download className="h-4 w-4 mr-1" /> Export PDF
-              </Button>
               <Button size="sm" onClick={() => recon.detectDivergences()} disabled={recon.isDetecting}>
                 <ScanSearch className="h-4 w-4 mr-1" /> Détecter divergences
               </Button>
