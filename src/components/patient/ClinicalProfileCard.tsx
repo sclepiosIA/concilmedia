@@ -157,7 +157,7 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
         </div>
 
         <div>
-          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Systèmes atteints</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Organes & systèmes concernés</div>
           <OrganMap labels={labels} imc={imc} />
         </div>
 
