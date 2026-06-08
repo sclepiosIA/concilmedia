@@ -34,13 +34,13 @@ export async function seedDemoJeanMartin(): Promise<string> {
   await supabase.from("comorbidites").insert(comorbidites);
 
   const traitements = [
-    { dci: "Metformine", dosage: "1000", dosage_unite: "mg", posologie_matin: 1, posologie_soir: 1, voie_administration: "PO", indication: "Diabète" },
-    { dci: "Ramipril", dosage: "10", dosage_unite: "mg", posologie_matin: 1, voie_administration: "PO", indication: "HTA" },
-    { dci: "Amlodipine", dosage: "10", dosage_unite: "mg", posologie_matin: 1, voie_administration: "PO", indication: "HTA" },
-    { dci: "Furosemide", dosage: "40", dosage_unite: "mg", posologie_matin: 1, voie_administration: "PO", indication: "IC" },
-    { dci: "Apixaban", dosage: "5", dosage_unite: "mg", posologie_matin: 1, posologie_soir: 1, voie_administration: "PO", indication: "FA" },
-    { dci: "Atorvastatine", dosage: "40", dosage_unite: "mg", posologie_soir: 1, voie_administration: "PO", indication: "Dyslipidémie" },
-  ].map((t) => ({ ...t, patient_id: patientId, source: "demo", actif: true }));
+    { dci: "Metformine", dosage: "1000", dosage_unite: "mg", posologie_matin: "1", posologie_soir: "1", voie_administration: "PO", indication: "Diabète" },
+    { dci: "Ramipril", dosage: "10", dosage_unite: "mg", posologie_matin: "1", voie_administration: "PO", indication: "HTA" },
+    { dci: "Amlodipine", dosage: "10", dosage_unite: "mg", posologie_matin: "1", voie_administration: "PO", indication: "HTA" },
+    { dci: "Furosemide", dosage: "40", dosage_unite: "mg", posologie_matin: "1", voie_administration: "PO", indication: "IC" },
+    { dci: "Apixaban", dosage: "5", dosage_unite: "mg", posologie_matin: "1", posologie_soir: "1", voie_administration: "PO", indication: "FA" },
+    { dci: "Atorvastatine", dosage: "40", dosage_unite: "mg", posologie_soir: "1", voie_administration: "PO", indication: "Dyslipidémie" },
+  ].map((t) => ({ ...t, patient_id: patientId, source: "patient", actif: true }));
   await supabase.from("traitements_habituels").insert(traitements);
 
   const { data: episode, error: eErr } = await supabase
