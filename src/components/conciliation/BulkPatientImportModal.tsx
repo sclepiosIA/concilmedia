@@ -126,6 +126,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
       }
       const epMsg = r.created_episode_ids.length > 0 ? ` • ${r.created_episode_ids.length} épisode(s) créé(s)` : "";
       toast.success(targetPatientId ? `Données ajoutées${epMsg}` : `${r.created} créé(s), ${r.updated} mis à jour${epMsg}`);
+      onCompleted?.();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur import"),
   });
