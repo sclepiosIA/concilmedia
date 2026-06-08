@@ -32,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/episodes/$episodeId")({
 function EpisodeConciliationPage() {
   const { episodeId } = Route.useParams();
   const recon = useMedicationReconciliation(episodeId);
+  const [syntheseOpen, setSyntheseOpen] = useState(false);
   const qc = useQueryClient();
   const computeRisk = useServerFn(computePrioritization);
   const pdfFn = useServerFn(generateEpisodeConciliationPdf);
