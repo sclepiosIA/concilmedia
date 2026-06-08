@@ -210,7 +210,15 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId }: 
               <div className="text-lg font-medium">Import terminé</div>
               <div className="text-sm text-muted-foreground">
                 {summary.created} patient(s) créé(s), {summary.updated} mis à jour
+                {summary.created_episode_ids.length > 0 && ` • ${summary.created_episode_ids.length} épisode(s) créé(s)`}
               </div>
+              {summary.created_episode_ids.length > 0 && (
+                <div className="flex justify-center">
+                  <Button onClick={() => { const id = summary.created_episode_ids[0]; close(); navigate({ to: "/episodes/$episodeId", params: { episodeId: id } }); }}>
+                    Ouvrir la conciliation <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              )}
               {summary.failed.length > 0 && (
                 <div className="border rounded-md p-3 text-left text-sm">
                   <div className="font-medium text-destructive mb-1">{summary.failed.length} échec(s)</div>
