@@ -11,8 +11,6 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { AntecedentsSection } from "@/components/patient/AntecedentsSection";
-import { AllergiesSection } from "@/components/patient/AllergiesSection";
-import { ComorbiditesSection } from "@/components/patient/ComorbiditesSection";
 import { TraitementsHabituelsSection } from "@/components/patient/TraitementsHabituelsSection";
 import { EpisodesSection } from "@/components/patient/EpisodesSection";
 import { BiologieSection } from "@/components/patient/BiologieSection";
@@ -120,8 +118,6 @@ function PatientDetailPage() {
 
       <div className="space-y-6">
         <section><h2 className="text-lg font-semibold mb-3">Antécédents</h2><AntecedentsSection patientId={patientId} /></section>
-        <section><h2 className="text-lg font-semibold mb-3">Allergies</h2><AllergiesSection patientId={patientId} /></section>
-        <section><h2 className="text-lg font-semibold mb-3">Comorbidités</h2><ComorbiditesSection patientId={patientId} /></section>
         <section>
           <h2 className="text-lg font-semibold mb-3">Traitements</h2>
           <div className="mb-3"><MedicationProfileCard patientId={patientId} /></div>
