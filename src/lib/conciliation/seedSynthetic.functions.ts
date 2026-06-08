@@ -24,7 +24,7 @@ interface Profil {
   bmo: BmoEntry[];
 }
 
-const PROFILS = [
+const PROFILS: Profil[] = [
   {
     tag: "diabete_hta",
     comorbidites: ["Diabète de type 2", "HTA essentielle"],
