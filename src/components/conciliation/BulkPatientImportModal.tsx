@@ -43,7 +43,7 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, initialFiles }: { open: boolean; onOpenChange: (v: boolean) => void; targetPatientId?: string; initialFiles?: File[] }) {
+export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, initialFiles, onCompleted }: { open: boolean; onOpenChange: (v: boolean) => void; targetPatientId?: string; initialFiles?: File[]; onCompleted?: () => void }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const extract = useServerFn(extractPatientDossier);
