@@ -16,6 +16,7 @@ import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
 import { OrdonnanceHospitaliereDropzone } from "@/components/conciliation/OrdonnanceHospitaliereDropzone";
 
 import { ComparaisonTable } from "@/components/conciliation/ComparaisonTable";
+import { TableauSyntheseClinique } from "@/components/conciliation/TableauSyntheseClinique";
 
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
