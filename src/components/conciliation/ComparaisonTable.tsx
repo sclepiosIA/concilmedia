@@ -128,7 +128,7 @@ export function ComparaisonTable({ episodeId, patientId }: { episodeId: string; 
                     <span className="inline-flex items-center gap-1"><Hospital className="h-3 w-3" /> Hôpital — Dosage</span>
                   </th>
                   <th className="text-left p-3 font-semibold bg-violet-500/10 text-violet-700 dark:text-violet-300">Hôpital — Posologie</th>
-                  <th className="text-left p-3 font-semibold">Divergence</th>
+                  <th className="text-left p-3 font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300">Divergence</th>
                   <th className="text-left p-3 font-semibold">Risque associé</th>
                 </tr>
               </thead>
@@ -146,7 +146,8 @@ export function ComparaisonTable({ episodeId, patientId }: { episodeId: string; 
                       <td className="p-3 text-muted-foreground bg-violet-500/5">{r.hopital?.dosage ?? <span className="opacity-40">—</span>}</td>
                       <td className="p-3 text-muted-foreground bg-violet-500/5">{r.hopital?.posologie ?? <span className="opacity-40">—</span>}</td>
 
-                      <td className="p-3">
+                      <td className="p-3 bg-amber-500/5">
+
                         <Badge variant="outline" className={`text-[10px] ${s.cls}`}>
                           <Icon className="h-3 w-3 mr-1" /> {s.label}
                         </Badge>
