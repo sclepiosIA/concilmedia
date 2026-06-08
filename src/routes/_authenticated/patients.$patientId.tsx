@@ -92,11 +92,18 @@ function PatientDetailPage() {
               </div>
             )}
           </div>
-          <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
-            <FilePlus2 className="h-4 w-4 mr-1" /> Nouvel épisode
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => setBulkOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-1" /> Importer PDF (IA)
+            </Button>
+            <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
+              <FilePlus2 className="h-4 w-4 mr-1" /> Nouvel épisode
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} targetPatientId={patientId} />
 
       <Tabs defaultValue="antecedents">
         <TabsList className="grid grid-cols-5 w-full max-w-3xl">
