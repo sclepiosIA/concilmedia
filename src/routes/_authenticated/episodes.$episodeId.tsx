@@ -10,7 +10,7 @@ import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.fun
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
 import { PharmacistConciliationPanel } from "@/components/conciliation/PharmacistConciliationPanel";
 import { TraitementsDomicileColumn } from "@/components/conciliation/TraitementsDomicileColumn";
-import { PrescriptionsHospitalieresColumn } from "@/components/conciliation/PrescriptionsHospitalieresColumn";
+
 import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
 import { OrdonnanceHospitaliereDropzone } from "@/components/conciliation/OrdonnanceHospitaliereDropzone";
