@@ -13,8 +13,6 @@ import { TraitementsDomicileColumn } from "@/components/conciliation/Traitements
 import { PrescriptionsHospitalieresColumn } from "@/components/conciliation/PrescriptionsHospitalieresColumn";
 import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
-import { ClinicalRecommendationsCard } from "@/components/conciliation/ClinicalRecommendationsCard";
-import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { BilanEntreeSection } from "@/components/episode/BilanEntreeSection";
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
@@ -189,7 +187,7 @@ function EpisodeConciliationPage() {
         <div className="lg:col-span-3">
           <TraitementsDomicileColumn patientId={episode.patient_id} />
         </div>
-        <div className="lg:col-span-6">
+        <div className="lg:col-span-9">
           <Card className="border-2 border-primary/15 shadow-sm">
             <CardHeader className="pb-3 bg-primary/[0.03] border-b">
               <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
@@ -206,13 +204,6 @@ function EpisodeConciliationPage() {
               />
             </CardContent>
           </Card>
-        </div>
-        <div className="lg:col-span-3 space-y-4">
-          <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">
-            Profil &amp; Vigilance
-          </h2>
-          <ClinicalProfileCard patientId={episode.patient_id} />
-          <ClinicalRecommendationsCard patientId={episode.patient_id} conciliations={recon.conciliations} />
         </div>
       </div>
 
