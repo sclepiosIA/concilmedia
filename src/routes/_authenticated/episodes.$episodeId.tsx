@@ -190,36 +190,43 @@ function EpisodeConciliationPage() {
       </Card>
 
 
-      {/* MAIN 3-COLUMN WORKSPACE */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-3">
-          <TraitementsDomicileColumn patientId={episode.patient_id} />
-        </div>
-        <div className="lg:col-span-9">
-          <Card className="border-2 border-primary/15 shadow-sm">
-            <CardHeader className="pb-3 bg-primary/[0.03] border-b">
-              <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Conciliation médicamenteuse
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <PharmacistConciliationPanel
-                conciliations={recon.conciliations}
-                onUpdate={recon.updateConciliation}
-                onValidate={recon.validateConciliation}
-                isLoading={recon.isLoading}
-              />
-            </CardContent>
-          </Card>
-        </div>
+      {/* STEP 1 — UPLOAD ORDONNANCE */}
+      <div className="mb-4">
+        <OrdonnanceHospitaliereDropzone
+          episodeId={episodeId}
+          patientId={episode.patient_id}
+          hasPrescriptions={prescriptions.length > 0}
+          onImported={() => recon.detectDivergences()}
+        />
       </div>
 
-      {/* SECONDARY ROW: prescriptions hospitalières + analyse IA */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+      {/* STEP 2 — COMPARISON 3 COLUMNS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+        <TraitementsDomicileColumn patientId={episode.patient_id} />
         <PrescriptionsHospitalieresColumn episodeId={episodeId} patientId={episode.patient_id} />
-        <AIAnalysisPanel episodeId={episodeId} />
+        <DivergencesColumn conciliations={recon.conciliations} />
       </div>
+
+      {/* STEP 3 — VALIDATION PHARMACIEN */}
+      <Card className="border-2 border-primary/15 shadow-sm mb-4">
+        <CardHeader className="pb-3 bg-primary/[0.03] border-b">
+          <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            Validation pharmaceutique
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <PharmacistConciliationPanel
+            conciliations={recon.conciliations}
+            onUpdate={recon.updateConciliation}
+            onValidate={recon.validateConciliation}
+            isLoading={recon.isLoading}
+          />
+        </CardContent>
+      </Card>
+
+      {/* SECONDARY: AI ANALYSIS */}
+      <AIAnalysisPanel episodeId={episodeId} />
     </div>
   );
 }
