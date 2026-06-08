@@ -18,7 +18,7 @@ function buildPosoDomicile(t: {
   posologie_coucher?: number | string | null;
 }) {
   const vals = [t.posologie_matin, t.posologie_midi, t.posologie_soir, t.posologie_coucher];
-  const hasAny = vals.some((v) => v !== null && v !== undefined && v !== "" && v !== 0);
+  const hasAny = vals.some((v) => v !== null && v !== undefined && v !== "" && String(v) !== "0");
   if (!hasAny) return null;
   return vals.map((v) => (v === null || v === undefined || v === "" ? "0" : String(v))).join("-");
 }
