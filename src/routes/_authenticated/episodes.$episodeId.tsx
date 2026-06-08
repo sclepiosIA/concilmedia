@@ -5,16 +5,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Sparkles, ScanSearch, ShieldAlert, Loader2, Download } from "lucide-react";
+import { ChevronLeft, ScanSearch, ShieldAlert, Loader2, Download } from "lucide-react";
 import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.functions";
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
-import { PharmacistConciliationPanel } from "@/components/conciliation/PharmacistConciliationPanel";
+
 
 
 import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
 import { OrdonnanceHospitaliereDropzone } from "@/components/conciliation/OrdonnanceHospitaliereDropzone";
-import { DivergencesColumn } from "@/components/conciliation/DivergencesColumn";
+
 import { ComparaisonTable } from "@/components/conciliation/ComparaisonTable";
 
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
@@ -206,28 +206,6 @@ function EpisodeConciliationPage() {
         <ComparaisonTable episodeId={episodeId} patientId={episode.patient_id} />
       </div>
 
-      {/* DIVERGENCES SUMMARY */}
-      <div className="mb-4">
-        <DivergencesColumn conciliations={recon.conciliations} />
-      </div>
-
-      {/* STEP 3 — VALIDATION PHARMACIEN */}
-      <Card className="border-2 border-primary/15 shadow-sm mb-4">
-        <CardHeader className="pb-3 bg-primary/[0.03] border-b">
-          <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Validation pharmaceutique
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <PharmacistConciliationPanel
-            conciliations={recon.conciliations}
-            onUpdate={recon.updateConciliation}
-            onValidate={recon.validateConciliation}
-            isLoading={recon.isLoading}
-          />
-        </CardContent>
-      </Card>
 
       {/* SECONDARY: AI ANALYSIS */}
       <AIAnalysisPanel episodeId={episodeId} />
