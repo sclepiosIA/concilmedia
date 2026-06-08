@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +10,17 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Trash2, Sparkles, Loader2, Check, AlertTriangle, X } from "lucide-react";
+import { Upload, Trash2, Sparkles, Loader2, Check, AlertTriangle, X, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { extractPatientDossier, commitBulkImport, type ExtractedDossier } from "@/lib/conciliation/bulkImport.functions";
+
+const docTypeLabel: Record<string, string> = {
+  ordonnance_ville: "Ordo ville",
+  ordonnance_hospitaliere: "Ordo hospi",
+  compte_rendu: "Compte-rendu",
+  bilan_bio: "Bilan bio",
+  autre: "Autre",
+};
 
 const MAX_FILES = 20;
 const MAX_SIZE = 10 * 1024 * 1024;
