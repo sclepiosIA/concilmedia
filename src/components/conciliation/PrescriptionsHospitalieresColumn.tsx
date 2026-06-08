@@ -17,7 +17,11 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
     queryFn: async () => (await supabase.from("prescriptions_hospitalieres").select("*").eq("episode_id", episodeId).eq("actif", true)).data ?? [],
   });
   const add = useMutation({
-    mutationFn: async (v: Record<string, string>) => { const { error } = await supabase.from("prescriptions_hospitalieres").insert({ episode_id: episodeId, patient_id: patientId, ...v }); if (error) throw error; },
+    mutationFn: async (v: Record<string, string>) => {
+      if (!v.medicament) throw new Error("Médicament requis");
+      const { error } = await supabase.from("prescriptions_hospitalieres").insert({ episode_id: episodeId, patient_id: patientId, medicament: v.medicament, dosage: v.dosage, posologie: v.posologie, voie_administration: v.voie_administration });
+      if (error) throw error;
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["prescriptions", episodeId] }); setOpen(false); toast.success("Prescription ajoutée"); },
   });
   const del = useMutation({
