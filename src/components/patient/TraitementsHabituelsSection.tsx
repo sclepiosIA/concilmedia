@@ -18,9 +18,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Trash2, Plus, Pill, Sun, CloudSun, Sunset, Moon } from "lucide-react";
+import { Trash2, Pill, Sun, CloudSun, Sunset, Moon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { OrdonnanceUploader } from "@/components/conciliation/OrdonnanceUploader";
 
 
 type Traitement = {
