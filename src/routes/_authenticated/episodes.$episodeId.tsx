@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ScanSearch, ShieldAlert, Loader2, Download } from "lucide-react";
+import { ChevronLeft, ScanSearch } from "lucide-react";
 import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.functions";
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
 
@@ -98,12 +98,7 @@ function EpisodeConciliationPage() {
 
   const total = recon.stats.nonTraite + recon.stats.resolu;
   const reconRatio = total > 0 ? recon.stats.resolu / total : 0;
-  const ordonnanceDone = prescriptions.length > 0;
-  const divergencesDone = recon.conciliations.length > 0;
   const validationDone = total > 0 && reconRatio === 1;
-  const progressPct = Math.round(
-    (ordonnanceDone ? 33 : 0) + (divergencesDone ? 33 : 0) + (validationDone ? 34 : 0)
-  );
 
 
   return (
@@ -116,7 +111,7 @@ function EpisodeConciliationPage() {
         <ChevronLeft className="h-4 w-4" /> Retour patient
       </Link>
 
-      {/* HEADER: patient + actions + workflow stepper */}
+      {/* HEADER: patient + actions */}
       <Card className="mb-4">
         <CardContent className="p-5">
           <div className="flex items-center justify-between gap-4 flex-wrap mb-5">
