@@ -33,26 +33,16 @@ export function PharmacistConciliationPanel({
   onValidate: (id: string) => void;
   isLoading: boolean;
 }) {
-  const [filter, setFilter] = useState<"all" | "non_traite" | "resolu">("non_traite");
-  const filtered = conciliations.filter((c) => filter === "all" || c.statut === filter);
-
   if (isLoading) return <p className="text-sm text-muted-foreground py-4">Chargement…</p>;
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1">
-        {(["non_traite", "all", "resolu"] as const).map((f) => (
-          <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
-            {f === "all" ? "Tous" : f === "non_traite" ? "À traiter" : "Résolus"}
-          </Button>
-        ))}
-      </div>
-      {filtered.length === 0 && (
+      {conciliations.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-8">
-          Aucune divergence. Cliquez sur "Détecter divergences" pour lancer l'analyse algorithmique.
+          Aucune divergence active.
         </p>
       )}
-      {filtered.map((c) => (
+      {conciliations.map((c) => (
         <ConciliationRow key={c.id} item={c} onUpdate={onUpdate} onValidate={onValidate} />
       ))}
     </div>
