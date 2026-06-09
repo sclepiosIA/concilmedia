@@ -9,7 +9,7 @@ export const generatePatientSynthesisPdf = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const [{ data: patient }, ant, com, all, trt, bio, ai] = await Promise.all([
+    const [{ data: patient }, ant, com, all, trt, bio, ai, eps] = await Promise.all([
       supabase.from("patients").select("*").eq("id", data.patientId).maybeSingle(),
       supabase.from("antecedents").select("*").eq("patient_id", data.patientId).eq("actif", true),
       supabase.from("comorbidites").select("*").eq("patient_id", data.patientId).eq("statut", "actif"),
@@ -17,8 +17,14 @@ export const generatePatientSynthesisPdf = createServerFn({ method: "POST" })
       supabase.from("traitements_habituels").select("*").eq("patient_id", data.patientId).eq("actif", true),
       supabase.from("biologie_resultats").select("*").eq("patient_id", data.patientId).order("date_prelevement", { ascending: false, nullsFirst: false }).limit(50),
       supabase.from("conciliation_ai_analyses").select("*").eq("patient_id", data.patientId).is("episode_id", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("episodes").select("id").eq("patient_id", data.patientId),
     ]);
     if (!patient) throw new Error("Patient introuvable");
+
+    const epIds = (eps.data ?? []).map((e) => e.id);
+    const { data: divergences } = epIds.length
+      ? await supabase.from("conciliation_medicaments").select("*").in("episode_id", epIds).neq("type_divergence", "aucune")
+      : { data: [] as Array<{ type_divergence: string; gravite: string | null; medication_domicile: unknown; medication_hospitalisation: unknown }> };
 
     const bioLatest = new Map<string, { parametre: string; valeur: number | null; unite: string | null; valeur_texte: string | null; date_prelevement: string | null }>();
     for (const b of bio.data ?? []) { const k = b.parametre.toLowerCase(); if (!bioLatest.has(k)) bioLatest.set(k, b); }
