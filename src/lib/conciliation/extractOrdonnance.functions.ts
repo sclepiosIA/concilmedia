@@ -85,8 +85,10 @@ Réponds STRICTEMENT en JSON valide selon ce schéma :
 }
 Règles :
 - Toujours préférer la DCI (princeps) plutôt que le nom commercial.
-- Omets les champs inconnus plutôt que d'inventer.
-- Ignore les annotations administratives, les en-têtes d'ordonnancier, signatures.
+- Pour CHAQUE médicament, extraire impérativement : DCI, dosage + unité, schéma de prise (matin/midi/soir/coucher OU posologie_texte si schéma complexe) et la DURÉE de traitement.
+- Pour la durée : reprends exactement la mention de l'ordonnance ("3 mois", "30 jours", "à renouveler 3 fois", "au long cours", "jusqu'à nouvel ordre"...). Si non précisée, utilise "non précisée".
+- Omets uniquement les champs vraiment absents (sauf duree : toujours renseignée).
+- Ignore les annotations administratives, en-têtes d'ordonnancier, signatures.
 - N'inclus que les médicaments réellement prescrits.
 Réponds UNIQUEMENT avec le JSON.`;
 
