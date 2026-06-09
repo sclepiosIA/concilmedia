@@ -4,8 +4,9 @@ import { z } from "zod";
 
 const Input = z.object({
   patientId: z.string().uuid(),
-  fileBase64: z.string().min(10),
-  mimeType: z.string(),
+  fileBase64: z.string().min(10).optional(),
+  mimeType: z.string().optional(),
+  storagePath: z.string().optional(),
 });
 
 export interface ExtractedLettreAdmission {
