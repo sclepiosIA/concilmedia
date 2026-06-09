@@ -13,6 +13,12 @@ import { Plus, Search, User, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
+import { TriageBadge, TriageLegend } from "@/components/conciliation/TriageBadge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { HelpCircle } from "lucide-react";
+import { usePatientsTriage } from "@/hooks/usePatientsTriage";
+import { TRIAGE_META, type TriageLevel } from "@/lib/conciliation/triageScale";
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { fr } from "date-fns/locale";
 
