@@ -74,7 +74,7 @@ const EpisodeContextSchema = z.object({
 }).optional().nullable();
 
 const DossierSchema = z.object({
-  document_type: z.enum(["ordonnance_ville", "ordonnance_hospitaliere", "compte_rendu", "bilan_bio", "autre"]).default("autre"),
+  document_type: z.enum(["ordonnance_ville", "ordonnance_hospitaliere", "lettre_admission", "compte_rendu", "bilan_bio", "autre"]).default("autre"),
   patient: PatientSchema,
   antecedents: z.array(AntecedentSchema).default([]),
   comorbidites: z.array(ComorbiditeSchema).default([]),
@@ -107,7 +107,7 @@ export const extractPatientDossier = createServerFn({ method: "POST" })
 Analyse le document fourni (PDF / image) et CLASSIFIE-LE puis extrais TOUTES les informations cliniques.
 Réponds STRICTEMENT en JSON valide (aucun texte avant/après, pas de markdown) selon ce schéma :
 {
-  "document_type": "ordonnance_ville" | "ordonnance_hospitaliere" | "compte_rendu" | "bilan_bio" | "autre",
+  "document_type": "ordonnance_ville" | "ordonnance_hospitaliere" | "lettre_admission" | "compte_rendu" | "bilan_bio" | "autre",
   "patient": { "nom":"...", "prenom":"...", "date_naissance":"YYYY-MM-DD", "sexe":"M|F|autre", "poids_kg":number, "taille_cm":number },
   "antecedents": [{ "type":"medical|chirurgical|familial|obstetrical|autre", "description":"...", "date_evenement":"YYYY-MM-DD" }],
   "comorbidites": [{ "libelle":"HTA", "statut":"actif|resolu|suspect" }],
@@ -118,11 +118,13 @@ Réponds STRICTEMENT en JSON valide (aucun texte avant/après, pas de markdown) 
   "episode_context": { "motif":"...", "service":"...", "date_admission":"YYYY-MM-DD" }
 }
 Règles CRUCIALES de classification :
+- "lettre_admission" = lettre/courrier d'admission, lettre du médecin adressant le patient, demande d'hospitalisation, fiche d'admission aux urgences. PRIORITÉ ABSOLUE : remplis "episode_context.motif" (motif d'admission/d'hospitalisation, ex. "chute mécanique avec fracture col fémur", "décompensation cardiaque") + "episode_context.service" + "episode_context.date_admission". Extrais AUSSI les antécédents et allergies mentionnés dans la lettre (souvent listés). Les traitements habituels listés vont dans "traitements". Ne mets RIEN dans "prescriptions_hospitalieres" (pas de prescription du jour J ici).
 - "ordonnance_hospitaliere" = prescription rédigée PENDANT une hospitalisation (en-tête hôpital/service, date d'admission, ordonnance de séjour) → met les lignes dans "prescriptions_hospitalieres" ET remplis "episode_context".
 - "ordonnance_ville" = ordonnance de médecin traitant / sortie / traitement habituel → met les lignes dans "traitements".
 - "compte_rendu" = CRH, lettre de consultation → extrais antécédents/comorbidités/allergies/traitements habituels mentionnés.
 - "bilan_bio" = laboratoire → remplis surtout "biologie".
 - Si le document liste à la fois traitement habituel ET nouvelles prescriptions hospi, sépare-les correctement.
+- Pour les antécédents et allergies : extrais TOUS ceux mentionnés, même brièvement (sections "ATCD", "Allergies", "Intolérances", anamnèse). N'invente jamais.
 - Pour chaque prescription hospitalière, EXTRAIS la date du jour de prescription (jour J) dans "date_debut" (format YYYY-MM-DD). C'est la date imprimée en tête d'ordonnance hospitalière ou à côté de chaque ligne. Si une durée ou date d'arrêt est précisée, remplis "date_fin".
 - Privilégie la DCI au nom commercial dans "traitements"; dans "prescriptions_hospitalieres" garde le libellé tel qu'écrit.
 - Biologie prioritaire : DFG, créatinine, kaliémie, natrémie, INR, TP, hémoglobine, plaquettes, leucocytes, ASAT, ALAT, glycémie, HbA1c, CRP.
