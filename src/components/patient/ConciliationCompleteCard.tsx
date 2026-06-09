@@ -238,7 +238,7 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
             <header className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <Stethoscope className="h-4 w-4 text-sky-700" />
-                <h3 className="text-sm font-semibold text-sky-900">B. Aide à la décision clinique (IA)</h3>
+                <h3 className="text-sm font-semibold text-sky-900">B. Aide à la décision pharmaceutique</h3>
               </div>
               <Badge
                 variant={payload.score_risque > 60 ? "destructive" : payload.score_risque > 30 ? "default" : "secondary"}
@@ -251,9 +251,91 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
             {payload.synthese && (
               <div className="rounded-md border bg-white p-3 space-y-1">
                 <div className="flex items-center gap-2 text-xs font-semibold text-sky-900">
-                  <FileText className="h-3.5 w-3.5" /> Synthèse clinique
+                  <FileText className="h-3.5 w-3.5" /> Synthèse de conciliation
                 </div>
                 <p className="text-xs leading-relaxed">{payload.synthese}</p>
+              </div>
+            )}
+
+            {payload.divergences_conciliation && payload.divergences_conciliation.length > 0 && (
+              <div className="rounded-md border bg-white p-3 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-sky-900">
+                  <ArrowLeftRight className="h-3.5 w-3.5" /> Tableau des divergences ville ↔ hôpital
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[11px]">
+                    <thead className="text-muted-foreground">
+                      <tr className="border-b">
+                        <th className="text-left py-1 pr-2 font-medium">Type</th>
+                        <th className="text-left py-1 pr-2 font-medium">Ville</th>
+                        <th className="text-left py-1 pr-2 font-medium">Hôpital</th>
+                        <th className="text-left py-1 pr-2 font-medium">Sévérité</th>
+                        <th className="text-left py-1 font-medium">Action recommandée</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payload.divergences_conciliation.map((d, i) => {
+                        const sevColor =
+                          d.severite === "critique" ? "bg-red-700 text-white" :
+                          d.severite === "majeure" ? "bg-red-600 text-white" :
+                          d.severite === "moderee" ? "bg-orange-500 text-white" :
+                          "bg-yellow-500 text-white";
+                        const typeLabels: Record<string, string> = {
+                          omission: "Omission",
+                          ajout_non_justifie: "Ajout non justifié",
+                          switch: "Switch",
+                          modification_posologie: "Modif. posologie",
+                          substitution_classe: "Substitution classe",
+                        };
+                        return (
+                          <tr key={i} className="border-b last:border-0 align-top">
+                            <td className="py-1.5 pr-2"><Badge variant="outline" className="text-[10px]">{typeLabels[d.type] ?? d.type}</Badge></td>
+                            <td className="py-1.5 pr-2">{d.medicament_ville ?? <span className="text-muted-foreground italic">—</span>}</td>
+                            <td className="py-1.5 pr-2">{d.medicament_hopital ?? <span className="text-muted-foreground italic">—</span>}</td>
+                            <td className="py-1.5 pr-2"><Badge className={`text-[10px] ${sevColor}`}>{d.severite}</Badge></td>
+                            <td className="py-1.5 leading-snug">{d.recommandation}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {payload.actions_prioritaires && payload.actions_prioritaires.length > 0 && (
+              <div className="rounded-md border bg-white p-3 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-sky-900">
+                  <AlertCircle className="h-3.5 w-3.5" /> Actions pharmaceutiques prioritaires
+                </div>
+                <ul className="space-y-2">
+                  {payload.actions_prioritaires
+                    .slice()
+                    .sort((a, b) => {
+                      const order = { immediate: 0, "24h": 1, differee: 2 } as const;
+                      return (order[a.urgence as keyof typeof order] ?? 3) - (order[b.urgence as keyof typeof order] ?? 3);
+                    })
+                    .map((a, i) => {
+                      const urgenceColor =
+                        a.urgence === "immediate" ? "bg-red-600 text-white" :
+                        a.urgence === "24h" ? "bg-orange-500 text-white" :
+                        "bg-slate-500 text-white";
+                      const urgenceLabel =
+                        a.urgence === "immediate" ? "Immédiat" :
+                        a.urgence === "24h" ? "Sous 24h" :
+                        "Différé";
+                      return (
+                        <li key={i} className="text-xs border-l-2 border-sky-300 pl-2 space-y-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Badge className={`text-[10px] ${urgenceColor}`}><Clock className="h-2.5 w-2.5 mr-0.5" />{urgenceLabel}</Badge>
+                            <Badge variant="outline" className="text-[10px]">→ {a.destinataire}</Badge>
+                          </div>
+                          <div className="font-medium leading-snug">{a.action}</div>
+                          {a.justification && <div className="text-muted-foreground leading-snug">{a.justification}</div>}
+                        </li>
+                      );
+                    })}
+                </ul>
               </div>
             )}
 
@@ -284,6 +366,7 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
               </div>
             )}
           </section>
+
 
           {/* Validation panel */}
           <section className="rounded-lg border-2 border-emerald-300 bg-emerald-50/40 p-4 space-y-3">
