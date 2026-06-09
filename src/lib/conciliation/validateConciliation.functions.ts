@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 export type ItemDecision = {
-  category: "interactions" | "contre_indications" | "adaptations_posologiques" | "doublons_therapeutiques" | "allergies_croisees" | "medicaments_haut_risque";
+  category: "interactions" | "contre_indications" | "adaptations_posologiques" | "doublons_therapeutiques" | "allergies_croisees" | "medicaments_haut_risque" | "divergences_conciliation";
   index: number;
   status: "accepted" | "rejected" | "modified";
   comment?: string;
@@ -18,6 +18,7 @@ const ItemDecisionSchema: z.ZodType<ItemDecision> = z.object({
     "doublons_therapeutiques",
     "allergies_croisees",
     "medicaments_haut_risque",
+    "divergences_conciliation",
   ]),
   index: z.number().int().min(0),
   status: z.enum(["accepted", "rejected", "modified"]),
