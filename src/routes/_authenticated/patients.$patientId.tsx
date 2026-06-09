@@ -17,6 +17,7 @@ import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImp
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { MedicationProfileCard } from "@/components/patient/MedicationProfileCard";
+import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
@@ -108,11 +109,38 @@ function PatientDetailPage() {
       });
       if (dbError) throw dbError;
 
-      return storagePath;
+      // Analyse IA → remplissage automatique du profil
+      const fileBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1] ?? "");
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+      const analysis = await analyzeLettreAdmission({
+        data: { patientId, fileBase64, mimeType: file.type || "application/pdf" },
+      });
+
+      return { storagePath, analysis };
     },
-    onSuccess: () => {
+    onSuccess: ({ analysis }) => {
       qc.invalidateQueries({ queryKey: ["lettre-admission", patientId] });
-      toast.success("Lettre d'admission importée");
+      qc.invalidateQueries({ queryKey: ["patient", patientId] });
+      qc.invalidateQueries({ queryKey: ["allergies", patientId] });
+      qc.invalidateQueries({ queryKey: ["antecedents", patientId] });
+      qc.invalidateQueries({ queryKey: ["comorbidites", patientId] });
+      const parts: string[] = [];
+      if (analysis.patient_updated) parts.push("profil mis à jour");
+      if (analysis.allergies_inserted) parts.push(`${analysis.allergies_inserted} allergie(s)`);
+      if (analysis.antecedents_inserted) parts.push(`${analysis.antecedents_inserted} antécédent(s)`);
+      if (analysis.comorbidites_inserted) parts.push(`${analysis.comorbidites_inserted} comorbidité(s)`);
+      toast.success(
+        parts.length
+          ? `Lettre analysée : ${parts.join(", ")}`
+          : "Lettre importée (aucune nouvelle donnée extraite)"
+      );
       if (fileInputRef.current) fileInputRef.current.value = "";
     },
     onError: (err) => {
@@ -147,7 +175,7 @@ function PatientDetailPage() {
                 title={lettreAdmission ? "Remplacer la lettre d'admission" : "Importer une lettre d'admission"}
               >
                 <Upload className="h-4 w-4" />
-                <span>Lettre d'admission{lettreAdmission ? " ✓" : ""}</span>
+                <span>{uploadLettre.isPending ? "Analyse en cours…" : `Lettre d'admission${lettreAdmission ? " ✓" : ""}`}</span>
               </Button>
               <input
                 ref={fileInputRef}
