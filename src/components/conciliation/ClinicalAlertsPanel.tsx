@@ -104,7 +104,15 @@ interface AlertItemProps {
   reference?: string;
   confiance?: number;
   icon?: typeof AlertTriangle;
+  validation?: {
+    decision: ItemDecision | undefined;
+    onChange: (d: ItemDecision | null) => void;
+    category: AlertCategory;
+    index: number;
+    readOnly?: boolean;
+  };
 }
+
 
 function AlertItem({
   title,
