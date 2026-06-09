@@ -48,19 +48,25 @@ export const analyzePatientSynthesis = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-3-flash-preview");
 
-    const systemPrompt = `Tu es un pharmacien clinicien. Analyse les traitements habituels du patient (sans prescription hospitalière) et produis STRICTEMENT un JSON :
+    const systemPrompt = `Tu es un pharmacien clinicien hospitalier. Analyse les traitements habituels du patient (sans prescription hospitalière) et produis STRICTEMENT un JSON :
 {
-  "synthese":"...","score_risque":0-100,
+  "synthese":"3-4 phrases citant les valeurs bio pertinentes",
+  "score_risque":0-100,
   "interactions":[{"dci_1":"","dci_2":"","severite":"mineure|moderee|majeure|contre_indication","mecanisme":"","recommandation":""}],
   "doublons_therapeutiques":[{"medicaments":[""],"classe":"","recommandation":""}],
   "contre_indications":[{"medicament":"","raison":"","recommandation":""}],
   "redondances_classe":[{"classe":"","medicaments":[""]}],
-  "adaptations_posologiques":[{"medicament":"","raison":"","recommandation":""}]
+  "adaptations_posologiques":[{"medicament":"","raison":"","recommandation":""}],
+  "medicaments_haut_risque":[{"medicament":"","classe":"","raison":""}],
+  "allergies_croisees":[{"allergene":"","medicament":"","risque":""}],
+  "surveillance":[{"parametre":"","frequence":"","justification":""}],
+  "conclusion_clinique":"1-2 phrases — style compte-rendu hospitalier (profil risque, vigilance prioritaire)"
 }
 Règles cliniques :
 - Si DFG < 60, vérifier metformine, IEC/ARA2, AINS, anticoagulants, antibio.
 - Si INR > 4, alerter sur anticoagulants/antiagrégants.
 - Si K+ anormal, alerter IEC/ARA2/spironolactone/AINS.
+- Vérifier allergies croisées (pénicilline↔céphalo, AINS↔aspirine, sulfamides).
 - Cite la valeur biologique précise dans "raison".
 Réponds UNIQUEMENT avec le JSON.`;
 
