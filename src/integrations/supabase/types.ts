@@ -596,6 +596,7 @@ export type Database = {
           dci: string | null
           dosage: string | null
           dosage_unite: string | null
+          duree: string | null
           id: string
           indication: string | null
           nom_commercial: string | null
@@ -604,6 +605,7 @@ export type Database = {
           posologie_matin: string | null
           posologie_midi: string | null
           posologie_soir: string | null
+          posologie_texte: string | null
           source: string | null
           updated_at: string
           voie_administration: string | null
@@ -614,6 +616,7 @@ export type Database = {
           dci?: string | null
           dosage?: string | null
           dosage_unite?: string | null
+          duree?: string | null
           id?: string
           indication?: string | null
           nom_commercial?: string | null
@@ -622,6 +625,7 @@ export type Database = {
           posologie_matin?: string | null
           posologie_midi?: string | null
           posologie_soir?: string | null
+          posologie_texte?: string | null
           source?: string | null
           updated_at?: string
           voie_administration?: string | null
@@ -632,6 +636,7 @@ export type Database = {
           dci?: string | null
           dosage?: string | null
           dosage_unite?: string | null
+          duree?: string | null
           id?: string
           indication?: string | null
           nom_commercial?: string | null
@@ -640,6 +645,7 @@ export type Database = {
           posologie_matin?: string | null
           posologie_midi?: string | null
           posologie_soir?: string | null
+          posologie_texte?: string | null
           source?: string | null
           updated_at?: string
           voie_administration?: string | null
