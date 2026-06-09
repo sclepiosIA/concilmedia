@@ -214,6 +214,7 @@ export type Database = {
       }
       conciliation_ai_analyses: {
         Row: {
+          analysis_type: string
           created_at: string
           episode_id: string | null
           id: string
@@ -222,6 +223,7 @@ export type Database = {
           payload: Json
         }
         Insert: {
+          analysis_type?: string
           created_at?: string
           episode_id?: string | null
           id?: string
@@ -230,6 +232,7 @@ export type Database = {
           payload: Json
         }
         Update: {
+          analysis_type?: string
           created_at?: string
           episode_id?: string | null
           id?: string
