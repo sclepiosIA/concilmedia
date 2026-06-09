@@ -9,6 +9,7 @@ import { analyzePatientSynthesis } from "@/lib/conciliation/analyzePatientSynthe
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { classifyDci } from "@/lib/conciliation/atcInteractions";
 import { toast } from "sonner";
+import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
 
 const HIGH_RISK_KEYS = new Set(["anticoagulant", "insuline", "antiepileptique", "antiarythmique", "opioide", "ains"]);
 
