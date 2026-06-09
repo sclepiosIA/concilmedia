@@ -1,4 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import { classifyDci } from "@/lib/conciliation/atcInteractions";
+import { classifyDivergenceGravite } from "@/lib/clinical/complexityScore";
+
 
 /**
  * Cas clinique de démonstration n°2 — Mme Sophie LEMOINE, 68 ans
