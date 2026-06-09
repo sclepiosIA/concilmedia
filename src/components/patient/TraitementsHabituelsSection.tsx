@@ -25,7 +25,9 @@ type Traitement = {
   posologie_midi: string | null;
   posologie_soir: string | null;
   posologie_coucher: string | null;
+  posologie_texte: string | null;
   indication: string | null;
+  duree: string | null;
   source: string | null;
 };
 
@@ -135,9 +137,17 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
                   <PriseCell value={t.posologie_coucher} icon={Moon} label="Coucher" />
                 </div>
 
-                {/* Indication / source */}
-                <div className="flex flex-col gap-1 text-xs min-w-[140px]">
+                {/* Indication / durée / source */}
+                <div className="flex flex-col gap-1 text-xs min-w-[160px]">
+                  {t.posologie_texte && (
+                    <span className="text-foreground/80 italic">{t.posologie_texte}</span>
+                  )}
                   {t.indication && <span className="text-foreground/80">{t.indication}</span>}
+                  {t.duree && (
+                    <span className="text-foreground/80">
+                      <span className="font-medium">Durée :</span> {t.duree}
+                    </span>
+                  )}
                   {t.source && (
                     <span className="text-muted-foreground">
                       Source : {SOURCE_LABEL[t.source] ?? t.source}

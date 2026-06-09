@@ -52,7 +52,9 @@ const TraitementSchema = z.object({
   posologie_midi: z.string().optional().nullable(),
   posologie_soir: z.string().optional().nullable(),
   posologie_coucher: z.string().optional().nullable(),
+  posologie_texte: z.string().optional().nullable(),
   indication: z.string().optional().nullable(),
+  duree: z.string().optional().nullable(),
 });
 
 const PrescriptionHospiSchema = z.object({
@@ -109,7 +111,7 @@ Réponds STRICTEMENT en JSON valide (aucun texte avant/après, pas de markdown) 
   "comorbidites": [{ "libelle":"HTA", "statut":"actif|resolu|suspect" }],
   "allergies": [{ "substance":"Pénicilline", "reaction":"urticaire", "severite":"legere|moderee|severe|anaphylaxie" }],
   "biologie": [{ "parametre":"DFG", "valeur":45, "unite":"mL/min/1,73m²", "date_prelevement":"YYYY-MM-DD" }],
-  "traitements": [{ "dci":"Metformine", "nom_commercial":"Glucophage", "dosage":"500", "dosage_unite":"mg", "voie_administration":"PO", "posologie_matin":"1", "posologie_soir":"1", "indication":"diabète" }],
+  "traitements": [{ "dci":"Metformine", "nom_commercial":"Glucophage", "dosage":"500", "dosage_unite":"mg", "voie_administration":"PO", "posologie_matin":"1", "posologie_soir":"1", "posologie_texte":"phrase libre si schéma complexe", "indication":"diabète", "duree":"3 mois | au long cours | non précisée" }],
   "prescriptions_hospitalieres": [{ "medicament":"Enoxaparine 4000 UI", "dosage":"4000 UI", "posologie":"1 inj/j SC", "voie_administration":"SC", "indication":"thromboprophylaxie" }],
   "episode_context": { "motif":"...", "service":"...", "date_admission":"YYYY-MM-DD" }
 }
@@ -257,7 +259,9 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             dosage_unite: t.dosage_unite ?? null, voie_administration: t.voie_administration ?? null,
             posologie_matin: t.posologie_matin ?? null, posologie_midi: t.posologie_midi ?? null,
             posologie_soir: t.posologie_soir ?? null, posologie_coucher: t.posologie_coucher ?? null,
-            indication: t.indication ?? null, source: "pdf_import", actif: true,
+            posologie_texte: t.posologie_texte ?? null,
+            indication: t.indication ?? null, duree: t.duree ?? null,
+            source: "pdf_import", actif: true,
           })) as never);
         }
 
