@@ -131,6 +131,7 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
               <div>Posologie</div>
               <div>Indication</div>
               <div></div>
+            </div>
             {data.map((p) => (
               <div
                 key={p.id}
