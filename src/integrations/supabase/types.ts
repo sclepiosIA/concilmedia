@@ -335,6 +335,57 @@ export type Database = {
           },
         ]
       }
+      conciliation_validations: {
+        Row: {
+          analysis_id: string
+          commentaire_global: string | null
+          id: string
+          item_decisions: Json
+          patient_id: string
+          pharmacien_nom: string | null
+          updated_at: string
+          validated_at: string
+          validated_by: string
+        }
+        Insert: {
+          analysis_id: string
+          commentaire_global?: string | null
+          id?: string
+          item_decisions?: Json
+          patient_id: string
+          pharmacien_nom?: string | null
+          updated_at?: string
+          validated_at?: string
+          validated_by: string
+        }
+        Update: {
+          analysis_id?: string
+          commentaire_global?: string | null
+          id?: string
+          item_decisions?: Json
+          patient_id?: string
+          pharmacien_nom?: string | null
+          updated_at?: string
+          validated_at?: string
+          validated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conciliation_validations_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: true
+            referencedRelation: "conciliation_ai_analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conciliation_validations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents_sources: {
         Row: {
           created_at: string
