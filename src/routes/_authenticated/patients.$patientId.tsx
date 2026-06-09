@@ -61,7 +61,7 @@ function PatientDetailPage() {
     },
   });
 
-  const uploadLettre = useMutation({
+  const createEpisode = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase
         .from("episodes")
@@ -75,6 +75,45 @@ function PatientDetailPage() {
       qc.invalidateQueries({ queryKey: ["episodes", patientId] });
       toast.success("Épisode créé");
       navigate({ to: "/episodes/$episodeId", params: { episodeId: ep.id } });
+    },
+  });
+
+  const uploadLettre = useMutation({
+    mutationFn: async (file: File) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Non authentifié");
+
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}_${file.name}`;
+      const storagePath = `${user.id}/${patientId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("ordonnances")
+        .upload(storagePath, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase.from("documents_sources").insert({
+        patient_id: patientId,
+        storage_path: storagePath,
+        file_name: file.name,
+        mime_type: file.type,
+        file_size: file.size,
+        document_type: "lettre_admission",
+        uploaded_by: user.id,
+      });
+      if (dbError) throw dbError;
+
+      return storagePath;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lettre-admission", patientId] });
+      toast.success("Lettre d'admission importée");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+    onError: (err) => {
+      toast.error("Erreur lors de l'import : " + (err as Error).message);
     },
   });
 
