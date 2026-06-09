@@ -64,23 +64,3 @@ export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-xs font-semibold text-muted-foreground uppercase mb-1 flex items-center gap-1">
-        <AlertTriangle className="h-3 w-3" /> {title}
-      </div>
-      <div className="space-y-1">{children}</div>
-    </div>
-  );
-}
-
-function Item({ title, sub, note }: { title: string; sub?: string; note?: string }) {
-  return (
-    <div className="border rounded p-2 text-xs">
-      <div className="font-medium">{title}</div>
-      {sub && <div className="text-muted-foreground">{sub}</div>}
-      {note && <div className="mt-1 italic">→ {note}</div>}
-    </div>
-  );
-}
