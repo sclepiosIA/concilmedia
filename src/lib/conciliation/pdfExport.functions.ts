@@ -105,12 +105,26 @@ export const generatePatientSynthesisPdf = createServerFn({ method: "POST" })
       writeLine(`• ${t.dci} ${t.dosage ?? ""}${t.dosage_unite ?? ""} ${t.voie_administration ?? ""} ${poso ? `— ${poso}` : ""}${t.indication ? ` (${t.indication})` : ""}`);
     }
 
+    // Comorbidités → calcul IMC + complexité
+    const imcVal = patient.poids_kg && patient.taille_cm
+      ? Number((patient.poids_kg / Math.pow(patient.taille_cm / 100, 2)).toFixed(1))
+      : null;
+    if (imcVal !== null) {
+      section("Profil anthropométrique");
+      const cat = imcVal < 18.5 ? "Maigreur" : imcVal < 25 ? "Normal" : imcVal < 30 ? "Surpoids" : imcVal < 35 ? "Obésité I" : imcVal < 40 ? "Obésité II" : "Obésité III";
+      writeLine(`IMC : ${imcVal} kg/m² (${cat})`);
+    }
+
     type AIPayload = {
       synthese: string; score_risque: number;
       interactions?: Array<{ dci_1: string; dci_2: string; severite: string; recommandation: string }>;
       contre_indications?: Array<{ medicament: string; raison: string; recommandation: string }>;
       doublons_therapeutiques?: Array<{ medicaments: string[]; classe: string }>;
       adaptations_posologiques?: Array<{ medicament: string; raison: string; recommandation: string }>;
+      medicaments_haut_risque?: Array<{ medicament: string; classe: string; raison: string }>;
+      allergies_croisees?: Array<{ allergene: string; medicament: string; risque: string }>;
+      surveillance?: Array<{ parametre: string; frequence: string; justification: string }>;
+      conclusion_clinique?: string;
     };
     const payload = ai.data?.payload as unknown as AIPayload | undefined;
     if (payload) {
@@ -120,6 +134,24 @@ export const generatePatientSynthesisPdf = createServerFn({ method: "POST" })
       if (payload.contre_indications?.length) { y -= 3; writeLine("Contre-indications :", { font: bold, size: 10 }); for (const c of payload.contre_indications) writeLine(`  • ${c.medicament} — ${c.raison} → ${c.recommandation}`); }
       if (payload.doublons_therapeutiques?.length) { y -= 3; writeLine("Doublons :", { font: bold, size: 10 }); for (const d of payload.doublons_therapeutiques) writeLine(`  • ${d.medicaments.join(" + ")} (${d.classe})`); }
       if (payload.adaptations_posologiques?.length) { y -= 3; writeLine("Adaptations posologiques :", { font: bold, size: 10 }); for (const a of payload.adaptations_posologiques) writeLine(`  • ${a.medicament} — ${a.raison} → ${a.recommandation}`); }
+      if (payload.medicaments_haut_risque?.length) { y -= 3; writeLine("Médicaments à haut risque :", { font: bold, size: 10 }); for (const m of payload.medicaments_haut_risque) writeLine(`  • ${m.medicament} (${m.classe}) — ${m.raison}`); }
+      if (payload.allergies_croisees?.length) { y -= 3; writeLine("Allergies croisées :", { font: bold, size: 10, color: rgb(0.8, 0, 0) }); for (const a of payload.allergies_croisees) writeLine(`  • ${a.allergene} ↔ ${a.medicament} — ${a.risque}`); }
+      if (payload.surveillance?.length) { y -= 3; writeLine("Plan de surveillance :", { font: bold, size: 10 }); for (const s of payload.surveillance) writeLine(`  • ${s.parametre} (${s.frequence}) — ${s.justification}`); }
+    }
+
+    if (divergences && divergences.length) {
+      section(`Divergences détectées (${divergences.length})`);
+      for (const d of divergences) {
+        const dom = (d.medication_domicile ?? {}) as { dci?: string; dosage?: string };
+        const hosp = (d.medication_hospitalisation ?? null) as { dci?: string; dosage?: string } | null;
+        const gr = d.gravite ? ` [${d.gravite}]` : "";
+        writeLine(`• [${d.type_divergence}]${gr} ${dom.dci ?? "—"} ${dom.dosage ? `(${dom.dosage})` : ""}${hosp ? ` → hôpital: ${hosp.dci ?? "—"} ${hosp.dosage ?? ""}` : " → non prescrit"}`);
+      }
+    }
+
+    if (payload?.conclusion_clinique) {
+      section("Conclusion clinique");
+      writeLine(payload.conclusion_clinique, { font: bold, size: 11 });
     }
 
     const bytes = await pdf.save();
