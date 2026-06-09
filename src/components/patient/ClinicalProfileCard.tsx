@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   HeartPulse,
   Stethoscope,
-  ClipboardCheck,
   Scale,
 } from "lucide-react";
 import {
