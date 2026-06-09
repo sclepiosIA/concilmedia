@@ -148,6 +148,25 @@ function PatientDetailPage() {
     },
   });
 
+  const reanalyze = useMutation({
+    mutationFn: async () => {
+      return await analyzeLettreAdmission({ data: { patientId } });
+    },
+    onSuccess: (analysis) => {
+      qc.invalidateQueries({ queryKey: ["patient", patientId] });
+      qc.invalidateQueries({ queryKey: ["allergies", patientId] });
+      qc.invalidateQueries({ queryKey: ["antecedents", patientId] });
+      qc.invalidateQueries({ queryKey: ["comorbidites", patientId] });
+      const parts: string[] = [];
+      if (analysis.patient_updated) parts.push("profil mis à jour");
+      if (analysis.allergies_inserted) parts.push(`${analysis.allergies_inserted} allergie(s)`);
+      if (analysis.antecedents_inserted) parts.push(`${analysis.antecedents_inserted} antécédent(s)`);
+      if (analysis.comorbidites_inserted) parts.push(`${analysis.comorbidites_inserted} comorbidité(s)`);
+      toast.success(parts.length ? `Analysé : ${parts.join(", ")}` : "Aucune nouvelle donnée trouvée");
+    },
+    onError: (err) => toast.error("Erreur d'analyse : " + (err as Error).message),
+  });
+
   if (!patient) return <div className="container py-8">Chargement…</div>;
 
   const age = patient.date_naissance
