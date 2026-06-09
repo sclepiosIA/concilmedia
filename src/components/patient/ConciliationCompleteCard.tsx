@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, FileText, ShieldCheck, Pencil, ArrowLeftRight, AlertCircle, Clock } from "lucide-react";
+import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, FileText, ShieldCheck, Pencil, ArrowLeftRight, AlertCircle, Clock, Upload } from "lucide-react";
 import { analyzePatientConciliationComplete } from "@/lib/conciliation/analyzePatientConciliationComplete.functions";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
@@ -17,6 +17,7 @@ import {
   deleteConciliationValidation,
   type ItemDecision,
 } from "@/lib/conciliation/validateConciliation.functions";
+import { uploadPharmacistDoc } from "@/lib/conciliation/pharmacistDoc.functions";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import { fr } from "date-fns/locale";
