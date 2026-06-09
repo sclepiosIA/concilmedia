@@ -144,7 +144,9 @@ export const importExtractedMedications = createServerFn({ method: "POST" })
       posologie_midi: typeof m.posologie_midi === "number" ? m.posologie_midi : null,
       posologie_soir: typeof m.posologie_soir === "number" ? m.posologie_soir : null,
       posologie_coucher: typeof m.posologie_coucher === "number" ? m.posologie_coucher : null,
+      posologie_texte: m.posologie_texte ? String(m.posologie_texte) : null,
       indication: m.indication ? String(m.indication) : null,
+      duree: m.duree ? String(m.duree) : null,
       source: "ordonnance_ocr",
       actif: true,
     }));
