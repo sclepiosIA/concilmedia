@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Hospital, Plus, Trash2 } from "lucide-react";
+import { Hospital, Plus, Trash2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PrescriptionHospitaliereUploader } from "./PrescriptionHospitaliereUploader";
 
 export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { episodeId: string; patientId: string }) {
   const qc = useQueryClient();
@@ -67,6 +68,12 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
             <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => del.mutate(p.id)}><Trash2 className="h-3 w-3" /></Button>
           </div>
         ))}
+        <div className="pt-2 border-t">
+          <div className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+            <Sparkles className="h-3 w-3" /> Importer par OCR
+          </div>
+          <PrescriptionHospitaliereUploader episodeId={episodeId} patientId={patientId} />
+        </div>
       </CardContent>
     </Card>
   );
