@@ -77,22 +77,23 @@ Analyse le dossier patient (incluant biologie_recente : DFG, créatinine, kalié
 {
   "synthese": "texte court (3-4 phrases) résumant les points clés, en mentionnant les valeurs biologiques pertinentes",
   "score_risque": entier 0-100,
-  "interactions": [{"dci_1":"...","dci_2":"...","severite":"mineure|moderee|majeure|contre_indication","mecanisme":"...","recommandation":"..."}],
-  "doublons_therapeutiques": [{"medicaments":["..."],"classe":"...","recommandation":"..."}],
-  "contre_indications": [{"medicament":"...","raison":"allergie/comorbidité/biologie","recommandation":"..."}],
+  "interactions": [{"dci_1":"...","dci_2":"...","severite":"mineure|moderee|majeure|contre_indication","mecanisme":"explication pharmacologique précise","risque":"conséquence clinique attendue pour le patient","recommandation":"action pratique (arrêt, espacement, surveillance, alternative)","reference":"ex: ANSM Thésaurus interactions 2024, HAS, Vidal, RCP, STOPP/START v2"}],
+  "doublons_therapeutiques": [{"medicaments":["..."],"classe":"...","severite":"mineure|moderee|majeure","mecanisme":"...","risque":"...","recommandation":"...","reference":"..."}],
+  "contre_indications": [{"medicament":"...","raison":"allergie/comorbidité/biologie","severite":"majeure|contre_indication","mecanisme":"...","risque":"...","recommandation":"...","reference":"RCP / HAS / ANSM"}],
   "redondances_classe": [{"classe":"...","medicaments":["..."]}],
-  "adaptations_posologiques": [{"medicament":"...","raison":"DFG=X mL/min / insuffisance hépatique / âge / hyperkaliémie / INR","recommandation":"..."}],
-  "medicaments_haut_risque": [{"medicament":"...","classe":"anticoagulant|insuline|opioïde|antiépileptique|chimio|...","raison":"..."}],
-  "allergies_croisees": [{"allergene":"...","medicament":"...","risque":"..."}],
+  "adaptations_posologiques": [{"medicament":"...","raison":"DFG=X mL/min / insuffisance hépatique / âge / hyperkaliémie / INR","severite":"mineure|moderee|majeure","mecanisme":"justification PK/PD","risque":"sur/sous-dosage attendu","recommandation":"posologie cible précise","reference":"GPR (Société de Néphrologie) / RCP / Vidal"}],
+  "medicaments_haut_risque": [{"medicament":"...","classe":"anticoagulant|insuline|opioïde|antiépileptique|chimio|...","raison":"...","severite":"majeure","risque":"...","recommandation":"surveillance spécifique","reference":"ISMP / HAS Never Events"}],
+  "allergies_croisees": [{"allergene":"...","medicament":"...","risque":"...","severite":"majeure|contre_indication","recommandation":"alternative thérapeutique","reference":"RCP / ANSM"}],
   "surveillance": [{"parametre":"DFG|K+|INR|glycémie|TA|...","frequence":"...","justification":"..."}],
-  "conclusion_clinique": "1-2 phrases de synthèse finale style compte-rendu hospitalier (profil de risque global + vigilance prioritaire + verdict divergences)"
+  "conclusion_clinique": "1-2 phrases — style compte-rendu hospitalier"
 }
 Règles cliniques :
 - Si DFG < 60 mL/min, vérifier systématiquement chaque médicament à élimination rénale (metformine, IEC/ARA2, AINS, anticoagulants, antibiotiques) et proposer adaptation.
 - Si INR > 4, alerter sur risque hémorragique des anticoagulants/antiagrégants.
 - Si K+ anormal, alerter sur IEC/ARA2/spironolactone/AINS.
-- Cite la valeur biologique précise dans le champ "raison".
-- Pour chaque allergie documentée, vérifier les allergies croisées (ex: pénicilline ↔ céphalosporines, AINS ↔ aspirine).
+- Cite la valeur biologique précise dans "raison" et "risque".
+- Pour chaque allergie documentée, vérifier les allergies croisées (pénicilline ↔ céphalosporines, AINS ↔ aspirine, sulfamides).
+- Chaque alerte (interaction, contre-indication, adaptation, doublon, allergie croisée, haut risque) DOIT contenir severite, mecanisme/raison, risque clinique, recommandation pratique ET reference de bonne pratique (ANSM, HAS, Vidal, RCP, STOPP/START, GPR, ISMP).
 - conclusion_clinique : ton neutre, factuel, exploitable pour le dossier patient.
 Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
 
