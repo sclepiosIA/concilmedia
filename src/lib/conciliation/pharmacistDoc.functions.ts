@@ -23,7 +23,7 @@ export const uploadPharmacistDoc = createServerFn({ method: "POST" })
     if (bytes.byteLength > 10 * 1024 * 1024) throw new Error("Fichier trop volumineux (max 10 Mo).");
 
     const safeName = data.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const storage_path = `pharmacist-validation/${data.patientId}/${data.analysisId}-${Date.now()}-${safeName}`;
+    const storage_path = `${userId}/pharmacist-validation/${data.patientId}/${data.analysisId}-${Date.now()}-${safeName}`;
 
     // Supprimer un éventuel précédent
     const { data: existing } = await supabase
