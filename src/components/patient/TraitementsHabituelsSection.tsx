@@ -155,6 +155,7 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
                       Source : {SOURCE_LABEL[t.source] ?? t.source}
                     </span>
                   )}
+                  {t.source_document_id && <SourceDocumentLink documentId={t.source_document_id} />}
                 </div>
 
                 {/* Actions */}
