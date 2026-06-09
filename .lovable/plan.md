@@ -1,66 +1,97 @@
+## Objectif
 
-# Échelle de tri "FRENCH-MED" — relecture de la conciliation
+Améliorer la lisibilité de la légende de tri en haut de `/patients`, enrichir le tooltip du badge **P** (priorité FRENCH-MED), et ajouter des aperçus au survol pour **traitements / antécédents / allergies / alertes** directement sur chaque ligne de la liste patients.
 
-Inspirée de la FRENCH (SFMU) : 5 paliers codés couleur, du plus urgent (1) au moins urgent (5), calculés automatiquement à partir des données déjà présentes (score de risque, divergences détectées, statut de validation). Affichage en pastille sur chaque ligne de la liste des patients + filtre/tri.
+---
 
-## Les 5 paliers
+## 1. Légende en haut — meilleure lisibilité
 
-```text
-P1  ROUGE     Immédiat       À relire maintenant
-P2  ORANGE    Très urgent    À relire < 1 h
-P3  JAUNE     Urgent         À relire < 6 h
-P4  VERT      Standard       À relire < 24 h
-P5  BLEU      Non urgent     Relecture programmée / déjà validée
+Fichier : `src/routes/_authenticated/patients.index.tsx` (chips P1…P5 lignes 269-291).
+
+Actuellement on a juste `P1 12` dans une pastille colorée — il faut deviner ce que c'est. Refonte :
+
+- Remplacer chaque chip par une "pill" plus large avec : badge couleur **+ libellé court** (`Immédiat`, `< 1 h`, `< 6 h`, `< 24 h`, `Validés`) + compteur en pastille à droite.
+- Police légèrement plus grande (`text-sm`), padding plus généreux, contraste renforcé (utiliser `m.fg` sur `m.bg` mais aussi un fond plus opaque que `--triage-x-bg` quand `count > 0`, et état "grisé" quand `count === 0`).
+- Rendre les pills cliquables : un clic filtre la liste sur ce palier (état `filterMode` étendu pour accepter `"p1" | "p2" | … | "p5"` en plus de `all/todo/done`). Un second clic désactive.
+- Préfixer par un petit label discret `Tri : ` pour clarifier le sens.
+
+Le `ToggleGroup` "Tous / À relire / Validés" reste à droite.
+
+## 2. Tooltip du badge P enrichi
+
+Fichier : `src/components/conciliation/TriageBadge.tsx` + `src/hooks/usePatientsTriage.ts`.
+
+Aujourd'hui le tooltip affiche seulement `code — label`, `delay`, et `reason`. On enrichit pour donner au pharmacien tout ce dont il a besoin pour décider sans cliquer.
+
+Étendre `TriageResult` (dans `triageScale.ts`) avec un champ optionnel `details` :
+
+```ts
+details?: {
+  divergences: { critique: number; majeur: number; modere: number; mineur: number };
+  nbNonIntentionnelles: number;
+  worstRisk: NiveauRisque | null;
+  hasValidation: boolean;
+  hasActiveEpisode: boolean;
+  pendingSinceHours: number | null;   // ancienneté de l'analyse IA non relue
+};
 ```
 
-## Règles de classement (auto, par patient — pire épisode actif)
+`computePatientTriage` et `usePatientsTriage` remplissent ces champs (les données sont déjà calculées localement, c'est juste de l'exposition).
 
-Calcul côté client à partir des données déjà chargées, prend le pire des critères :
+`TriageBadge` accepte une nouvelle prop optionnelle `details` et son tooltip affiche, en plus de l'existant :
+- Une ligne "Divergences :" avec mini-puces colorées par gravité et compteurs (ex: `● 1 critique · ● 2 majeures · ● 3 modérées`), masque les zéros.
+- "Dont non intentionnelles : N" si > 0.
+- "Score de risque : Critique/Élevé/…" avec dot coloré.
+- "Validation pharmacien : ✔ oui / ✘ non".
+- "Épisode actif : oui/non".
+- "En attente depuis : 52 h" si `pendingSinceHours != null`.
+- `reason` conservé en italique en bas.
 
-- **P1 — Immédiat**
-  - ≥ 1 divergence non intentionnelle de gravité `critique` non résolue, **ou**
-  - score de risque `critique` (≥ 70) **et** aucune validation pharmacien.
-- **P2 — Très urgent**
-  - ≥ 1 divergence `majeur` non résolue, **ou**
-  - score `eleve` (50–69) sans validation, **ou**
-  - ≥ 3 divergences non intentionnelles non résolues.
-- **P3 — Urgent**
-  - divergences `modere` non résolues, **ou**
-  - score `modere` (30–49) sans validation, **ou**
-  - analyse IA présente mais aucune relecture pharmacien depuis > 24 h.
-- **P4 — Standard**
-  - divergences uniquement `mineur` non résolues, **ou**
-  - conciliation à faire mais score `faible`.
-- **P5 — Non urgent**
-  - conciliation validée par un pharmacien et aucune divergence non résolue restante,
-  - ou patient sans épisode de conciliation en cours.
+Largeur tooltip portée à `max-w-sm`, typographie clarifiée.
 
-Surcouche d'ancienneté : si une analyse IA est en attente de relecture depuis > 48 h, on remonte d'un palier (sans dépasser P1).
+## 3. Tooltips au survol de chaque dossier patient
 
-## UI
+Fichier : `src/routes/_authenticated/patients.index.tsx` (ligne patient 302-332) + nouveau composant `src/components/patient/PatientRowQuickInfo.tsx`.
 
-- **Pastille FRENCH-MED** : carré arrondi 28×28 px, numéro 1–5, couleur du palier, tooltip = libellé + raison principale (« Divergence critique non résolue », « Validé le … », etc.).
-- **Listing patients** (`patients.index.tsx`) :
-  - Colonne pastille en tête de chaque carte patient (à gauche de l'avatar).
-  - Barre d'actions au-dessus : tri par défaut = palier croissant (P1 d'abord) ; filtre rapide « Tous / À relire (P1–P3) / Validés (P5) ».
-  - Compteurs en haut : `P1: 2 · P2: 5 · P3: 8 · P4: 12 · P5: 30`.
-- **Légende** : popover « ? » à côté du titre expliquant les 5 paliers.
+À droite du nom (avant le bouton supprimer), ajouter 4 petites icônes-badges discrètes, chacune avec un compteur :
 
-## Détails techniques
+| Icône (lucide) | Libellé | Source | Tooltip au survol |
+|---|---|---|---|
+| `Pill` | Traitements | `traitements_habituels` actifs | Liste : `DCI (dosage, voie) — fréquence`, max 8 + "…et N de plus" |
+| `Stethoscope` | Antécédents | `comorbidites` (statut actif) | Liste : `intitulé — date début` |
+| `ShieldAlert` | Allergies | `allergies` | Liste : `substance — réaction — sévérité` avec puce colorée par sévérité |
+| `AlertTriangle` | Alertes | divergences non résolues + dernière analyse IA (`conciliation_ai_analyses`) | Top 5 alertes : `gravité — libellé`, lien implicite (la carte entière reste le lien vers le patient) |
 
-- Nouveau fichier `src/lib/conciliation/triageScale.ts` :
-  - type `TriageLevel = 1|2|3|4|5`, constantes `TRIAGE_META` (label, couleur, délai, classe Tailwind).
-  - fonction `computePatientTriage(input)` pure, prend `{ activeEpisodes, riskScores, divergences, validations }` et renvoie `{ level, reason }`.
-- Nouveau composant `src/components/conciliation/TriageBadge.tsx`.
-- Nouveau hook `src/hooks/usePatientsTriage.ts` :
-  - une requête React Query agrégée qui charge en un appel pour la liste affichée : derniers `risk_scores`, `conciliation_medicaments` non résolus (group by patient avec max gravité + count), `conciliation_validations` (présence). Pas de N+1.
-- Tokens couleurs ajoutés à `src/styles.css` : `--triage-1`…`--triage-5` (rouge, orange, jaune, vert, bleu, déclinés en OKLCH cohérents avec la charte navy/teal).
-- Modifs `src/routes/_authenticated/patients.index.tsx` :
-  - intégrer le hook, la pastille, le tri/filtre, les compteurs.
-  - tri secondaire : date de création desc.
+Si le compteur est à 0, l'icône est rendue grisée (opacité 40 %) sans tooltip "rien à signaler" parasite (on garde un tooltip court "Aucune allergie", etc.).
 
-## Hors périmètre
+Comportement & performance :
+- Un seul hook batché `usePatientsQuickInfo(patientIds: string[])` (nouveau fichier `src/hooks/usePatientsQuickInfo.ts`) qui fait 4 requêtes Supabase `in("patient_id", ids)` en parallèle, agrège par `patient_id`, mêmes options que `usePatientsTriage` (`staleTime 5 min`, pas de refetch focus/mount/reconnect, `keepPreviousData`).
+- Pour les alertes : on réutilise `divs` (conciliation_medicaments non résolus, déjà chargé côté triage mais ici on garde un hook dédié pour éviter le couplage). On agrège top 5 par gravité décroissante.
+- Le clic sur les badges ne navigue pas (les icônes sont dans un `span` à part, hors du `<Link>`), mais le survol affiche le tooltip via `Tooltip` shadcn (déjà importé).
 
-- Pas de stockage en base du palier (recalculé à la volée — toujours à jour).
-- Pas de modification de l'algorithme de score de risque existant ni des écrans de détail patient (le palier sera réutilisable plus tard côté `patients.$patientId`).
-- Pas de notifications / alertes temps réel.
+## 4. Composant `PatientRowQuickInfo`
+
+Petit composant pur affichage :
+
+```tsx
+<PatientRowQuickInfo info={quickInfoMap[p.id]} />
+```
+
+Rend les 4 icônes-badges + compteurs + tooltips. Conserve `TooltipProvider` unique en haut de la liste (passe `delayDuration={200}`) pour éviter de multiplier les providers.
+
+## 5. Détails techniques
+
+### Fichiers modifiés
+- `src/lib/conciliation/triageScale.ts` — ajoute `details` à `TriageResult`, le remplit dans `computePatientTriage`.
+- `src/hooks/usePatientsTriage.ts` — transmet les chiffres déjà calculés (divergences par gravité, worstRisk, validations, ancienneté) dans `details`.
+- `src/components/conciliation/TriageBadge.tsx` — tooltip enrichi.
+- `src/routes/_authenticated/patients.index.tsx` — légende refondue (pills cliquables), filtres P1…P5, intégration `PatientRowQuickInfo`, wrap par un seul `TooltipProvider`.
+
+### Fichiers créés
+- `src/hooks/usePatientsQuickInfo.ts` — fetch batché (traitements / comorbidités / allergies / divergences) + agrégation.
+- `src/components/patient/PatientRowQuickInfo.tsx` — affichage des 4 icônes + tooltips.
+
+### Hors-périmètre
+- Pas de changement backend / SQL / RLS (toutes les tables sont déjà lisibles côté authentifié).
+- Pas de modification de la page patient détaillée.
+- Pas de modification du calcul de priorité lui-même (juste exposition des détails déjà calculés).
