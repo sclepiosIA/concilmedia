@@ -139,15 +139,15 @@ function PatientDetailPage() {
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">{patient.nom.toUpperCase()} {patient.prenom}</h1>
               <Button
-                variant="ghost"
+                variant={lettreAdmission ? "secondary" : "outline"}
                 size="sm"
-                className={`h-8 px-2 ${lettreAdmission ? "text-green-600 hover:text-green-700" : "text-muted-foreground hover:text-foreground"}`}
+                className="h-8 gap-2"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadLettre.isPending}
-                title={lettreAdmission ? "Lettre d'admission importée" : "Importer une lettre d'admission"}
+                title={lettreAdmission ? "Remplacer la lettre d'admission" : "Importer une lettre d'admission"}
               >
                 <Upload className="h-4 w-4" />
-                {lettreAdmission && <span className="sr-only">Lettre d'admission importée</span>}
+                <span>Lettre d'admission{lettreAdmission ? " ✓" : ""}</span>
               </Button>
               <input
                 ref={fileInputRef}
