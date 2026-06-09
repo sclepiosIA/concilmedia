@@ -71,6 +71,22 @@ function PriseCell({
   );
 }
 
+/** Parse "1-0-1", "1—1—1", "1-1-1-0", "1/0/1/0" → [matin, midi, soir, coucher]. */
+function parsePosologie(s: string | null): [string | null, string | null, string | null, string | null] {
+  if (!s) return [null, null, null, null];
+  const parts = s.split(/[-—–\/]/).map((p) => p.trim()).filter((p) => /^\d+([.,]\d+)?$/.test(p));
+  if (parts.length === 3) return [parts[0], parts[1], parts[2], null];
+  if (parts.length === 4) return [parts[0], parts[1], parts[2], parts[3]];
+  return [null, null, null, null];
+}
+
+function resolvePrises(p: Prescription): [string | null, string | null, string | null, string | null] {
+  if (p.posologie_matin || p.posologie_midi || p.posologie_soir || p.posologie_coucher) {
+    return [p.posologie_matin, p.posologie_midi, p.posologie_soir, p.posologie_coucher];
+  }
+  return parsePosologie(p.posologie);
+}
+
 export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { episodeId: string; patientId: string }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
