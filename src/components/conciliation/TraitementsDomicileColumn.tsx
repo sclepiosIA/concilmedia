@@ -105,7 +105,7 @@ export function TraitementsDomicileColumn({ patientId }: { patientId: string }) 
           </div>
         ) : (
           <div className="divide-y">
-            <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 text-[11px] uppercase tracking-wide text-muted-foreground bg-muted/40">
+            <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto] gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted/40">
               <div>Médicament</div>
               <div className="text-center">M • Mi • S • Co</div>
               <div>Indication / Source</div>
@@ -114,23 +114,23 @@ export function TraitementsDomicileColumn({ patientId }: { patientId: string }) 
             {data.map((t) => (
               <div
                 key={t.id}
-                className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-3 items-center hover:bg-muted/30 transition-colors"
+                className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-2 px-3 py-2 items-center hover:bg-muted/30 transition-colors text-xs"
               >
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Pill className="h-4 w-4 text-primary shrink-0" />
-                    <span className="font-medium truncate">{t.dci || t.nom_commercial}</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Pill className="h-3 w-3 text-primary shrink-0" />
+                    <span className="font-medium truncate text-xs">{t.dci || t.nom_commercial}</span>
                     {t.dosage && (
-                      <Badge variant="outline" className="font-mono text-xs">
+                      <Badge variant="outline" className="font-mono text-[10px] px-1 py-0">
                         {t.dosage}{t.dosage_unite ? ` ${t.dosage_unite}` : ""}
                       </Badge>
                     )}
                     {t.voie_administration && (
-                      <Badge variant="secondary" className="text-xs">{t.voie_administration}</Badge>
+                      <Badge variant="secondary" className="text-[10px] px-1 py-0">{t.voie_administration}</Badge>
                     )}
                   </div>
                   {t.dci && t.nom_commercial && t.dci !== t.nom_commercial && (
-                    <div className="text-xs text-muted-foreground ml-6 mt-0.5">{t.nom_commercial}</div>
+                    <div className="text-[11px] text-muted-foreground ml-4 mt-0.5">{t.nom_commercial}</div>
                   )}
                 </div>
 
@@ -141,7 +141,7 @@ export function TraitementsDomicileColumn({ patientId }: { patientId: string }) 
                   <PriseCell value={t.posologie_coucher} icon={Moon} label="Coucher" />
                 </div>
 
-                <div className="flex flex-col gap-1 text-xs min-w-[140px]">
+                <div className="flex flex-col gap-0.5 text-[11px] min-w-[120px]">
                   {t.indication && <span className="text-foreground/80">{t.indication}</span>}
                   {t.source && (
                     <span className="text-muted-foreground">
@@ -154,10 +154,10 @@ export function TraitementsDomicileColumn({ patientId }: { patientId: string }) 
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
                     onClick={() => del.mutate(t.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>
