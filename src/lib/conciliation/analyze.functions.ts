@@ -77,13 +77,13 @@ Analyse le dossier patient (incluant biologie_recente : DFG, créatinine, kalié
 {
   "synthese": "texte court (3-4 phrases) résumant les points clés, en mentionnant les valeurs biologiques pertinentes",
   "score_risque": entier 0-100,
-  "interactions": [{"dci_1":"...","dci_2":"...","severite":"mineure|moderee|majeure|contre_indication","mecanisme":"explication pharmacologique précise","risque":"conséquence clinique attendue pour le patient","recommandation":"action pratique (arrêt, espacement, surveillance, alternative)","reference":"ex: ANSM Thésaurus interactions 2024, HAS, Vidal, RCP, STOPP/START v2"}],
-  "doublons_therapeutiques": [{"medicaments":["..."],"classe":"...","severite":"mineure|moderee|majeure","mecanisme":"...","risque":"...","recommandation":"...","reference":"..."}],
-  "contre_indications": [{"medicament":"...","raison":"allergie/comorbidité/biologie","severite":"majeure|contre_indication","mecanisme":"...","risque":"...","recommandation":"...","reference":"RCP / HAS / ANSM"}],
+  "interactions": [{"dci_1":"...","dci_2":"...","severite":"mineure|moderee|majeure|contre_indication","mecanisme":"explication pharmacologique précise","risque":"conséquence clinique attendue pour le patient","recommandation":"action pratique (arrêt, espacement, surveillance, alternative)","alternative":"alternative thérapeutique concrète si pertinente","confiance":0-100,"reference":"ex: ANSM Thésaurus interactions 2024, HAS, Vidal, RCP, STOPP/START v2, SPILF"}],
+  "doublons_therapeutiques": [{"medicaments":["..."],"classe":"...","severite":"mineure|moderee|majeure","mecanisme":"...","risque":"...","recommandation":"...","alternative":"...","confiance":0-100,"reference":"..."}],
+  "contre_indications": [{"medicament":"...","raison":"allergie/comorbidité/biologie","severite":"majeure|contre_indication","mecanisme":"...","risque":"...","recommandation":"...","alternative":"...","confiance":0-100,"reference":"RCP / HAS / ANSM / SPILF"}],
   "redondances_classe": [{"classe":"...","medicaments":["..."]}],
-  "adaptations_posologiques": [{"medicament":"...","raison":"DFG=X mL/min / insuffisance hépatique / âge / hyperkaliémie / INR","severite":"mineure|moderee|majeure","mecanisme":"justification PK/PD","risque":"sur/sous-dosage attendu","recommandation":"posologie cible précise","reference":"GPR (Société de Néphrologie) / RCP / Vidal"}],
-  "medicaments_haut_risque": [{"medicament":"...","classe":"anticoagulant|insuline|opioïde|antiépileptique|chimio|...","raison":"...","severite":"majeure","risque":"...","recommandation":"surveillance spécifique","reference":"ISMP / HAS Never Events"}],
-  "allergies_croisees": [{"allergene":"...","medicament":"...","risque":"...","severite":"majeure|contre_indication","recommandation":"alternative thérapeutique","reference":"RCP / ANSM"}],
+  "adaptations_posologiques": [{"medicament":"...","raison":"DFG=X mL/min / insuffisance hépatique / âge / hyperkaliémie / INR","severite":"mineure|moderee|majeure","mecanisme":"justification PK/PD","risque":"sur/sous-dosage attendu","recommandation":"posologie cible précise","alternative":"alternative si arrêt nécessaire","confiance":0-100,"reference":"GPR (Société de Néphrologie) / RCP / Vidal"}],
+  "medicaments_haut_risque": [{"medicament":"...","classe":"anticoagulant|insuline|opioïde|antiépileptique|chimio|...","raison":"...","severite":"majeure","risque":"...","recommandation":"surveillance spécifique","alternative":"...","confiance":0-100,"reference":"ISMP / HAS Never Events"}],
+  "allergies_croisees": [{"allergene":"...","medicament":"...","risque":"...","severite":"majeure|contre_indication","recommandation":"...","alternative":"alternative thérapeutique","confiance":0-100,"reference":"RCP / ANSM / SPILF"}],
   "surveillance": [{"parametre":"DFG|K+|INR|glycémie|TA|...","frequence":"...","justification":"..."}],
   "conclusion_clinique": "1-2 phrases — style compte-rendu hospitalier"
 }
@@ -93,7 +93,7 @@ Règles cliniques :
 - Si K+ anormal, alerter sur IEC/ARA2/spironolactone/AINS.
 - Cite la valeur biologique précise dans "raison" et "risque".
 - Pour chaque allergie documentée, vérifier les allergies croisées (pénicilline ↔ céphalosporines, AINS ↔ aspirine, sulfamides).
-- Chaque alerte (interaction, contre-indication, adaptation, doublon, allergie croisée, haut risque) DOIT contenir severite, mecanisme/raison, risque clinique, recommandation pratique ET reference de bonne pratique (ANSM, HAS, Vidal, RCP, STOPP/START, GPR, ISMP).
+- Chaque alerte (interaction, contre-indication, adaptation, doublon, allergie croisée, haut risque) DOIT contenir severite, mecanisme/raison, risque clinique, recommandation pratique, alternative thérapeutique (si applicable), un score "confiance" entier 0-100 reflétant le niveau de preuve, ET reference de bonne pratique (ANSM, HAS, Vidal, RCP, STOPP/START, GPR, ISMP, SPILF).
 - conclusion_clinique : ton neutre, factuel, exploitable pour le dossier patient.
 Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
 
