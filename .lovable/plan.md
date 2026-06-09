@@ -1,69 +1,66 @@
-## Refonte globale UI — charte ConcilMed·IA
 
-Refonte cohérente avec l'identité visuelle du logo fourni : palette **navy profond + teal/cyan**, accent **healthcare/IA**, typographie **Sora (titres) + Manrope (corps)**. Le logo est intégré tel quel (image) dans le header.
+# Échelle de tri "FRENCH-MED" — relecture de la conciliation
 
-### Palette extraite du logo
+Inspirée de la FRENCH (SFMU) : 5 paliers codés couleur, du plus urgent (1) au moins urgent (5), calculés automatiquement à partir des données déjà présentes (score de risque, divergences détectées, statut de validation). Affichage en pastille sur chaque ligne de la liste des patients + filtre/tri.
 
-| Token | Usage | Couleur |
-|---|---|---|
-| `--navy-900` | Texte fort, headers, CONCILMED | `#0d1b3d` |
-| `--navy-700` | Primary / boutons | `#1a2e5c` |
-| `--navy-500` | Hover / borders forts | `#2a4178` |
-| `--teal-500` | Accent IA, "IA" du logo, CTA secondaire | `#2dd4bf` |
-| `--teal-600` | Accent foncé, focus ring | `#0d9488` |
-| `--cyan-200` | Halos doux, backgrounds info | `#a5f3fc` |
-| `--paper` | Fond app | `#f8fafc` |
-| `--paper-2` | Cartes / sidebar | `#ffffff` |
+## Les 5 paliers
 
-Sémantique gravité conservée (crit/major/minor/ok) en harmonisant les bases vers la nouvelle palette.
+```text
+P1  ROUGE     Immédiat       À relire maintenant
+P2  ORANGE    Très urgent    À relire < 1 h
+P3  JAUNE     Urgent         À relire < 6 h
+P4  VERT      Standard       À relire < 24 h
+P5  BLEU      Non urgent     Relecture programmée / déjà validée
+```
 
-### 1. Tokens — `src/styles.css`
+## Règles de classement (auto, par patient — pire épisode actif)
 
-- Réécriture du bloc `:root` (et `.dark`) avec les nouvelles valeurs OKLCH dérivées du navy/teal.
-- `--primary` → navy-700, `--accent` → teal-500, `--ring` → teal-600.
-- Sidebar : `--sidebar` blanc, `--sidebar-primary` navy-700, `--sidebar-accent` teal-50.
-- Ajout `--gradient-brand: linear-gradient(135deg, var(--navy-700), var(--teal-500))` et `--shadow-brand` (ombre teintée navy).
-- Polices : `--font-sans: "Manrope", ...`, `--font-display: "Sora", ...`. Suppression IBM Plex/Newsreader.
-- Nouvel utilitaire `@utility font-display` (Sora 600/700, tracking -0.02em).
+Calcul côté client à partir des données déjà chargées, prend le pire des critères :
 
-### 2. Polices — `src/routes/__root.tsx`
+- **P1 — Immédiat**
+  - ≥ 1 divergence non intentionnelle de gravité `critique` non résolue, **ou**
+  - score de risque `critique` (≥ 70) **et** aucune validation pharmacien.
+- **P2 — Très urgent**
+  - ≥ 1 divergence `majeur` non résolue, **ou**
+  - score `eleve` (50–69) sans validation, **ou**
+  - ≥ 3 divergences non intentionnelles non résolues.
+- **P3 — Urgent**
+  - divergences `modere` non résolues, **ou**
+  - score `modere` (30–49) sans validation, **ou**
+  - analyse IA présente mais aucune relecture pharmacien depuis > 24 h.
+- **P4 — Standard**
+  - divergences uniquement `mineur` non résolues, **ou**
+  - conciliation à faire mais score `faible`.
+- **P5 — Non urgent**
+  - conciliation validée par un pharmacien et aucune divergence non résolue restante,
+  - ou patient sans épisode de conciliation en cours.
 
-- Remplacer le `<link>` Google Fonts par Sora (400/600/700/800) + Manrope (400/500/600/700).
-- Title + meta inchangés (déjà OK).
+Surcouche d'ancienneté : si une analyse IA est en attente de relecture depuis > 48 h, on remonte d'un palier (sans dépasser P1).
 
-### 3. Logo intégré
+## UI
 
-- Upload du logo via Lovable Assets CLI depuis `/mnt/user-uploads/Logo-WhatsApp-Défi_1_-_ConcilMed_IA_1.png` → `src/assets/concilmed-logo.png.asset.json`.
-- Import dans `_authenticated/route.tsx` et `auth.tsx`.
+- **Pastille FRENCH-MED** : carré arrondi 28×28 px, numéro 1–5, couleur du palier, tooltip = libellé + raison principale (« Divergence critique non résolue », « Validé le … », etc.).
+- **Listing patients** (`patients.index.tsx`) :
+  - Colonne pastille en tête de chaque carte patient (à gauche de l'avatar).
+  - Barre d'actions au-dessus : tri par défaut = palier croissant (P1 d'abord) ; filtre rapide « Tous / À relire (P1–P3) / Validés (P5) ».
+  - Compteurs en haut : `P1: 2 · P2: 5 · P3: 8 · P4: 12 · P5: 30`.
+- **Légende** : popover « ? » à côté du titre expliquant les 5 paliers.
 
-### 4. Header — `src/routes/_authenticated/route.tsx`
+## Détails techniques
 
-- Remplacer l'icône `Pill` par `<img src={logo} className="h-9 w-9 rounded-full" />`.
-- Wordmark : `<span className="font-display font-bold">ConcilMed<span className="text-teal-600">·IA</span></span>` + sous-titre fin "Conciliation médicamenteuse".
-- Hauteur header 16, fond `bg-card/80 backdrop-blur` + bordure douce, sticky.
-- Nav items : pills arrondies, état actif teal underline.
+- Nouveau fichier `src/lib/conciliation/triageScale.ts` :
+  - type `TriageLevel = 1|2|3|4|5`, constantes `TRIAGE_META` (label, couleur, délai, classe Tailwind).
+  - fonction `computePatientTriage(input)` pure, prend `{ activeEpisodes, riskScores, divergences, validations }` et renvoie `{ level, reason }`.
+- Nouveau composant `src/components/conciliation/TriageBadge.tsx`.
+- Nouveau hook `src/hooks/usePatientsTriage.ts` :
+  - une requête React Query agrégée qui charge en un appel pour la liste affichée : derniers `risk_scores`, `conciliation_medicaments` non résolus (group by patient avec max gravité + count), `conciliation_validations` (présence). Pas de N+1.
+- Tokens couleurs ajoutés à `src/styles.css` : `--triage-1`…`--triage-5` (rouge, orange, jaune, vert, bleu, déclinés en OKLCH cohérents avec la charte navy/teal).
+- Modifs `src/routes/_authenticated/patients.index.tsx` :
+  - intégrer le hook, la pastille, le tri/filtre, les compteurs.
+  - tri secondaire : date de création desc.
 
-### 5. Page Auth — `src/routes/auth.tsx`
+## Hors périmètre
 
-- Hero gauche avec logo grand format + tagline "L'IA au service de la conciliation médicamenteuse" sur fond `--gradient-brand` subtil, formulaire à droite.
-
-### 6. Composants clés — légère mise au goût de la nouvelle charte
-
-- `ConciliationCompleteCard`, `AIAnalysisPanel`, `PharmacistDocumentCompareCard` : titres en `font-display`, badges concordance en teal, headers de cartes avec liseré dégradé.
-- Boutons primaires : `bg-primary` (navy) ; boutons accent IA : nouvelle variante `bg-teal-600 text-white hover:bg-teal-700`.
-- Aucune logique métier modifiée.
-
-### Hors périmètre
-
-- Pas de refonte du flux conciliation, pas de touches DB, pas de modif des server functions.
-- Pas de mode sombre revisité (juste tokens cohérents).
-- Pas de recréation SVG du logo (utilisation telle quelle).
-
-### Fichiers modifiés / créés
-
-- modifié : `src/styles.css`
-- modifié : `src/routes/__root.tsx`
-- modifié : `src/routes/_authenticated/route.tsx`
-- modifié : `src/routes/auth.tsx`
-- modifiés (légers) : `src/components/patient/ConciliationCompleteCard.tsx`, `src/components/conciliation/AIAnalysisPanel.tsx`, `src/components/conciliation/PharmacistDocumentCompareCard.tsx`
-- créé : `src/assets/concilmed-logo.png.asset.json`
+- Pas de stockage en base du palier (recalculé à la volée — toujours à jour).
+- Pas de modification de l'algorithme de score de risque existant ni des écrans de détail patient (le palier sera réutilisable plus tard côté `patients.$patientId`).
+- Pas de notifications / alertes temps réel.
