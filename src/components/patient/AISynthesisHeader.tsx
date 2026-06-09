@@ -9,6 +9,7 @@ import { analyzePatientSynthesis } from "@/lib/conciliation/analyzePatientSynthe
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { classifyDci } from "@/lib/conciliation/atcInteractions";
 import { toast } from "sonner";
+import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
 
 const HIGH_RISK_KEYS = new Set(["anticoagulant", "insuline", "antiepileptique", "antiarythmique", "opioide", "ains"]);
 
@@ -134,6 +135,8 @@ export function AISynthesisHeader({ patientId }: { patientId: string }) {
             <p className="text-muted-foreground">{payload.synthese}</p>
           </div>
         )}
+
+        {payload && <ClinicalAlertsPanel payload={payload} />}
 
         {recos.length > 0 && payload && (
           <div className="rounded-md border bg-white p-3">

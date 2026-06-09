@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, AlertTriangle, Loader2 } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { analyzeConciliation, type AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { toast } from "sonner";
+import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
 
 export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
   const qc = useQueryClient();
@@ -52,28 +53,7 @@ export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
               </Badge>
             </div>
             <p className="text-xs">{payload.synthese}</p>
-            {payload.interactions?.length > 0 && (
-              <Section title={`Interactions (${payload.interactions.length})`}>
-                {payload.interactions.map((i, k) => (
-                  <Item key={k} title={`${i.dci_1} ↔ ${i.dci_2}`} sub={`${i.severite} — ${i.mecanisme}`} note={i.recommandation} />
-                ))}
-              </Section>
-            )}
-            {payload.contre_indications?.length > 0 && (
-              <Section title={`Contre-indications (${payload.contre_indications.length})`}>
-                {payload.contre_indications.map((c, k) => <Item key={k} title={c.medicament} sub={c.raison} note={c.recommandation} />)}
-              </Section>
-            )}
-            {payload.doublons_therapeutiques?.length > 0 && (
-              <Section title={`Doublons (${payload.doublons_therapeutiques.length})`}>
-                {payload.doublons_therapeutiques.map((d, k) => <Item key={k} title={d.medicaments.join(" + ")} sub={d.classe} note={d.recommandation} />)}
-              </Section>
-            )}
-            {payload.adaptations_posologiques?.length > 0 && (
-              <Section title={`Adaptations (${payload.adaptations_posologiques.length})`}>
-                {payload.adaptations_posologiques.map((a, k) => <Item key={k} title={a.medicament} sub={a.raison} note={a.recommandation} />)}
-              </Section>
-            )}
+            <ClinicalAlertsPanel payload={payload} />
           </div>
         )}
         {!payload && !mut.isPending && (
@@ -84,23 +64,3 @@ export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-xs font-semibold text-muted-foreground uppercase mb-1 flex items-center gap-1">
-        <AlertTriangle className="h-3 w-3" /> {title}
-      </div>
-      <div className="space-y-1">{children}</div>
-    </div>
-  );
-}
-
-function Item({ title, sub, note }: { title: string; sub?: string; note?: string }) {
-  return (
-    <div className="border rounded p-2 text-xs">
-      <div className="font-medium">{title}</div>
-      {sub && <div className="text-muted-foreground">{sub}</div>}
-      {note && <div className="mt-1 italic">→ {note}</div>}
-    </div>
-  );
-}
