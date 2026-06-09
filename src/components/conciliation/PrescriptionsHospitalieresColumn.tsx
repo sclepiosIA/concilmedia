@@ -154,6 +154,78 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
       ).data ?? []) as unknown as DomicileTraitement[],
   });
 
+  const { data: omissions = [] } = useQuery({
+    queryKey: ["prescription_omissions", episodeId],
+    queryFn: async () =>
+      ((
+        await supabase
+          .from("prescription_omissions" as never)
+          .select("*")
+          .eq("episode_id", episodeId)
+      ).data ?? []) as unknown as Omission[],
+  });
+
+  const presentKeys = new Set(
+    data.map((p) => dciKey(p.medicament ?? p.nom_commercial ?? "")).filter(Boolean),
+  );
+  const justifiedTraitementIds = new Set(omissions.filter((o) => o.justifiee).map((o) => o.traitement_id));
+  const missingTreatments = domicile.filter((t) => {
+    if (justifiedTraitementIds.has(t.id)) return false;
+    const k = dciKey(t.dci ?? t.nom_commercial ?? "");
+    return k.length > 0 && !presentKeys.has(k);
+  });
+
+  const addFromDomicile = useMutation({
+    mutationFn: async (t: DomicileTraitement) => {
+      const { error } = await supabase.from("prescriptions_hospitalieres").insert({
+        episode_id: episodeId,
+        patient_id: patientId,
+        medicament: t.dci ?? t.nom_commercial ?? "Médicament",
+        nom_commercial: t.nom_commercial ?? null,
+        dosage: t.dosage ?? null,
+        dosage_unite: t.dosage_unite ?? null,
+        voie_administration: t.voie_administration ?? null,
+        posologie_matin: t.posologie_matin ?? null,
+        posologie_midi: t.posologie_midi ?? null,
+        posologie_soir: t.posologie_soir ?? null,
+        posologie_coucher: t.posologie_coucher ?? null,
+        posologie: t.posologie_texte ?? null,
+        source: "omission_corrigee",
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["prescriptions", episodeId] });
+      toast.success("Traitement ajouté à la prescription hospitalière");
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const justifyOmission = useMutation({
+    mutationFn: async ({ traitementId, commentaire }: { traitementId: string; commentaire: string }) => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("prescription_omissions" as never).upsert(
+        {
+          episode_id: episodeId,
+          traitement_id: traitementId,
+          justifiee: true,
+          commentaire: commentaire || null,
+          created_by: u.user?.id ?? null,
+        } as never,
+        { onConflict: "episode_id,traitement_id" } as never,
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["prescription_omissions", episodeId] });
+      setJustifyId(null);
+      setJustifyText("");
+      toast.success("Omission marquée comme souhaitée");
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+
   const runAI = useServerFn(matchPrescriptionAI);
   const evaluatedRef = useRef<Set<string>>(new Set());
 
