@@ -259,7 +259,9 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             dosage_unite: t.dosage_unite ?? null, voie_administration: t.voie_administration ?? null,
             posologie_matin: t.posologie_matin ?? null, posologie_midi: t.posologie_midi ?? null,
             posologie_soir: t.posologie_soir ?? null, posologie_coucher: t.posologie_coucher ?? null,
-            indication: t.indication ?? null, source: "pdf_import", actif: true,
+            posologie_texte: t.posologie_texte ?? null,
+            indication: t.indication ?? null, duree: t.duree ?? null,
+            source: "pdf_import", actif: true,
           })) as never);
         }
 
