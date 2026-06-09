@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,9 +13,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Hospital, Pill, Plus, Trash2, Sparkles, Sunrise, Sun, Sunset, Moon } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { PrescriptionHospitaliereUploader } from "./PrescriptionHospitaliereUploader";
+import { MatchStatusBadge, MatchLegend } from "./MatchStatusBadge";
+import {
+  matchPrescription,
+  STATUS_META,
+  type MatchStatus,
+  type DomicileTraitement,
+  type HospPrescription,
+} from "@/lib/conciliation/prescriptionMatch";
+import { matchPrescriptionAI } from "@/lib/conciliation/matchPrescriptionAI.functions";
 
 type Prescription = {
   id: string;
@@ -31,6 +41,10 @@ type Prescription = {
   indication: string | null;
   prescripteur: string | null;
   source: string | null;
+  match_status: string | null;
+  match_reason: string | null;
+  match_source: string | null;
+  match_recommandation: string | null;
 };
 
 const SOURCE_LABEL: Record<string, string> = {
