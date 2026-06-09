@@ -221,7 +221,7 @@ export async function seedDemoJeanPierreMoreau(): Promise<string> {
     episode_id: episodeId,
     patient_id: patientId,
     phase: "entree",
-    medication_domicile: null,
+    medication_domicile: {},
     medication_hospitalisation: {
       dci: "Méthylprednisolone",
       dosage: "40 mg IV",
@@ -245,7 +245,7 @@ export async function seedDemoJeanPierreMoreau(): Promise<string> {
     episode_id: episodeId,
     patient_id: patientId,
     phase: "entree",
-    medication_domicile: null,
+    medication_domicile: {},
     medication_hospitalisation: {
       dci: "Vancomycine",
       dosage: "1 g IV",
@@ -269,7 +269,7 @@ export async function seedDemoJeanPierreMoreau(): Promise<string> {
     episode_id: episodeId,
     patient_id: patientId,
     phase: "entree",
-    medication_domicile: null,
+    medication_domicile: {},
     medication_hospitalisation: {
       dci: "Pipéracilline-Tazobactam",
       dosage: "4 g / 0,5 g IV",
@@ -305,7 +305,7 @@ export async function seedDemoJeanPierreMoreau(): Promise<string> {
       posologie: "1 matin",
       prescription_id: findRx("Empagliflozine")?.id,
     },
-    type_divergence: "modification",
+    type_divergence: "modification_dose",
     intention: "non_intentionnel",
     justification: null,
     action_corrective:
@@ -334,7 +334,7 @@ export async function seedDemoJeanPierreMoreau(): Promise<string> {
       posologie: "1 matin",
       prescription_id: findRx("Lisinopril")?.id,
     },
-    type_divergence: "modification",
+    type_divergence: "modification_dose",
     intention: "a_evaluer",
     justification: null,
     action_corrective:
