@@ -55,9 +55,11 @@ function PatientsListPage() {
     },
   });
 
-  const [filterMode, setFilterMode] = useState<"all" | "todo" | "done">("all");
+  type FilterMode = "all" | "todo" | "done" | "p1" | "p2" | "p3" | "p4" | "p5";
+  const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const patientIds = useMemo(() => patients.map((p) => p.id), [patients]);
   const { data: triageMap = {} } = usePatientsTriage(patientIds);
+  const { data: quickInfoMap = {} } = usePatientsQuickInfo(patientIds);
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
@@ -71,6 +73,7 @@ function PatientsListPage() {
         const lvl = triageMap[p.id]?.level ?? 5;
         if (filterMode === "todo") return lvl <= 3;
         if (filterMode === "done") return lvl === 5;
+        if (filterMode.startsWith("p")) return lvl === Number(filterMode.slice(1));
         return true;
       })
       .sort((a, b) => {
@@ -80,6 +83,7 @@ function PatientsListPage() {
         return (b.created_at ?? "").localeCompare(a.created_at ?? "");
       });
   }, [patients, search, filterMode, triageMap]);
+
 
   const counts = useMemo(() => {
     const c: Record<TriageLevel, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
