@@ -39,6 +39,32 @@ export const analyzeLettreAdmission = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY manquante");
 
+    // Resolve file: prefer base64 from client; otherwise download from storage
+    let fileBase64 = data.fileBase64;
+    let mimeType = data.mimeType ?? "application/pdf";
+    if (!fileBase64) {
+      let path = data.storagePath;
+      if (!path) {
+        const { data: doc } = await supabase
+          .from("documents_sources")
+          .select("storage_path, mime_type")
+          .eq("patient_id", data.patientId)
+          .eq("document_type", "lettre_admission")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!doc?.storage_path) throw new Error("Aucune lettre d'admission trouvée");
+        path = doc.storage_path;
+        if (doc.mime_type) mimeType = doc.mime_type;
+      }
+      const { data: blob, error: dlErr } = await supabase.storage.from("ordonnances").download(path);
+      if (dlErr || !blob) throw new Error("Téléchargement impossible : " + (dlErr?.message ?? "vide"));
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+      fileBase64 = btoa(bin);
+    }
+
     const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
     const { generateText } = await import("ai");
     const gateway = createLovableAiGatewayProvider(apiKey);
