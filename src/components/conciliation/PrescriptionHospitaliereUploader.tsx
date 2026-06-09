@@ -10,7 +10,7 @@ function PreviewPriseCell({
   label,
   shortLabel,
 }: {
-  value: string | null | undefined;
+  value: string | number | null | undefined;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   shortLabel: string;
