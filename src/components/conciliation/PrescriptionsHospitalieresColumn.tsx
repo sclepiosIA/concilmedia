@@ -12,7 +12,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Hospital, Pill, Plus, Trash2, Sparkles, Sunrise, Sun, Sunset, Moon } from "lucide-react";
+import { Hospital, Pill, Plus, Trash2, Sparkles, Sunrise, Sun, Sunset, Moon, AlertTriangle, Check, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { PrescriptionHospitaliereUploader } from "./PrescriptionHospitaliereUploader";
