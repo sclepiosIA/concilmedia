@@ -52,7 +52,9 @@ const TraitementSchema = z.object({
   posologie_midi: z.string().optional().nullable(),
   posologie_soir: z.string().optional().nullable(),
   posologie_coucher: z.string().optional().nullable(),
+  posologie_texte: z.string().optional().nullable(),
   indication: z.string().optional().nullable(),
+  duree: z.string().optional().nullable(),
 });
 
 const PrescriptionHospiSchema = z.object({
