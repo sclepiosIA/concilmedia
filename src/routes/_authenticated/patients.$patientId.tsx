@@ -109,7 +109,6 @@ function PatientDetailPage() {
       <SynthesePatientDialog patientId={patientId} open={syntheseOpen} onOpenChange={setSyntheseOpen} />
 
       <div className="space-y-6">
-        <AISynthesisHeader patientId={patientId} />
         <ClinicalProfileCard patientId={patientId} />
         
         <section>
