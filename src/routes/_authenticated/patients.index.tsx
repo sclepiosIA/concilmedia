@@ -375,7 +375,9 @@ function PatientsListPage() {
             </Card>
           ))}
 
-      </div>
+        </div>
+      </TooltipProvider>
+
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
