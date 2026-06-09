@@ -165,13 +165,13 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
             return;
           }
           runAI({ data: { prescriptionId: p.id, patientId } })
-            .catch((e: unknown) => {
-              const msg = e instanceof Error ? e.message : "Erreur IA";
+            .catch(() => {
+              // Si l'IA échoue, on conserve l'analyse déterministe sans afficher de trace technique.
               supabase
                 .from("prescriptions_hospitalieres")
                 .update({
                   match_status: result.status === "gris" ? "gris" : "orange",
-                  match_reason: `${result.reason} (IA indisponible : ${msg})`,
+                  match_reason: result.reason,
                   match_source: "deterministe",
                 })
                 .eq("id", p.id)
