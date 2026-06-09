@@ -245,6 +245,9 @@ export const commitBulkImport = createServerFn({ method: "POST" })
               hash_sha256: hashHex,
               document_type: item.document_type,
               uploaded_by: userId,
+              prescriber_name: item.prescriber?.name ?? null,
+              prescriber_specialty: item.prescriber?.specialty ?? null,
+              prescription_date: item.prescriber?.prescription_date ?? null,
             } as never).select("id").single();
             if (docErr || !doc) throw docErr ?? new Error("Création document source échouée");
             sourceDocumentId = (doc as { id: string }).id;
