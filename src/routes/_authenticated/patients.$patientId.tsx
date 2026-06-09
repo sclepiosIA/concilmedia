@@ -20,7 +20,7 @@ import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { MedicationProfileCard } from "@/components/patient/MedicationProfileCard";
 import { CollapsibleSection } from "@/components/patient/CollapsibleSection";
 import { ConciliationCompleteCard } from "@/components/patient/ConciliationCompleteCard";
-import { Activity, FlaskConical, Hospital, Pill, Sparkles, Stethoscope } from "lucide-react";
+import { FlaskConical, Hospital, Pill, Sparkles, Stethoscope } from "lucide-react";
 import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
@@ -303,7 +303,7 @@ function PatientDetailPage() {
           <ConciliationCompleteCard patientId={patientId} />
         </CollapsibleSection>
       </div>
-      {void Activity}
+      
     </div>
   );
 }
