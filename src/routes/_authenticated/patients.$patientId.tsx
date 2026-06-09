@@ -187,6 +187,18 @@ function PatientDetailPage() {
                   if (file) uploadLettre.mutate(file);
                 }}
               />
+              {lettreAdmission && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1 text-xs"
+                  onClick={() => reanalyze.mutate()}
+                  disabled={reanalyze.isPending || uploadLettre.isPending}
+                  title="Relancer l'analyse IA sur la lettre déjà importée"
+                >
+                  {reanalyze.isPending ? "Analyse…" : "🔄 Analyser"}
+                </Button>
+              )}
             </div>
             <div className="text-sm text-muted-foreground mt-1">
               {patient.date_naissance && `${format(new Date(patient.date_naissance), "d MMMM yyyy", { locale: fr })}`}
