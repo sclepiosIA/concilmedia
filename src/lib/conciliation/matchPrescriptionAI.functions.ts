@@ -63,6 +63,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
 
     // Tentative 1 : structured output. Fallback : parsing JSON manuel.
     let output: z.infer<typeof AISchema> | null = null;
+    let lastError: unknown = null;
     try {
       const res = await generateText({
         model: gateway("google/gemini-2.5-flash"),
@@ -70,7 +71,8 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
         experimental_output: Output.object({ schema: AISchema }),
       });
       output = res.experimental_output;
-    } catch {
+    } catch (e) {
+      lastError = e;
       try {
         const res = await generateText({
           model: gateway("google/gemini-2.5-flash"),
@@ -81,15 +83,18 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
         const txt = res.text.trim().replace(/^```json\s*|\s*```$/g, "");
         const match = txt.match(/\{[\s\S]*\}/);
         if (match) output = AISchema.parse(JSON.parse(match[0]));
-      } catch {
-        /* ignore, géré ci-dessous */
+      } catch (e2) {
+        lastError = e2;
       }
     }
 
     if (!output) {
-      // Pas d'analyse IA possible : on laisse la prescription en l'état (analyse déterministe déjà enregistrée).
-      throw new Error("Analyse IA non disponible pour cette prescription");
+      // Pas d'analyse IA possible : on conserve l'analyse déterministe déjà en base, sans erreur côté UI.
+      console.warn("[matchPrescriptionAI] IA indisponible", lastError);
+      return { status: "gris" as const, reason: "Analyse IA non disponible — résultat déterministe conservé", recommandation: null, skipped: true as const };
     }
+
+
 
     await supabase
       .from("prescriptions_hospitalieres")
