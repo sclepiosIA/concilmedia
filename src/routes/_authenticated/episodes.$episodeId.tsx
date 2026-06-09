@@ -151,6 +151,12 @@ function EpisodeConciliationPage() {
 
       <BilanEntreeSection episodeId={episodeId} />
 
+      <div className="my-4">
+        <DivergencesSummaryCard conciliations={recon.conciliations} />
+      </div>
+
+
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <div className="lg:col-span-3">
           <TraitementsDomicileColumn patientId={episode.patient_id} />
