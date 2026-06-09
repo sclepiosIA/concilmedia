@@ -126,8 +126,12 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
           </div>
         ) : (
           <div className="divide-y">
-            <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 text-[11px] uppercase tracking-wide text-muted-foreground bg-muted/40">
+            <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto] gap-2 px-4 py-2 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted/40">
               <div>Médicament</div>
+              <div>Posologie</div>
+              <div>Indication</div>
+              <div></div>
+            </div>
               <div className="text-center">Posologie</div>
               <div>Indication / Prescripteur</div>
               <div></div>
