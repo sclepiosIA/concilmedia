@@ -73,9 +73,16 @@ const EpisodeContextSchema = z.object({
   date_admission: z.string().optional().nullable(),
 }).optional().nullable();
 
+const PrescriberSchema = z.object({
+  name: z.string().optional().nullable(),
+  specialty: z.string().optional().nullable(),
+  prescription_date: z.string().optional().nullable(),
+}).optional().nullable();
+
 const DossierSchema = z.object({
   document_type: z.enum(["ordonnance_ville", "ordonnance_hospitaliere", "lettre_admission", "compte_rendu", "bilan_bio", "autre"]).default("autre"),
   patient: PatientSchema,
+  prescriber: PrescriberSchema,
   antecedents: z.array(AntecedentSchema).default([]),
   comorbidites: z.array(ComorbiditeSchema).default([]),
   allergies: z.array(AllergieSchema).default([]),
@@ -109,6 +116,7 @@ Réponds STRICTEMENT en JSON valide (aucun texte avant/après, pas de markdown) 
 {
   "document_type": "ordonnance_ville" | "ordonnance_hospitaliere" | "lettre_admission" | "compte_rendu" | "bilan_bio" | "autre",
   "patient": { "nom":"...", "prenom":"...", "date_naissance":"YYYY-MM-DD", "sexe":"M|F|autre", "poids_kg":number, "taille_cm":number },
+  "prescriber": { "name":"Dr Jean Dupont", "specialty":"Médecin généraliste|Cardiologue|Endocrinologue|Néphrologue|...", "prescription_date":"YYYY-MM-DD" },
   "antecedents": [{ "type":"medical|chirurgical|familial|obstetrical|autre", "description":"...", "date_evenement":"YYYY-MM-DD" }],
   "comorbidites": [{ "libelle":"HTA", "statut":"actif|resolu|suspect" }],
   "allergies": [{ "substance":"Pénicilline", "reaction":"urticaire", "severite":"legere|moderee|severe|anaphylaxie" }],
@@ -126,6 +134,7 @@ Règles CRUCIALES de classification :
 - Si le document liste à la fois traitement habituel ET nouvelles prescriptions hospi, sépare-les correctement.
 - Pour les antécédents et allergies : extrais TOUS ceux mentionnés, même brièvement (sections "ATCD", "Allergies", "Intolérances", anamnèse). N'invente jamais.
 - Pour chaque prescription hospitalière, EXTRAIS la date du jour de prescription (jour J) dans "date_debut" (format YYYY-MM-DD). C'est la date imprimée en tête d'ordonnance hospitalière ou à côté de chaque ligne. Si une durée ou date d'arrêt est précisée, remplis "date_fin".
+- Pour TOUTE ordonnance de ville : extrais OBLIGATOIREMENT le bloc "prescriber" (nom complet du médecin prescripteur tel qu'écrit avec titre "Dr"/"Pr", spécialité littérale issue de l'en-tête/du tampon, date de l'ordonnance en YYYY-MM-DD). Si plusieurs ordonnances dans le même PDF, prends celle du document analysé. N'invente jamais : laisse null si non lisible.
 - Privilégie la DCI au nom commercial dans "traitements"; dans "prescriptions_hospitalieres" garde le libellé tel qu'écrit.
 - Biologie prioritaire : DFG, créatinine, kaliémie, natrémie, INR, TP, hémoglobine, plaquettes, leucocytes, ASAT, ALAT, glycémie, HbA1c, CRP.
 - Omets les champs inconnus, n'invente rien. Renvoie [] pour les sections vides.
@@ -236,6 +245,9 @@ export const commitBulkImport = createServerFn({ method: "POST" })
               hash_sha256: hashHex,
               document_type: item.document_type,
               uploaded_by: userId,
+              prescriber_name: item.prescriber?.name ?? null,
+              prescriber_specialty: item.prescriber?.specialty ?? null,
+              prescription_date: item.prescriber?.prescription_date ?? null,
             } as never).select("id").single();
             if (docErr || !doc) throw docErr ?? new Error("Création document source échouée");
             sourceDocumentId = (doc as { id: string }).id;

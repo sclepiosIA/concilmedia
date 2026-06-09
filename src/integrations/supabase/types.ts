@@ -343,6 +343,9 @@ export type Database = {
           id: string
           mime_type: string
           patient_id: string
+          prescriber_name: string | null
+          prescriber_specialty: string | null
+          prescription_date: string | null
           storage_path: string
           uploaded_by: string | null
         }
@@ -356,6 +359,9 @@ export type Database = {
           id?: string
           mime_type: string
           patient_id: string
+          prescriber_name?: string | null
+          prescriber_specialty?: string | null
+          prescription_date?: string | null
           storage_path: string
           uploaded_by?: string | null
         }
@@ -369,6 +375,9 @@ export type Database = {
           id?: string
           mime_type?: string
           patient_id?: string
+          prescriber_name?: string | null
+          prescriber_specialty?: string | null
+          prescription_date?: string | null
           storage_path?: string
           uploaded_by?: string | null
         }
