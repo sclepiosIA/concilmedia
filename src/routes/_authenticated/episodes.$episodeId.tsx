@@ -156,8 +156,9 @@ function EpisodeConciliationPage() {
 
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 space-y-4">
           <TraitementsDomicileColumn patientId={episode.patient_id} />
+          <PrescriptionsHospitalieresColumn episodeId={episodeId} patientId={episode.patient_id} />
         </div>
         <div className="lg:col-span-6">
           <Card>
@@ -180,7 +181,6 @@ function EpisodeConciliationPage() {
         <div className="lg:col-span-3 space-y-4">
           <ClinicalProfileCard patientId={episode.patient_id} />
           <ClinicalRecommendationsCard patientId={episode.patient_id} conciliations={recon.conciliations} />
-          <PrescriptionsHospitalieresColumn episodeId={episodeId} patientId={episode.patient_id} />
           <AIAnalysisPanel episodeId={episodeId} />
         </div>
       </div>
