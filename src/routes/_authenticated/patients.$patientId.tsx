@@ -29,6 +29,7 @@ function PatientDetailPage() {
   const qc = useQueryClient();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [syntheseOpen, setSyntheseOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   const { data: patient } = useQuery({
