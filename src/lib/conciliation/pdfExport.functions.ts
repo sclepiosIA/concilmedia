@@ -268,6 +268,10 @@ export const generateEpisodeConciliationPdf = createServerFn({ method: "POST" })
       contre_indications?: Array<{ medicament: string; raison: string; recommandation: string }>;
       doublons_therapeutiques?: Array<{ medicaments: string[]; classe: string }>;
       adaptations_posologiques?: Array<{ medicament: string; raison: string; recommandation: string }>;
+      medicaments_haut_risque?: Array<{ medicament: string; classe: string; raison: string }>;
+      allergies_croisees?: Array<{ allergene: string; medicament: string; risque: string }>;
+      surveillance?: Array<{ parametre: string; frequence: string; justification: string }>;
+      conclusion_clinique?: string;
     };
     const payload = ai.data?.payload as unknown as AIPayload | undefined;
     if (payload) {
@@ -277,6 +281,10 @@ export const generateEpisodeConciliationPdf = createServerFn({ method: "POST" })
       if (payload.contre_indications?.length) { y -= 3; writeLine("Contre-indications :", { font: bold }); for (const c of payload.contre_indications) writeLine(`  • ${c.medicament} — ${c.raison} → ${c.recommandation}`); }
       if (payload.doublons_therapeutiques?.length) { y -= 3; writeLine("Doublons :", { font: bold }); for (const d of payload.doublons_therapeutiques) writeLine(`  • ${d.medicaments.join(" + ")} (${d.classe})`); }
       if (payload.adaptations_posologiques?.length) { y -= 3; writeLine("Adaptations posologiques :", { font: bold }); for (const a of payload.adaptations_posologiques) writeLine(`  • ${a.medicament} — ${a.raison} → ${a.recommandation}`); }
+      if (payload.medicaments_haut_risque?.length) { y -= 3; writeLine("Médicaments à haut risque :", { font: bold }); for (const m of payload.medicaments_haut_risque) writeLine(`  • ${m.medicament} (${m.classe}) — ${m.raison}`); }
+      if (payload.allergies_croisees?.length) { y -= 3; writeLine("Allergies croisées :", { font: bold, color: rgb(0.8, 0, 0) }); for (const a of payload.allergies_croisees) writeLine(`  • ${a.allergene} ↔ ${a.medicament} — ${a.risque}`); }
+      if (payload.surveillance?.length) { y -= 3; writeLine("Plan de surveillance :", { font: bold }); for (const s of payload.surveillance) writeLine(`  • ${s.parametre} (${s.frequence}) — ${s.justification}`); }
+      if (payload.conclusion_clinique) { section("Conclusion clinique"); writeLine(payload.conclusion_clinique, { font: bold, size: 11 }); }
     }
 
     const bytes = await pdf.save();
