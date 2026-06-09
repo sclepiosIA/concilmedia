@@ -1,12 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // tabs removed
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, FilePlus2, Sparkles, FileText } from "lucide-react";
+import { ChevronLeft, FilePlus2, FileText, Upload } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -29,6 +29,7 @@ function PatientDetailPage() {
   const qc = useQueryClient();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [syntheseOpen, setSyntheseOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
 
   const { data: patient } = useQuery({
@@ -43,6 +44,21 @@ function PatientDetailPage() {
   const { data: allergies = [] } = useQuery({
     queryKey: ["allergies", patientId],
     queryFn: async () => (await supabase.from("allergies").select("*").eq("patient_id", patientId)).data ?? [],
+  });
+
+  const { data: lettreAdmission } = useQuery({
+    queryKey: ["lettre-admission", patientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("documents_sources")
+        .select("*")
+        .eq("patient_id", patientId)
+        .eq("document_type", "lettre_admission")
+        .order("created_at", { ascending: false })
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
   });
 
   const createEpisode = useMutation({
@@ -62,6 +78,45 @@ function PatientDetailPage() {
     },
   });
 
+  const uploadLettre = useMutation({
+    mutationFn: async (file: File) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Non authentifié");
+
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}_${file.name}`;
+      const storagePath = `${user.id}/${patientId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("ordonnances")
+        .upload(storagePath, file, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase.from("documents_sources").insert({
+        patient_id: patientId,
+        storage_path: storagePath,
+        file_name: file.name,
+        mime_type: file.type,
+        file_size: file.size,
+        document_type: "lettre_admission",
+        uploaded_by: user.id,
+      });
+      if (dbError) throw dbError;
+
+      return storagePath;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["lettre-admission", patientId] });
+      toast.success("Lettre d'admission importée");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    },
+    onError: (err) => {
+      toast.error("Erreur lors de l'import : " + (err as Error).message);
+    },
+  });
+
   if (!patient) return <div className="container py-8">Chargement…</div>;
 
   const age = patient.date_naissance
@@ -78,7 +133,30 @@ function PatientDetailPage() {
       <Card className="mb-6">
         <CardContent className="py-5 flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold">{patient.nom.toUpperCase()} {patient.prenom}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold">{patient.nom.toUpperCase()} {patient.prenom}</h1>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`h-8 px-2 ${lettreAdmission ? "text-green-600 hover:text-green-700" : "text-muted-foreground hover:text-foreground"}`}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadLettre.isPending}
+                title={lettreAdmission ? "Lettre d'admission importée" : "Importer une lettre d'admission"}
+              >
+                <Upload className="h-4 w-4" />
+                {lettreAdmission && <span className="sr-only">Lettre d'admission importée</span>}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) uploadLettre.mutate(file);
+                }}
+              />
+            </div>
             <div className="text-sm text-muted-foreground mt-1">
               {patient.date_naissance && `${format(new Date(patient.date_naissance), "d MMMM yyyy", { locale: fr })}`}
               {age !== null && ` • ${age} ans`}
