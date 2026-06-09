@@ -10,12 +10,14 @@ import {
   HeartPulse,
   Stethoscope,
   ClipboardCheck,
+  Scale,
 } from "lucide-react";
 import {
   computeComplexity,
   COMPLEXITY_LABEL,
   type ComplexityLevel,
 } from "@/lib/clinical/complexityScore";
+import { computeBmi } from "@/lib/clinical/bmi";
 
 const TONE: Record<ComplexityLevel, string> = {
   faible: "bg-green-100 text-green-800 border-green-200",
@@ -80,17 +82,17 @@ function normalize(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-function buildRiskProfile(comorb: string[]): string[] {
+function buildRiskProfile(comorb: string[], bmi: number | null): { label: string; tone: Tone }[] {
   const set = comorb.map(normalize);
   const has = (kw: string) => set.some((s) => s.includes(kw));
-  const risks: string[] = [];
+  const risks: { label: string; tone: Tone }[] = [];
   if (has("hta") || has("hypertension") || has("coronar") || has("infarctus") || has("avc") || has("ait") || has("fibrillation") || has("insuffisance cardiaque")) {
-    risks.push("Risque cardiovasculaire élevé");
+    risks.push({ label: "Risque cardiovasculaire élevé", tone: "red" });
   }
-  if (has("renal") || has("rein") || has("irc")) risks.push("Vigilance rénale");
-  if (has("diabete") || has("dyslipid") || has("cholesterol")) risks.push("Risque métabolique élevé");
-  if (has("obesite") || has("imc")) risks.push("Obésité");
-  if (has("bpco") || has("asthme")) risks.push("Vigilance respiratoire");
+  if (has("renal") || has("rein") || has("irc")) risks.push({ label: "Vigilance rénale", tone: "orange" });
+  if (has("diabete") || has("dyslipid") || has("cholesterol")) risks.push({ label: "Risque métabolique élevé", tone: "orange" });
+  if (has("obesite") || (bmi !== null && bmi >= 30)) risks.push({ label: "Risque lié à l'obésité", tone: "orange" });
+  if (has("bpco") || has("asthme")) risks.push({ label: "Vigilance respiratoire", tone: "orange" });
   return risks;
 }
 
@@ -98,16 +100,22 @@ function buildVigilance(comorb: string[]): string[] {
   const set = comorb.map(normalize);
   const has = (kw: string) => set.some((s) => s.includes(kw));
   const items: string[] = [];
-  if (has("diabete")) items.push("Vérifier les traitements antidiabétiques");
-  if (has("renal") || has("rein") || has("irc")) items.push("Vérifier les adaptations posologiques rénales");
-  if (has("hta") || has("hypertension") || has("insuffisance cardiaque")) items.push("Vérifier les traitements antihypertenseurs");
-  if (has("fibrillation") || has("avc") || has("ait")) items.push("Vérifier la couverture anticoagulante");
-  items.push("Vérifier les interactions potentielles");
-  items.push("Vérifier les médicaments manquants lors des transitions de soins");
+  if (has("diabete")) items.push("Vérification des traitements antidiabétiques");
+  if (has("renal") || has("rein") || has("irc")) items.push("Vérification des adaptations posologiques rénales");
+  if (has("hta") || has("hypertension") || has("insuffisance cardiaque")) items.push("Vérification des traitements antihypertenseurs");
+  if (has("fibrillation") || has("avc") || has("ait")) items.push("Vérification de la couverture anticoagulante");
+  items.push("Recherche d'interactions médicamenteuses");
+  items.push("Détection des médicaments manquants ou ajoutés");
+  items.push("Vérification des traitements à haut risque (anticoagulants, insuline, antiépileptiques)");
   return items;
 }
 
 export function ClinicalProfileCard({ patientId }: { patientId: string }) {
+  const { data: patient } = useQuery({
+    queryKey: ["patient", patientId],
+    queryFn: async () =>
+      (await supabase.from("patients").select("*").eq("id", patientId).maybeSingle()).data,
+  });
   const { data: comorbidites = [] } = useQuery({
     queryKey: ["comorbidites", patientId],
     queryFn: async () =>
@@ -118,25 +126,35 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
     queryFn: async () =>
       (await supabase.from("allergies").select("*").eq("patient_id", patientId)).data ?? [],
   });
+  const { data: traitements = [] } = useQuery({
+    queryKey: ["traitements", patientId],
+    queryFn: async () =>
+      (await supabase.from("traitements_habituels").select("*").eq("patient_id", patientId).eq("actif", true)).data ?? [],
+  });
 
   const labels = comorbidites.map((c) => c.libelle);
-  const complexity = computeComplexity(labels);
-  const risks = buildRiskProfile(labels);
-  const vigilance = buildVigilance(labels);
-  
+  const bmi = computeBmi(patient?.poids_kg ?? null, patient?.taille_cm ?? null);
+  const baseComplexity = computeComplexity(labels);
+  // Extension du score : âge, polymédication, obésité, IR
+  const age = patient?.date_naissance
+    ? Math.floor((Date.now() - new Date(patient.date_naissance).getTime()) / 31557600000)
+    : null;
+  let extra = 0;
+  const detail = [...baseComplexity.detail];
+  if (age !== null && age >= 75) { extra += 2; detail.push({ label: "Âge ≥ 75 ans", weight: 2 }); }
+  else if (age !== null && age >= 65) { extra += 1; detail.push({ label: "Âge 65-74 ans", weight: 1 }); }
+  if (traitements.length >= 10) { extra += 3; detail.push({ label: "Polymédication majeure (≥10)", weight: 3 }); }
+  else if (traitements.length >= 5) { extra += 2; detail.push({ label: "Polymédication (≥5)", weight: 2 }); }
+  if (bmi && bmi.imc >= 30) { extra += 1; detail.push({ label: "Obésité (IMC ≥ 30)", weight: 1 }); }
+  const score = baseComplexity.score + extra;
+  const niveau: ComplexityLevel = score >= 9 ? "eleve" : score >= 5 ? "modere" : "faible";
+  const complexity = { score, niveau, detail };
 
-  if (labels.length === 0 && allergies.length === 0) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="py-4 text-sm text-muted-foreground">
-          Ajoutez des comorbidités et allergies pour générer le profil patient et la vigilance médicamenteuse.
-        </CardContent>
-      </Card>
-    );
-  }
+  const risks = buildRiskProfile(labels, bmi?.imc ?? null);
+  const vigilance = buildVigilance(labels);
 
   return (
-    <Card>
+    <Card className="border-primary/20 shadow-sm">
       <CardContent className="py-4 space-y-4">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 font-semibold text-sm uppercase tracking-wide">
@@ -160,12 +178,33 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
           </ProfileTile>
 
           <ProfileTile
+            tone={bmi ? bmi.tone : "green"}
+            icon={Scale}
+            title="IMC & morphologie"
+          >
+            {!bmi ? (
+              <span className="text-muted-foreground">Poids et taille requis pour calculer l'IMC</span>
+            ) : (
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">{bmi.imc}</span>
+                  <span className="text-xs text-muted-foreground">kg/m²</span>
+                </div>
+                <div className="text-sm font-medium">{bmi.label}</div>
+                <div className="text-xs text-muted-foreground">
+                  {patient?.poids_kg} kg · {patient?.taille_cm} cm
+                </div>
+              </div>
+            )}
+          </ProfileTile>
+
+          <ProfileTile
             tone={allergies.length === 0 ? "green" : "red"}
             icon={allergies.length === 0 ? ShieldCheck : AlertTriangle}
             title="Allergies"
           >
             {allergies.length === 0 ? (
-              <span className="text-green-800">Aucune allergie connue</span>
+              <span className="text-green-800 font-medium">Aucune allergie connue</span>
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {allergies.map((a) => (
@@ -177,13 +216,21 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
             )}
           </ProfileTile>
 
-          <ProfileTile tone="orange" icon={Stethoscope} title="Profil de risque">
+          <ProfileTile tone="orange" icon={Stethoscope} title="Profil de risque clinique">
             {risks.length === 0 ? (
               <span className="text-muted-foreground">Aucun risque particulier identifié</span>
             ) : (
-              <ul className="space-y-0.5 list-disc pl-5 text-amber-900">
-                {risks.map((r) => <li key={r}>{r}</li>)}
-              </ul>
+              <div className="flex flex-wrap gap-1.5">
+                {risks.map((r) => (
+                  <Badge
+                    key={r.label}
+                    variant="outline"
+                    className={`bg-white ${r.tone === "red" ? "border-red-300 text-red-800" : "border-amber-300 text-amber-900"}`}
+                  >
+                    {r.label}
+                  </Badge>
+                ))}
+              </div>
             )}
           </ProfileTile>
 
@@ -192,7 +239,6 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
               {vigilance.map((v) => <li key={v}>{v}</li>)}
             </ul>
           </ProfileTile>
-
         </div>
       </CardContent>
     </Card>
