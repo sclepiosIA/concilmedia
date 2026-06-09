@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { TraitementsHabituelsSection } from "@/components/patient/TraitementsHabituelsSection";
+import { PrescriptionsHospitalieresSection } from "@/components/patient/PrescriptionsHospitalieresSection";
 import { EpisodesSection } from "@/components/patient/EpisodesSection";
 import { BiologieSection } from "@/components/patient/BiologieSection";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
@@ -255,6 +256,10 @@ function PatientDetailPage() {
           <h2 className="text-lg font-semibold mb-3">Traitements</h2>
           <div className="mb-3"><MedicationProfileCard patientId={patientId} /></div>
           <TraitementsHabituelsSection patientId={patientId} />
+        </section>
+        <section>
+          <h2 className="text-lg font-semibold mb-3">Prescriptions hospitalières</h2>
+          <PrescriptionsHospitalieresSection patientId={patientId} />
         </section>
         <section><h2 className="text-lg font-semibold mb-3">Biologie</h2><BiologieSection patientId={patientId} /></section>
       </div>
