@@ -17,6 +17,7 @@ import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImp
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { MedicationProfileCard } from "@/components/patient/MedicationProfileCard";
+import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
