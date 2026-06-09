@@ -14,6 +14,7 @@ import { PrescriptionsHospitalieresColumn } from "@/components/conciliation/Pres
 import { AIAnalysisPanel } from "@/components/conciliation/AIAnalysisPanel";
 import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
 import { ClinicalRecommendationsCard } from "@/components/conciliation/ClinicalRecommendationsCard";
+import { DivergencesSummaryCard } from "@/components/conciliation/DivergencesSummaryCard";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { BilanEntreeSection } from "@/components/episode/BilanEntreeSection";
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
