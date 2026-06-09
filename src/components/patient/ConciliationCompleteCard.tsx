@@ -112,7 +112,8 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
   };
 
   const totalAlertes = payload
-    ? (payload.interactions?.length ?? 0) +
+    ? (payload.divergences_conciliation?.length ?? 0) +
+      (payload.interactions?.length ?? 0) +
       (payload.contre_indications?.length ?? 0) +
       (payload.adaptations_posologiques?.length ?? 0) +
       (payload.doublons_therapeutiques?.length ?? 0) +
