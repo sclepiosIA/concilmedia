@@ -502,6 +502,17 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
                 </div>
               </div>
             )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadDocMut.mutate(f);
+                e.target.value = "";
+              }}
+            />
           </section>
 
           {validation && analysisId && (
