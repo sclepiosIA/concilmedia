@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   computePatientTriage,
@@ -15,11 +15,19 @@ const worseRisk = (a: NiveauRisque | null, b: NiveauRisque | null): NiveauRisque
 };
 
 export function usePatientsTriage(patientIds: string[]) {
+  // Clé stable : on ignore l'ordre du tableau et on évite de regénérer la clé
+  // si la liste ne change pas réellement.
   const key = [...patientIds].sort().join(",");
   return useQuery({
     queryKey: ["patients-triage", key],
     enabled: patientIds.length > 0,
-    staleTime: 30_000,
+    // Le triage est purement dérivé — pas besoin de rafraîchir souvent.
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
+    placeholderData: keepPreviousData,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     queryFn: async (): Promise<Record<string, TriageResult>> => {
       const [episodesRes, divsRes, validationsRes, analysesRes, risksRes] = await Promise.all([
         supabase
