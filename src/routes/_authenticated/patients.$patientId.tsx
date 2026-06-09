@@ -138,12 +138,13 @@ function PatientDetailPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                className={`h-8 px-2 ${lettreAdmission ? "text-green-600 hover:text-green-700" : "text-muted-foreground hover:text-foreground"}`}
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadLettre.isPending}
                 title={lettreAdmission ? "Lettre d'admission importée" : "Importer une lettre d'admission"}
               >
                 <Upload className="h-4 w-4" />
+                {lettreAdmission && <span className="sr-only">Lettre d'admission importée</span>}
               </Button>
               <input
                 ref={fileInputRef}
