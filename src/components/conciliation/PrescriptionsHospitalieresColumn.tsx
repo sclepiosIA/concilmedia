@@ -11,7 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Hospital, Pill, Plus, Trash2, Sparkles, Sun, CloudSun, Sunset, Moon } from "lucide-react";
+import { Hospital, Pill, Plus, Trash2, Sparkles, Sunrise, Sun, Sunset, Moon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PrescriptionHospitaliereUploader } from "./PrescriptionHospitaliereUploader";
@@ -44,25 +44,32 @@ function PriseCell({
   value,
   icon: Icon,
   label,
+  shortLabel,
 }: {
   value: string | null;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
+  shortLabel: string;
 }) {
-  const active = value && value !== "0" && value.trim() !== "";
+  const normalizedValue = value?.trim() ?? "";
+  const active = normalizedValue !== "" && normalizedValue !== "0";
   return (
     <TooltipProvider delayDuration={150}>
       <Tooltip>
         <TooltipTrigger asChild>
           <div
-            className={`flex flex-col items-center justify-center w-10 h-10 rounded-md border text-xs font-medium transition-colors ${
+            aria-label={`${label} : ${active ? normalizedValue : "aucune prise"}`}
+            className={`flex h-12 w-12 flex-col items-center justify-center rounded-md border text-[11px] font-semibold transition-colors ${
               active
-                ? "bg-primary/10 border-primary/40 text-primary"
-                : "bg-muted/30 border-border text-muted-foreground/40"
+                ? "border-primary/50 bg-primary/10 text-primary shadow-sm"
+                : "border-border bg-muted/30 text-muted-foreground/45"
             }`}
           >
-            <Icon className="h-3 w-3 mb-0.5" />
-            <span className="leading-none">{active ? value : "—"}</span>
+            <span className="mb-0.5 flex items-center gap-0.5 text-[9px] uppercase leading-none text-current">
+              <Icon className="h-4 w-4" />
+              {shortLabel}
+            </span>
+            <span className="leading-none">{active ? normalizedValue : "—"}</span>
           </div>
         </TooltipTrigger>
         <TooltipContent side="top">{label}</TooltipContent>
@@ -262,10 +269,10 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
                 </div>
 
                 <div className="flex gap-1 justify-start md:justify-center">
-                  <PriseCell value={m} icon={Sun} label="Matin" />
-                  <PriseCell value={mi} icon={CloudSun} label="Midi" />
-                  <PriseCell value={s} icon={Sunset} label="Soir" />
-                  <PriseCell value={c} icon={Moon} label="Coucher" />
+                  <PriseCell value={m} icon={Sunrise} label="Matin" shortLabel="M" />
+                  <PriseCell value={mi} icon={Sun} label="Midi" shortLabel="Mi" />
+                  <PriseCell value={s} icon={Sunset} label="Soir" shortLabel="S" />
+                  <PriseCell value={c} icon={Moon} label="Coucher" shortLabel="Co" />
                 </div>
 
                 <div className="flex flex-col gap-0.5 text-[11px] min-w-[120px]">
