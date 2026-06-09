@@ -317,11 +317,19 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
             {data.map((p) => {
               const [m, mi, s, c] = resolvePrises(p);
               const hasPrises = m || mi || s || c;
+              const status = (p.match_status as MatchStatus) ?? "en_cours";
+              const meta = STATUS_META[status] ?? STATUS_META.en_cours;
               return (
               <div
                 key={p.id}
-                className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-2 px-3 py-2 items-center hover:bg-muted/30 transition-colors text-xs"
+                className={`grid grid-cols-1 md:grid-cols-[auto_1fr_auto_auto_auto] gap-2 px-3 py-2 items-center hover:bg-muted/30 transition-colors text-xs ${meta.bg} ${meta.border}`}
               >
+                <MatchStatusBadge
+                  status={status}
+                  reason={p.match_reason}
+                  recommandation={p.match_recommandation}
+                  source={p.match_source}
+                />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <Pill className="h-3 w-3 text-primary shrink-0" />
