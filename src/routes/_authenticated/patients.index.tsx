@@ -18,9 +18,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { HelpCircle } from "lucide-react";
 import { usePatientsTriage } from "@/hooks/usePatientsTriage";
+import { usePatientsQuickInfo } from "@/hooks/usePatientsQuickInfo";
+import { PatientRowQuickInfo } from "@/components/patient/PatientRowQuickInfo";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { TRIAGE_META, type TriageLevel } from "@/lib/conciliation/triageScale";
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { fr } from "date-fns/locale";
+
 
 export const Route = createFileRoute("/_authenticated/patients/")({
   head: () => ({ meta: [{ title: "Patients — Conciliation" }] }),
