@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, AlertTriangle, Loader2 } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { analyzeConciliation, type AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { toast } from "sonner";
 import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
