@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, FileText, ShieldCheck, Pencil, ArrowLeftRight, AlertCircle, Clock } from "lucide-react";
+import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, FileText, ShieldCheck, Pencil, ArrowLeftRight, AlertCircle, Clock, Upload } from "lucide-react";
 import { analyzePatientConciliationComplete } from "@/lib/conciliation/analyzePatientConciliationComplete.functions";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
@@ -17,6 +17,7 @@ import {
   deleteConciliationValidation,
   type ItemDecision,
 } from "@/lib/conciliation/validateConciliation.functions";
+import { uploadPharmacistDoc } from "@/lib/conciliation/pharmacistDoc.functions";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -31,6 +32,8 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
   const saveFn = useServerFn(saveConciliationValidation);
   const getValidationFn = useServerFn(getConciliationValidation);
   const deleteValidationFn = useServerFn(deleteConciliationValidation);
+  const uploadDocFn = useServerFn(uploadPharmacistDoc);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: latest } = useQuery({
     queryKey: ["patient-conciliation-complete", patientId],
@@ -161,6 +164,39 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
       setEditingValidation(false);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
+  });
+
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve((r.result as string).split(",")[1] ?? "");
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+  }
+
+  const uploadDocMut = useMutation({
+    mutationFn: async (file: File) => {
+      if (!analysisId) throw new Error("Aucune analyse");
+      if (file.type !== "application/pdf") throw new Error("Seuls les PDF sont acceptés.");
+      if (file.size > 10 * 1024 * 1024) throw new Error("Fichier trop volumineux (max 10 Mo).");
+      const base64 = await fileToBase64(file);
+      return uploadDocFn({
+        data: {
+          analysisId,
+          patientId,
+          episodeId: null,
+          fileName: file.name,
+          mimeType: file.type,
+          base64,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Document pharmacien uploadé");
+      qc.invalidateQueries({ queryKey: ["pharmacist-doc", analysisId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   return (
@@ -445,6 +481,15 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
                       </Button>
                     )}
                     <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadDocMut.isPending || !analysisId}
+                    >
+                      {uploadDocMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+                      PDF pharmacien
+                    </Button>
+                    <Button
                       size="sm"
                       className="bg-emerald-600 hover:bg-emerald-700"
                       onClick={() => saveMut.mutate()}
@@ -457,6 +502,17 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
                 </div>
               </div>
             )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadDocMut.mutate(f);
+                e.target.value = "";
+              }}
+            />
           </section>
 
           {validation && analysisId && (
