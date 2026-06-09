@@ -46,7 +46,22 @@ function PatientDetailPage() {
     queryFn: async () => (await supabase.from("allergies").select("*").eq("patient_id", patientId)).data ?? [],
   });
 
-  const createEpisode = useMutation({
+  const { data: lettreAdmission } = useQuery({
+    queryKey: ["lettre-admission", patientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("documents_sources")
+        .select("*")
+        .eq("patient_id", patientId)
+        .eq("document_type", "lettre_admission")
+        .order("created_at", { ascending: false })
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const uploadLettre = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase
         .from("episodes")
