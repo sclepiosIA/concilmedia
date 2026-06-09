@@ -319,7 +319,7 @@ function Detail({ icon: Icon, label, value }: { icon: typeof BookOpen; label: st
   );
 }
 
-export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload }) {
+export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalysisPayload; validation?: ValidationControl }) {
   const interactions = payload.interactions ?? [];
   const ci = payload.contre_indications ?? [];
   const adaptations = payload.adaptations_posologiques ?? [];
@@ -330,6 +330,18 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
   const hasAny =
     interactions.length + ci.length + adaptations.length + doublons.length + allergies.length + hautRisque.length > 0;
   if (!hasAny) return null;
+
+  const valFor = (category: AlertCategory, index: number) => {
+    if (!validation) return undefined;
+    const key = decisionKey(category, index);
+    return {
+      decision: validation.decisions[key],
+      category,
+      index,
+      readOnly: validation.readOnly,
+      onChange: (d: ItemDecision | null) => validation.onDecision(key, d),
+    };
+  };
 
   return (
     <div className="space-y-4">
@@ -347,6 +359,7 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
               alternative={i.alternative}
               reference={i.reference}
               confiance={i.confiance}
+              validation={valFor("interactions", k)}
             />
           ))}
         </Section>
@@ -367,6 +380,7 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
               alternative={c.alternative}
               reference={c.reference}
               confiance={c.confiance}
+              validation={valFor("contre_indications", k)}
             />
           ))}
         </Section>
@@ -387,6 +401,7 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
               alternative={a.alternative}
               reference={a.reference}
               confiance={a.confiance}
+              validation={valFor("adaptations_posologiques", k)}
             />
           ))}
         </Section>
@@ -407,6 +422,7 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
               alternative={d.alternative}
               reference={d.reference}
               confiance={d.confiance}
+              validation={valFor("doublons_therapeutiques", k)}
             />
           ))}
         </Section>
@@ -425,6 +441,7 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
               alternative={a.alternative}
               reference={a.reference}
               confiance={a.confiance}
+              validation={valFor("allergies_croisees", k)}
             />
           ))}
         </Section>
@@ -445,6 +462,7 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
               alternative={h.alternative}
               reference={h.reference}
               confiance={h.confiance}
+              validation={valFor("medicaments_haut_risque", k)}
             />
           ))}
         </Section>
@@ -452,6 +470,7 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
     </div>
   );
 }
+
 
 function Section({
   title,
