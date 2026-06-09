@@ -294,9 +294,9 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             source_document_id: sourceDocumentId,
           })) as never);
         }
-        const newTraitements = item.traitements.filter((t) => !existingTraitements.has((t.dci ?? "").toLowerCase().trim()));
-        if (newTraitements.length) {
-          await supabase.from("traitements_habituels").insert(newTraitements.map((t) => ({
+        // Pas de fusion : chaque ordonnance contribue toutes ses lignes (une par occurrence).
+        if (item.traitements.length) {
+          const { data: insertedTraits, error: tErr } = await supabase.from("traitements_habituels").insert(item.traitements.map((t) => ({
             patient_id: patientId!, dci: t.dci, nom_commercial: t.nom_commercial ?? null, dosage: t.dosage ?? null,
             dosage_unite: t.dosage_unite ?? null, voie_administration: t.voie_administration ?? null,
             posologie_matin: t.posologie_matin ?? null, posologie_midi: t.posologie_midi ?? null,
@@ -305,7 +305,17 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             indication: t.indication ?? null, duree: t.duree ?? null,
             source: "pdf_import", actif: true,
             source_document_id: sourceDocumentId,
-          })) as never);
+          })) as never).select("id");
+          if (tErr) throw tErr;
+          // Lien dans la table de jonction (multi-sources)
+          if (sourceDocumentId && insertedTraits) {
+            await supabase.from("traitement_sources").insert(
+              (insertedTraits as { id: string }[]).map((row) => ({
+                traitement_id: row.id,
+                source_document_id: sourceDocumentId!,
+              })) as never,
+            );
+          }
         }
 
         // Agréger prescriptions hospi pour ce patient
