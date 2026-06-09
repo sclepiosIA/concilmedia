@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Loader2, Pill, AlertTriangle, GitCompare, PackageMinus, Sliders, ShieldAlert, Lightbulb } from "lucide-react";
+import { Sparkles, Loader2, Pill, AlertTriangle, GitCompare, PackageMinus, Sliders, ShieldAlert, Lightbulb, FileSearch, Activity, ClipboardCheck, Stethoscope } from "lucide-react";
 import { analyzePatientSynthesis } from "@/lib/conciliation/analyzePatientSynthesis.functions";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { classifyDci } from "@/lib/conciliation/atcInteractions";
