@@ -126,11 +126,47 @@ function AlertItem({
   reference,
   confiance,
   icon: Icon = AlertTriangle,
+  validation,
 }: AlertItemProps) {
   const [open, setOpen] = useState(false);
   const detailsId = useId();
   const sev = sevStyle(severite);
   const conf = typeof confiance === "number" ? Math.max(0, Math.min(100, Math.round(confiance))) : null;
+  const decision = validation?.decision;
+  const readOnly = validation?.readOnly;
+
+  const decisionBadge = decision ? (
+    <Badge
+      className={`text-[10px] ${
+        decision.status === "accepted"
+          ? "bg-emerald-600 text-white hover:bg-emerald-600"
+          : decision.status === "rejected"
+          ? "bg-slate-600 text-white hover:bg-slate-600"
+          : "bg-amber-600 text-white hover:bg-amber-600"
+      }`}
+    >
+      {decision.status === "accepted" ? "✓ Accepté" : decision.status === "rejected" ? "✗ Refusé" : "✎ Modifié"}
+    </Badge>
+  ) : validation && !readOnly ? (
+    <Badge variant="outline" className="text-[10px] bg-white text-amber-700 border-amber-400">À valider</Badge>
+  ) : null;
+
+  const setStatus = (status: ItemDecision["status"]) => {
+    if (!validation) return;
+    validation.onChange({
+      category: validation.category,
+      index: validation.index,
+      status,
+      comment: decision?.comment,
+      modification: decision?.modification,
+    });
+    setOpen(true);
+  };
+
+  const updateField = (field: "comment" | "modification", value: string) => {
+    if (!validation || !decision) return;
+    validation.onChange({ ...decision, [field]: value });
+  };
 
   return (
     <Collapsible
@@ -157,6 +193,7 @@ function AlertItem({
                     Confiance IA {conf}%
                   </Badge>
                 )}
+                {decisionBadge}
               </div>
               {subtitle && <p className="text-xs mt-0.5 opacity-80">{subtitle}</p>}
             </div>
@@ -189,12 +226,86 @@ function AlertItem({
               </div>
             </div>
           )}
+
+          {validation && (
+            <div className="pt-2 mt-2 border-t space-y-2">
+              <div className="font-semibold uppercase tracking-wide text-[10px] text-muted-foreground">
+                Validation pharmacien
+              </div>
+              {!readOnly ? (
+                <div className="flex gap-1 flex-wrap">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={decision?.status === "accepted" ? "default" : "outline"}
+                    className={`h-7 text-xs ${decision?.status === "accepted" ? "bg-emerald-600 hover:bg-emerald-700" : ""}`}
+                    onClick={(e) => { e.stopPropagation(); setStatus("accepted"); }}
+                  >
+                    <Check className="h-3 w-3 mr-1" /> Accepter
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={decision?.status === "modified" ? "default" : "outline"}
+                    className={`h-7 text-xs ${decision?.status === "modified" ? "bg-amber-600 hover:bg-amber-700" : ""}`}
+                    onClick={(e) => { e.stopPropagation(); setStatus("modified"); }}
+                  >
+                    <Pencil className="h-3 w-3 mr-1" /> Modifier
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={decision?.status === "rejected" ? "default" : "outline"}
+                    className={`h-7 text-xs ${decision?.status === "rejected" ? "bg-slate-600 hover:bg-slate-700" : ""}`}
+                    onClick={(e) => { e.stopPropagation(); setStatus("rejected"); }}
+                  >
+                    <X className="h-3 w-3 mr-1" /> Refuser
+                  </Button>
+                  {decision && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs text-muted-foreground"
+                      onClick={(e) => { e.stopPropagation(); validation.onChange(null); }}
+                    >
+                      Réinitialiser
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">
+                  {decision ? "Décision enregistrée — lecture seule." : "Pas de décision enregistrée."}
+                </p>
+              )}
+
+              {decision?.status === "modified" && (
+                <Textarea
+                  placeholder="Modification proposée (ex : adaptation posologique, switch DCI…)"
+                  value={decision.modification ?? ""}
+                  onChange={(e) => updateField("modification", e.target.value)}
+                  className="text-xs min-h-[60px]"
+                  disabled={readOnly}
+                />
+              )}
+              {decision && (
+                <Textarea
+                  placeholder="Commentaire pharmacien (optionnel)"
+                  value={decision.comment ?? ""}
+                  onChange={(e) => updateField("comment", e.target.value)}
+                  className="text-xs min-h-[50px]"
+                  disabled={readOnly}
+                />
+              )}
+            </div>
+          )}
           </div>
         </div>
       </CollapsibleContent>
     </Collapsible>
   );
 }
+
 
 function Detail({ icon: Icon, label, value }: { icon: typeof BookOpen; label: string; value: string }) {
   return (
