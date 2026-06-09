@@ -13,6 +13,12 @@ import { Plus, Search, User, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
+import { TriageBadge, TriageLegend } from "@/components/conciliation/TriageBadge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { HelpCircle } from "lucide-react";
+import { usePatientsTriage } from "@/hooks/usePatientsTriage";
+import { TRIAGE_META, type TriageLevel } from "@/lib/conciliation/triageScale";
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { fr } from "date-fns/locale";
 
@@ -45,11 +51,35 @@ function PatientsListPage() {
     },
   });
 
-  const filtered = patients.filter(
+  const [filterMode, setFilterMode] = useState<"all" | "todo" | "done">("all");
+  const patientIds = patients.map((p) => p.id);
+  const { data: triageMap = {} } = usePatientsTriage(patientIds);
+
+  const filteredBySearch = patients.filter(
     (p) =>
       `${p.nom} ${p.prenom}`.toLowerCase().includes(search.toLowerCase()) ||
       p.nir?.includes(search),
   );
+
+  const filtered = filteredBySearch
+    .filter((p) => {
+      const lvl = triageMap[p.id]?.level ?? 5;
+      if (filterMode === "todo") return lvl <= 3;
+      if (filterMode === "done") return lvl === 5;
+      return true;
+    })
+    .sort((a, b) => {
+      const la = triageMap[a.id]?.level ?? 5;
+      const lb = triageMap[b.id]?.level ?? 5;
+      if (la !== lb) return la - lb;
+      return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+    });
+
+  const counts: Record<TriageLevel, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  for (const p of patients) {
+    const lvl = (triageMap[p.id]?.level ?? 5) as TriageLevel;
+    counts[lvl] += 1;
+  }
 
   const createMut = useMutation({
     mutationFn: async (input: { nom: string; prenom: string; date_naissance: string; sexe: string; poids_kg?: number; taille_cm?: number }) => {
@@ -104,7 +134,27 @@ function PatientsListPage() {
     <div className="container mx-auto px-4 py-6 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Patients</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold font-display">Patients</h1>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Échelle FRENCH-MED">
+                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-[520px] max-w-[90vw]">
+                <div className="space-y-2">
+                  <div className="font-semibold text-sm">Échelle FRENCH-MED — priorité de relecture</div>
+                  <p className="text-xs text-muted-foreground">
+                    Inspirée de la FRENCH (SFMU). 5 paliers, du plus urgent (P1) au moins urgent (P5),
+                    calculés automatiquement à partir des divergences, du score de risque et de la
+                    validation pharmacien.
+                  </p>
+                  <TriageLegend />
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <p className="text-sm text-muted-foreground">{patients.length} patient(s)</p>
         </div>
         <div className="flex items-center gap-2">
@@ -211,6 +261,30 @@ function PatientsListPage() {
         />
       )}
 
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        {([1, 2, 3, 4, 5] as TriageLevel[]).map((l) => {
+          const m = TRIAGE_META[l];
+          return (
+            <div
+              key={l}
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+              style={{ background: m.bg, color: m.fg, border: `1px solid ${m.ring}` }}
+              title={`${m.label} — ${m.delay}`}
+            >
+              <span className="font-bold">{m.code}</span>
+              <span className="opacity-80">{counts[l]}</span>
+            </div>
+          );
+        })}
+        <div className="ml-auto">
+          <ToggleGroup type="single" value={filterMode} onValueChange={(v) => v && setFilterMode(v as typeof filterMode)} size="sm">
+            <ToggleGroupItem value="all">Tous</ToggleGroupItem>
+            <ToggleGroupItem value="todo">À relire (P1–P3)</ToggleGroupItem>
+            <ToggleGroupItem value="done">Validés (P5)</ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+      </div>
+
       <div className="relative mb-4">
         <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
         <Input placeholder="Rechercher un patient..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -220,9 +294,12 @@ function PatientsListPage() {
         {filtered.length === 0 && (
           <Card><CardContent className="py-12 text-center text-muted-foreground">Aucun patient</CardContent></Card>
         )}
-        {filtered.map((p) => (
+        {filtered.map((p) => {
+          const triage = triageMap[p.id];
+          return (
           <Card key={p.id} className="hover:bg-accent/50 transition">
             <CardContent className="py-4 flex items-center gap-4">
+              <TriageBadge level={triage?.level ?? 5} reason={triage?.reason} />
               <Link
                 to="/patients/$patientId"
                 params={{ patientId: p.id }}
@@ -249,7 +326,8 @@ function PatientsListPage() {
               </Button>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
