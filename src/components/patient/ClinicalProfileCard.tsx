@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   HeartPulse,
   Stethoscope,
-  ClipboardCheck,
   Scale,
 } from "lucide-react";
 import {
@@ -96,19 +95,6 @@ function buildRiskProfile(comorb: string[], bmi: number | null): { label: string
   return risks;
 }
 
-function buildVigilance(comorb: string[]): string[] {
-  const set = comorb.map(normalize);
-  const has = (kw: string) => set.some((s) => s.includes(kw));
-  const items: string[] = [];
-  if (has("diabete")) items.push("Vérification des traitements antidiabétiques");
-  if (has("renal") || has("rein") || has("irc")) items.push("Vérification des adaptations posologiques rénales");
-  if (has("hta") || has("hypertension") || has("insuffisance cardiaque")) items.push("Vérification des traitements antihypertenseurs");
-  if (has("fibrillation") || has("avc") || has("ait")) items.push("Vérification de la couverture anticoagulante");
-  items.push("Recherche d'interactions médicamenteuses");
-  items.push("Détection des médicaments manquants ou ajoutés");
-  items.push("Vérification des traitements à haut risque (anticoagulants, insuline, antiépileptiques)");
-  return items;
-}
 
 export function ClinicalProfileCard({ patientId }: { patientId: string }) {
   const { data: patient } = useQuery({
@@ -151,7 +137,6 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
   const complexity = { score, niveau, detail };
 
   const risks = buildRiskProfile(labels, bmi?.imc ?? null);
-  const vigilance = buildVigilance(labels);
 
   return (
     <Card className="border-primary/20 shadow-sm">
@@ -232,12 +217,6 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
                 ))}
               </div>
             )}
-          </ProfileTile>
-
-          <ProfileTile tone="orange" icon={ClipboardCheck} title="Points de vigilance pour la conciliation">
-            <ul className="space-y-0.5 list-disc pl-5 text-amber-900">
-              {vigilance.map((v) => <li key={v}>{v}</li>)}
-            </ul>
           </ProfileTile>
         </div>
       </CardContent>
