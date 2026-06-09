@@ -20,6 +20,7 @@ import {
   Repeat,
   Sparkles,
   X,
+  ArrowLeftRight,
 } from "lucide-react";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import type { ItemDecision } from "@/lib/conciliation/validateConciliation.functions";
@@ -320,6 +321,7 @@ function Detail({ icon: Icon, label, value }: { icon: typeof BookOpen; label: st
 }
 
 export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalysisPayload; validation?: ValidationControl }) {
+  const divergences = payload.divergences_conciliation ?? [];
   const interactions = payload.interactions ?? [];
   const ci = payload.contre_indications ?? [];
   const adaptations = payload.adaptations_posologiques ?? [];
@@ -328,7 +330,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
   const hautRisque = payload.medicaments_haut_risque ?? [];
 
   const hasAny =
-    interactions.length + ci.length + adaptations.length + doublons.length + allergies.length + hautRisque.length > 0;
+    divergences.length + interactions.length + ci.length + adaptations.length + doublons.length + allergies.length + hautRisque.length > 0;
   if (!hasAny) return null;
 
   const valFor = (category: AlertCategory, index: number) => {
@@ -343,8 +345,56 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
     };
   };
 
+  const divergenceTypeLabel: Record<string, string> = {
+    omission: "Omission",
+    ajout_non_justifie: "Ajout non justifié",
+    switch: "Switch",
+    modification_posologie: "Modif. posologie",
+    substitution_classe: "Substitution de classe",
+  };
+
+  const divergenceSevToAlertSev = (s: string): Severity => {
+    if (s === "critique") return "contre_indication";
+    if (s === "majeure") return "majeure";
+    if (s === "moderee") return "moderee";
+    return "mineure";
+  };
+
   return (
     <div className="space-y-4">
+      {divergences.length > 0 && (
+        <Section title="Divergences de conciliation (ville ↔ hôpital)" count={divergences.length} icon={ArrowLeftRight}>
+          {divergences.map((d, k) => {
+            const typeLabel = divergenceTypeLabel[d.type] ?? d.type;
+            const title = d.medicament_ville && d.medicament_hopital
+              ? `${d.medicament_ville} → ${d.medicament_hopital}`
+              : d.medicament_ville
+              ? `${d.medicament_ville} (manquant à l'hôpital)`
+              : d.medicament_hopital
+              ? `${d.medicament_hopital} (ajouté à l'hôpital)`
+              : "Divergence";
+            return (
+              <AlertItem
+                key={`dv-${k}`}
+                title={`${typeLabel} — ${title}`}
+                medicaments={[d.medicament_ville, d.medicament_hopital].filter(Boolean).join(" / ") || title}
+                subtitle={d.justification_clinique}
+                severite={divergenceSevToAlertSev(d.severite)}
+                mecanisme={d.justification_clinique}
+                risque={d.risque}
+                recommandation={d.recommandation}
+                alternative={d.alternative}
+                reference={d.reference}
+                confiance={d.confiance}
+                icon={ArrowLeftRight}
+                validation={valFor("divergences_conciliation", k)}
+              />
+            );
+          })}
+        </Section>
+      )}
+
+
       {interactions.length > 0 && (
         <Section title="Interactions médicamenteuses" count={interactions.length} icon={Copy}>
           {interactions.map((i, k) => (
