@@ -30,6 +30,7 @@ type Traitement = {
   indication: string | null;
   duree: string | null;
   source: string | null;
+  source_document_id: string | null;
 };
 
 const SOURCE_LABEL: Record<string, string> = {
