@@ -1,14 +1,14 @@
 import { Badge } from "@/components/ui/badge";
-
+import { useState } from "react";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   AlertTriangle,
   BookOpen,
+  ChevronDown,
   ShieldAlert,
   Stethoscope,
   Sliders,
@@ -75,7 +75,6 @@ function confidenceColor(c: number) {
 }
 
 interface AlertItemProps {
-  id: string;
   title: string;
   medicaments?: string;
   subtitle?: string;
@@ -90,7 +89,6 @@ interface AlertItemProps {
 }
 
 function AlertItem({
-  id,
   title,
   medicaments,
   subtitle,
@@ -103,41 +101,47 @@ function AlertItem({
   confiance,
   icon: Icon = AlertTriangle,
 }: AlertItemProps) {
+  const [open, setOpen] = useState(false);
   const sev = sevStyle(severite);
   const conf = typeof confiance === "number" ? Math.max(0, Math.min(100, Math.round(confiance))) : null;
 
   return (
-    <AccordionItem
-      value={id}
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
       className={`rounded-md border ${sev.container} overflow-hidden mb-2 last:mb-0`}
     >
-      <AccordionTrigger className={`px-3 py-2 hover:no-underline ${sev.trigger}`}>
-        <div className="flex items-start gap-3 flex-1 min-w-0 text-left">
-          <span className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${sev.dot}`} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="font-semibold text-sm">{title}</span>
-              <Badge className={`text-[10px] ${sev.badge}`}>{sev.label}</Badge>
-              {conf !== null && (
-                <Badge variant="outline" className="text-[10px] bg-white">
-                  Confiance IA {conf}%
-                </Badge>
-              )}
+      <CollapsibleTrigger asChild>
+        <button type="button" className={`flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition-colors ${sev.trigger}`}>
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <span className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${sev.dot}`} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="font-semibold text-sm">{title}</span>
+                <Badge className={`text-[10px] ${sev.badge}`}>{sev.label}</Badge>
+                {conf !== null && (
+                  <Badge variant="outline" className="text-[10px] bg-white">
+                    Confiance IA {conf}%
+                  </Badge>
+                )}
+              </div>
+              {subtitle && <p className="text-xs mt-0.5 opacity-80">{subtitle}</p>}
             </div>
-            {subtitle && <p className="text-xs mt-0.5 opacity-80">{subtitle}</p>}
           </div>
-        </div>
-      </AccordionTrigger>
-      <AccordionContent className="px-3 pb-3">
-        <div className="space-y-2 text-xs bg-white/80 rounded p-3 border">
-          {medicaments && <Detail icon={Pill} label="Médicaments concernés" value={medicaments} />}
-          <Detail icon={AlertTriangle} label="Niveau de gravité" value={sev.label} />
-          {mecanisme && <Detail icon={Stethoscope} label="Explication clinique" value={mecanisme} />}
-          {risque && <Detail icon={ShieldAlert} label="Risque encouru" value={risque} />}
-          {recommandation && <Detail icon={Sliders} label="Recommandation pratique" value={recommandation} />}
-          {alternative && <Detail icon={Repeat} label="Alternative thérapeutique" value={alternative} />}
-          {reference && <Detail icon={BookOpen} label="Référence (HAS / ANSM / SPILF…)" value={reference} />}
+          <ChevronDown className={`mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+        <div className="px-3 pb-3">
+          <div className="space-y-2 text-xs bg-white/80 rounded p-3 border">
+          <Detail icon={Pill} label="Médicaments concernés" value={medicaments || title} />
+          <Detail icon={AlertTriangle} label="Gravité" value={sev.label} />
+          <Detail icon={Stethoscope} label="Mécanisme / explication clinique" value={mecanisme || "Non renseigné dans l'analyse."} />
+          <Detail icon={ShieldAlert} label="Risque clinique" value={risque || "Non renseigné dans l'analyse."} />
+          <Detail icon={Sliders} label="Recommandation pratique" value={recommandation || "Non renseignée dans l'analyse."} />
+          <Detail icon={Repeat} label="Alternative thérapeutique" value={alternative || "Non proposée dans cette recommandation."} />
+          <Detail icon={BookOpen} label="Références" value={reference || "Référence non renseignée dans l'analyse."} />
           {conf !== null && (
             <div className="flex gap-2 pt-1">
               <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
@@ -154,9 +158,10 @@ function AlertItem({
               </div>
             </div>
           )}
+          </div>
         </div>
-      </AccordionContent>
-    </AccordionItem>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -191,7 +196,6 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
           {interactions.map((i, k) => (
             <AlertItem
               key={`int-${k}`}
-              id={`int-${k}`}
               title={`${i.dci_1} ↔ ${i.dci_2}`}
               medicaments={`${i.dci_1}, ${i.dci_2}`}
               severite={i.severite}
@@ -211,7 +215,6 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
           {ci.map((c, k) => (
             <AlertItem
               key={`ci-${k}`}
-              id={`ci-${k}`}
               title={c.medicament}
               medicaments={c.medicament}
               subtitle={c.raison}
@@ -232,7 +235,6 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
           {adaptations.map((a, k) => (
             <AlertItem
               key={`ad-${k}`}
-              id={`ad-${k}`}
               title={a.medicament}
               medicaments={a.medicament}
               subtitle={a.raison}
@@ -253,7 +255,6 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
           {doublons.map((d, k) => (
             <AlertItem
               key={`db-${k}`}
-              id={`db-${k}`}
               title={d.medicaments.join(" + ")}
               medicaments={d.medicaments.join(", ")}
               subtitle={`Classe : ${d.classe}`}
@@ -274,7 +275,6 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
           {allergies.map((a, k) => (
             <AlertItem
               key={`al-${k}`}
-              id={`al-${k}`}
               title={`${a.allergene} ↔ ${a.medicament}`}
               medicaments={a.medicament}
               severite={a.severite ?? "majeure"}
@@ -293,7 +293,6 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
           {hautRisque.map((h, k) => (
             <AlertItem
               key={`hr-${k}`}
-              id={`hr-${k}`}
               title={h.medicament}
               medicaments={h.medicament}
               subtitle={`Classe : ${h.classe}`}
@@ -331,9 +330,7 @@ function Section({
           {count}
         </Badge>
       </div>
-      <Accordion type="multiple" className="space-y-0">
-        {children}
-      </Accordion>
+      <div className="space-y-0">{children}</div>
     </div>
   );
 }
