@@ -184,6 +184,47 @@ function EpisodeConciliationPage() {
           <AIAnalysisPanel episodeId={episodeId} />
         </div>
       </div>
+
+      {/* Divergences résolues — en bas de page */}
+      <div className="mt-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+              Divergences résolues
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recon.conciliations.filter((c) => c.statut === "resolu").length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Aucune divergence. Cliquez sur "Détecter divergences" pour lancer l'analyse algorithmique.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {recon.conciliations
+                  .filter((c) => c.statut === "resolu")
+                  .map((c) => (
+                    <div key={c.id} className="border rounded p-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">Résolu</Badge>
+                        <span className="font-medium">{c.medication_domicile.dci}</span>
+                        {c.medication_hospitalisation && (
+                          <>
+                            <span className="text-muted-foreground">→</span>
+                            <span>{c.medication_hospitalisation.dci}</span>
+                          </>
+                        )}
+                      </div>
+                      {c.justification && (
+                        <div className="text-xs text-muted-foreground mt-1">{c.justification}</div>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
