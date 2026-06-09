@@ -85,8 +85,11 @@ function PatientDetailPage() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Non authentifié");
 
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}_${file.name}`;
+      const safeName = file.name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9._-]/g, "_");
+      const fileName = `${Date.now()}_${safeName}`;
       const storagePath = `${user.id}/${patientId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
