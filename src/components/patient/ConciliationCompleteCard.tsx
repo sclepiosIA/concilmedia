@@ -481,6 +481,15 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
                       </Button>
                     )}
                     <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadDocMut.isPending || !analysisId}
+                    >
+                      {uploadDocMut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
+                      PDF pharmacien
+                    </Button>
+                    <Button
                       size="sm"
                       className="bg-emerald-600 hover:bg-emerald-700"
                       onClick={() => saveMut.mutate()}
