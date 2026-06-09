@@ -136,6 +136,8 @@ export function AISynthesisHeader({ patientId }: { patientId: string }) {
           </div>
         )}
 
+        {payload && <ClinicalAlertsPanel payload={payload} />}
+
         {recos.length > 0 && payload && (
           <div className="rounded-md border bg-white p-3">
             <div className="flex items-center gap-2 font-medium text-sm mb-1">
