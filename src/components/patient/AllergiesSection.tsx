@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, AlertTriangle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { SourceDocumentLink } from "@/components/conciliation/SourceDocumentLink";
 
 const severites: Record<string, "default" | "secondary" | "destructive"> = {
   legere: "secondary", moderee: "default", severe: "destructive", anaphylaxie: "destructive",
@@ -47,11 +48,12 @@ export function AllergiesSection({ patientId }: { patientId: string }) {
       {data.length === 0 && <p className="text-sm text-muted-foreground py-4">Aucune allergie</p>}
       {data.map((a) => (
         <Card key={a.id}><CardContent className="py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {(a.severite === "severe" || a.severite === "anaphylaxie") && <AlertTriangle className="h-4 w-4 text-destructive" />}
             <span className="font-medium">{a.substance}</span>
             {a.reaction && <span className="text-sm text-muted-foreground">— {a.reaction}</span>}
             {a.severite && <Badge variant={severites[a.severite] ?? "secondary"}>{a.severite}</Badge>}
+            <SourceDocumentLink documentId={(a as { source_document_id?: string | null }).source_document_id} />
           </div>
           <Button size="icon" variant="ghost" onClick={() => del.mutate(a.id)}><Trash2 className="h-4 w-4" /></Button>
         </CardContent></Card>
