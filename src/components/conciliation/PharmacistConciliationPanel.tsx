@@ -33,7 +33,11 @@ export function PharmacistConciliationPanel({
   onValidate: (id: string) => void;
   isLoading: boolean;
 }) {
-  const actives = conciliations.filter((c) => c.statut !== "resolu");
+  const graviteOrder: Record<string, number> = { critique: 0, majeur: 1, modere: 2, mineur: 3 };
+  const actives = conciliations
+    .filter((c) => c.statut !== "resolu")
+    .slice()
+    .sort((a, b) => (graviteOrder[a.gravite ?? "mineur"] ?? 99) - (graviteOrder[b.gravite ?? "mineur"] ?? 99));
 
   if (isLoading) return <p className="text-sm text-muted-foreground py-4">Chargement…</p>;
 
