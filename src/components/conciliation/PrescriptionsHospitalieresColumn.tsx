@@ -322,6 +322,87 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
+        {missingTreatments.length > 0 && (
+          <div className="rounded-md border border-amber-300/60 bg-amber-50/60 dark:bg-amber-950/20 p-2 space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-200">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {missingTreatments.length} médicament{missingTreatments.length > 1 ? "s" : ""} du domicile non repris
+            </div>
+            <div className="space-y-1.5">
+              {missingTreatments.map((t) => (
+                <div key={t.id} className="rounded border border-amber-200/70 bg-background/70 p-2 text-xs space-y-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Pill className="h-3 w-3 text-amber-600 shrink-0" />
+                    <span className="font-medium">{t.dci ?? t.nom_commercial}</span>
+                    {t.dosage && (
+                      <Badge variant="outline" className="font-mono text-[10px] px-1 py-0">
+                        {t.dosage}{t.dosage_unite ? ` ${t.dosage_unite}` : ""}
+                      </Badge>
+                    )}
+                    {t.voie_administration && (
+                      <Badge variant="secondary" className="text-[10px] px-1 py-0">{t.voie_administration}</Badge>
+                    )}
+                    {(t.posologie_matin || t.posologie_midi || t.posologie_soir || t.posologie_coucher || t.posologie_texte) && (
+                      <span className="text-[11px] text-muted-foreground">
+                        {t.posologie_texte ?? `${t.posologie_matin ?? 0}-${t.posologie_midi ?? 0}-${t.posologie_soir ?? 0}${t.posologie_coucher ? `-${t.posologie_coucher}` : ""}`}
+                      </span>
+                    )}
+                  </div>
+                  {justifyId === t.id ? (
+                    <div className="space-y-1.5">
+                      <Textarea
+                        value={justifyText}
+                        onChange={(e) => setJustifyText(e.target.value)}
+                        placeholder="Justification (optionnelle) : motif clinique de l'omission…"
+                        className="text-xs min-h-[60px]"
+                      />
+                      <div className="flex gap-1.5">
+                        <Button
+                          size="sm"
+                          className="h-7"
+                          onClick={() => justifyOmission.mutate({ traitementId: t.id, commentaire: justifyText })}
+                          disabled={justifyOmission.isPending}
+                        >
+                          <Check className="h-3 w-3 mr-1" /> Valider
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7"
+                          onClick={() => { setJustifyId(null); setJustifyText(""); }}
+                        >
+                          <X className="h-3 w-3 mr-1" /> Annuler
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="h-7"
+                        onClick={() => addFromDomicile.mutate(t)}
+                        disabled={addFromDomicile.isPending}
+                      >
+                        <Plus className="h-3 w-3 mr-1" /> Ajouter le traitement
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7"
+                        onClick={() => { setJustifyId(t.id); setJustifyText(""); }}
+                      >
+                        Omission souhaitée
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+
         {open && (
           <form
             onSubmit={(e) => {
