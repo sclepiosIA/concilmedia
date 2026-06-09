@@ -12,7 +12,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Hospital, Pill, Plus, Trash2, Sparkles, Sunrise, Sun, Sunset, Moon } from "lucide-react";
+import { Hospital, Pill, Plus, Trash2, Sparkles, Sunrise, Sun, Sunset, Moon, AlertTriangle, Check, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { PrescriptionHospitaliereUploader } from "./PrescriptionHospitaliereUploader";
@@ -107,10 +108,26 @@ function resolvePrises(p: Prescription): [string | null, string | null, string |
   }
   return parsePosologie(p.posologie);
 }
+function dciKey(s: string | null | undefined): string {
+  const raw = (s ?? "")
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  return raw.split(" ")[0] ?? "";
+}
+
+type Omission = { id: string; episode_id: string; traitement_id: string; justifiee: boolean; commentaire: string | null };
+
 
 export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { episodeId: string; patientId: string }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [justifyId, setJustifyId] = useState<string | null>(null);
+  const [justifyText, setJustifyText] = useState("");
+
 
   const { data = [] } = useQuery({
     queryKey: ["prescriptions", episodeId],
@@ -136,6 +153,78 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
           .eq("actif", true)
       ).data ?? []) as unknown as DomicileTraitement[],
   });
+
+  const { data: omissions = [] } = useQuery({
+    queryKey: ["prescription_omissions", episodeId],
+    queryFn: async () =>
+      ((
+        await supabase
+          .from("prescription_omissions" as never)
+          .select("*")
+          .eq("episode_id", episodeId)
+      ).data ?? []) as unknown as Omission[],
+  });
+
+  const presentKeys = new Set(
+    data.map((p) => dciKey(p.medicament ?? p.nom_commercial ?? "")).filter(Boolean),
+  );
+  const justifiedTraitementIds = new Set(omissions.filter((o) => o.justifiee).map((o) => o.traitement_id));
+  const missingTreatments = domicile.filter((t) => {
+    if (justifiedTraitementIds.has(t.id)) return false;
+    const k = dciKey(t.dci ?? t.nom_commercial ?? "");
+    return k.length > 0 && !presentKeys.has(k);
+  });
+
+  const addFromDomicile = useMutation({
+    mutationFn: async (t: DomicileTraitement) => {
+      const { error } = await supabase.from("prescriptions_hospitalieres").insert({
+        episode_id: episodeId,
+        patient_id: patientId,
+        medicament: t.dci ?? t.nom_commercial ?? "Médicament",
+        nom_commercial: t.nom_commercial ?? null,
+        dosage: t.dosage ?? null,
+        dosage_unite: t.dosage_unite ?? null,
+        voie_administration: t.voie_administration ?? null,
+        posologie_matin: t.posologie_matin ?? null,
+        posologie_midi: t.posologie_midi ?? null,
+        posologie_soir: t.posologie_soir ?? null,
+        posologie_coucher: t.posologie_coucher ?? null,
+        posologie: t.posologie_texte ?? null,
+        source: "omission_corrigee",
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["prescriptions", episodeId] });
+      toast.success("Traitement ajouté à la prescription hospitalière");
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const justifyOmission = useMutation({
+    mutationFn: async ({ traitementId, commentaire }: { traitementId: string; commentaire: string }) => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("prescription_omissions" as never).upsert(
+        {
+          episode_id: episodeId,
+          traitement_id: traitementId,
+          justifiee: true,
+          commentaire: commentaire || null,
+          created_by: u.user?.id ?? null,
+        } as never,
+        { onConflict: "episode_id,traitement_id" } as never,
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["prescription_omissions", episodeId] });
+      setJustifyId(null);
+      setJustifyText("");
+      toast.success("Omission marquée comme souhaitée");
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
 
   const runAI = useServerFn(matchPrescriptionAI);
   const evaluatedRef = useRef<Set<string>>(new Set());
@@ -233,6 +322,87 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
+        {missingTreatments.length > 0 && (
+          <div className="rounded-md border border-amber-300/60 bg-amber-50/60 dark:bg-amber-950/20 p-2 space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-200">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {missingTreatments.length} médicament{missingTreatments.length > 1 ? "s" : ""} du domicile non repris
+            </div>
+            <div className="space-y-1.5">
+              {missingTreatments.map((t) => (
+                <div key={t.id} className="rounded border border-amber-200/70 bg-background/70 p-2 text-xs space-y-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Pill className="h-3 w-3 text-amber-600 shrink-0" />
+                    <span className="font-medium">{t.dci ?? t.nom_commercial}</span>
+                    {t.dosage && (
+                      <Badge variant="outline" className="font-mono text-[10px] px-1 py-0">
+                        {t.dosage}{t.dosage_unite ? ` ${t.dosage_unite}` : ""}
+                      </Badge>
+                    )}
+                    {t.voie_administration && (
+                      <Badge variant="secondary" className="text-[10px] px-1 py-0">{t.voie_administration}</Badge>
+                    )}
+                    {(t.posologie_matin || t.posologie_midi || t.posologie_soir || t.posologie_coucher || t.posologie_texte) && (
+                      <span className="text-[11px] text-muted-foreground">
+                        {t.posologie_texte ?? `${t.posologie_matin ?? 0}-${t.posologie_midi ?? 0}-${t.posologie_soir ?? 0}${t.posologie_coucher ? `-${t.posologie_coucher}` : ""}`}
+                      </span>
+                    )}
+                  </div>
+                  {justifyId === t.id ? (
+                    <div className="space-y-1.5">
+                      <Textarea
+                        value={justifyText}
+                        onChange={(e) => setJustifyText(e.target.value)}
+                        placeholder="Justification (optionnelle) : motif clinique de l'omission…"
+                        className="text-xs min-h-[60px]"
+                      />
+                      <div className="flex gap-1.5">
+                        <Button
+                          size="sm"
+                          className="h-7"
+                          onClick={() => justifyOmission.mutate({ traitementId: t.id, commentaire: justifyText })}
+                          disabled={justifyOmission.isPending}
+                        >
+                          <Check className="h-3 w-3 mr-1" /> Valider
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7"
+                          onClick={() => { setJustifyId(null); setJustifyText(""); }}
+                        >
+                          <X className="h-3 w-3 mr-1" /> Annuler
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="h-7"
+                        onClick={() => addFromDomicile.mutate(t)}
+                        disabled={addFromDomicile.isPending}
+                      >
+                        <Plus className="h-3 w-3 mr-1" /> Ajouter le traitement
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7"
+                        onClick={() => { setJustifyId(t.id); setJustifyText(""); }}
+                      >
+                        Omission souhaitée
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+
         {open && (
           <form
             onSubmit={(e) => {

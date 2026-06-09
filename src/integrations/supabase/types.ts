@@ -645,6 +645,54 @@ export type Database = {
         }
         Relationships: []
       }
+      prescription_omissions: {
+        Row: {
+          commentaire: string | null
+          created_at: string
+          created_by: string | null
+          episode_id: string
+          id: string
+          justifiee: boolean
+          traitement_id: string
+          updated_at: string
+        }
+        Insert: {
+          commentaire?: string | null
+          created_at?: string
+          created_by?: string | null
+          episode_id: string
+          id?: string
+          justifiee?: boolean
+          traitement_id: string
+          updated_at?: string
+        }
+        Update: {
+          commentaire?: string | null
+          created_at?: string
+          created_by?: string | null
+          episode_id?: string
+          id?: string
+          justifiee?: boolean
+          traitement_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescription_omissions_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescription_omissions_traitement_id_fkey"
+            columns: ["traitement_id"]
+            isOneToOne: false
+            referencedRelation: "traitements_habituels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prescriptions_hospitalieres: {
         Row: {
           actif: boolean
