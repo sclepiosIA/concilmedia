@@ -458,6 +458,14 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
               </div>
             )}
           </section>
+
+          {validation && analysisId && (
+            <PharmacistDocumentCompareCard
+              analysisId={analysisId}
+              patientId={patientId}
+              episodeId={null}
+            />
+          )}
         </>
       )}
     </div>
