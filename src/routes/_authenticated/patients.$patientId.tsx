@@ -18,6 +18,9 @@ import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImp
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { MedicationProfileCard } from "@/components/patient/MedicationProfileCard";
+import { CollapsibleSection } from "@/components/patient/CollapsibleSection";
+import { ConciliationCompleteCard } from "@/components/patient/ConciliationCompleteCard";
+import { Activity, FlaskConical, Hospital, Pill, Sparkles, Stethoscope } from "lucide-react";
 import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
@@ -249,20 +252,58 @@ function PatientDetailPage() {
       <BulkPatientImportModal open={bulkOpen} onOpenChange={setBulkOpen} targetPatientId={patientId} />
       <SynthesePatientDialog patientId={patientId} open={syntheseOpen} onOpenChange={setSyntheseOpen} />
 
-      <div className="space-y-6">
-        <ClinicalProfileCard patientId={patientId} />
-        
-        <section>
-          <h2 className="text-lg font-semibold mb-3">Traitements</h2>
-          <div className="mb-3"><MedicationProfileCard patientId={patientId} /></div>
-          <TraitementsHabituelsSection patientId={patientId} />
-        </section>
-        <section>
-          <h2 className="text-lg font-semibold mb-3">Prescriptions hospitalières</h2>
+      <div className="space-y-3">
+        <CollapsibleSection
+          title="Profil clinique"
+          icon={<Stethoscope className="h-4 w-4 text-primary" />}
+          storageKey={`sec:clinical:${patientId}`}
+          defaultOpen
+        >
+          <ClinicalProfileCard patientId={patientId} />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Traitements habituels (domicile)"
+          icon={<Pill className="h-4 w-4 text-primary" />}
+          storageKey={`sec:traitements:${patientId}`}
+          defaultOpen
+        >
+          <div className="space-y-3">
+            <MedicationProfileCard patientId={patientId} />
+            <TraitementsHabituelsSection patientId={patientId} />
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Prescriptions hospitalières"
+          icon={<Hospital className="h-4 w-4 text-primary" />}
+          storageKey={`sec:prescriptions:${patientId}`}
+          defaultOpen
+        >
           <PrescriptionsHospitalieresSection patientId={patientId} />
-        </section>
-        <section><h2 className="text-lg font-semibold mb-3">Biologie</h2><BiologieSection patientId={patientId} /></section>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Biologie"
+          icon={<FlaskConical className="h-4 w-4 text-primary" />}
+          storageKey={`sec:biologie:${patientId}`}
+          defaultOpen={false}
+        >
+          <BiologieSection patientId={patientId} />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Conciliation pharmaceutique complète (IA)"
+          icon={<Sparkles className="h-4 w-4 text-primary" />}
+          badge={<span className="text-[10px] uppercase tracking-wide text-muted-foreground ml-1">analyse globale</span>}
+          storageKey={`sec:conciliation-complete:${patientId}`}
+          defaultOpen
+          className="border-primary/30"
+        >
+          <ConciliationCompleteCard patientId={patientId} />
+        </CollapsibleSection>
       </div>
+      {void Activity}
     </div>
   );
 }
