@@ -146,7 +146,9 @@ function AlertItem({
                   Score de confiance IA
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <Progress value={conf} className="h-1.5 flex-1" indicatorClassName={confidenceColor(conf)} />
+                  <div className="h-1.5 flex-1 rounded-full bg-slate-200 overflow-hidden">
+                    <div className={`h-full ${confidenceColor(conf)}`} style={{ width: `${conf}%` }} />
+                  </div>
                   <span className="text-xs font-semibold tabular-nums">{conf}%</span>
                 </div>
               </div>
