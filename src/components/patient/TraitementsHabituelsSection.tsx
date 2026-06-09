@@ -9,7 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Trash2, Pill, Sun, CloudSun, Sunset, Moon } from "lucide-react";
+import { Trash2, Pill, Sun, CloudSun, Sunset, Moon, FileText, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { OrdonnanceUploader } from "@/components/conciliation/OrdonnanceUploader";
 import { SourceDocumentLink } from "@/components/conciliation/SourceDocumentLink";
@@ -85,9 +85,43 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
     onSuccess: () => qc.invalidateQueries({ queryKey: ["traitements", patientId] }),
   });
 
+  // Indicateur BME : nb lignes, nb sources PDF distinctes, dernière mise à jour
+  const sourceIds = new Set(data.map((t) => t.source_document_id).filter(Boolean) as string[]);
+  const latestUpdate = data.reduce<string | null>((acc, t) => {
+    const c = (t as unknown as { created_at?: string }).created_at;
+    if (!c) return acc;
+    return !acc || c > acc ? c : acc;
+  }, null);
+  const formattedDate = latestUpdate ? new Date(latestUpdate).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : null;
+
   return (
     <div className="space-y-3">
       <OrdonnanceUploader patientId={patientId} />
+
+      {/* Indicateur de complétude du Bilan Médicamenteux d'Entrée (BME) */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="py-3 px-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <div className="flex items-center gap-2 font-medium">
+            <Pill className="h-4 w-4 text-primary" />
+            <span>Bilan médicamenteux d'entrée</span>
+          </div>
+          <Badge variant={data.length > 0 ? "default" : "secondary"} className="font-mono">
+            {data.length} ligne{data.length > 1 ? "s" : ""}
+          </Badge>
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <FileText className="h-3.5 w-3.5" />
+            {sourceIds.size} source{sourceIds.size > 1 ? "s" : ""} PDF
+          </span>
+          {formattedDate && (
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              MAJ {formattedDate}
+            </span>
+          )}
+        </CardContent>
+      </Card>
+
+
 
 
       {data.length === 0 ? (
