@@ -41,9 +41,19 @@ export interface PatientTriageInput {
   oldestPendingAnalysisAt: number | null;
 }
 
+export interface TriageDetails {
+  divergences: Record<Gravite, number>;
+  nbNonIntentionnelles: number;
+  worstRisk: NiveauRisque | null;
+  hasValidation: boolean;
+  hasActiveEpisode: boolean;
+  pendingSinceHours: number | null;
+}
+
 export interface TriageResult {
   level: TriageLevel;
   reason: string;
+  details?: TriageDetails;
 }
 
 export function computePatientTriage(input: PatientTriageInput): TriageResult {
@@ -96,14 +106,28 @@ export function computePatientTriage(input: PatientTriageInput): TriageResult {
     reason = "Conciliation validée par un pharmacien";
   }
 
-  // Surcouche d'ancienneté : > 48 h en attente → on remonte d'un palier
-  if (level > 1 && oldestPendingAnalysisAt != null) {
-    const ageH = (Date.now() - oldestPendingAnalysisAt) / 36e5;
-    if (ageH > 48) {
-      level = (level - 1) as TriageLevel;
-      reason += ` · en attente depuis ${Math.round(ageH)} h`;
-    }
+  let pendingSinceHours: number | null = null;
+  if (oldestPendingAnalysisAt != null) {
+    pendingSinceHours = Math.round((Date.now() - oldestPendingAnalysisAt) / 36e5);
   }
 
-  return { level, reason };
+  // Surcouche d'ancienneté : > 48 h en attente → on remonte d'un palier
+  if (level > 1 && pendingSinceHours != null && pendingSinceHours > 48) {
+    level = (level - 1) as TriageLevel;
+    reason += ` · en attente depuis ${pendingSinceHours} h`;
+  }
+
+  return {
+    level,
+    reason,
+    details: {
+      divergences: { ...divergencesByGravity },
+      nbNonIntentionnelles: nbDivergencesNonIntentionnelles,
+      worstRisk,
+      hasValidation,
+      hasActiveEpisode,
+      pendingSinceHours,
+    },
+  };
 }
+

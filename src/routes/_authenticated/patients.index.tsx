@@ -18,9 +18,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { HelpCircle } from "lucide-react";
 import { usePatientsTriage } from "@/hooks/usePatientsTriage";
+import { usePatientsQuickInfo } from "@/hooks/usePatientsQuickInfo";
+import { PatientRowQuickInfo } from "@/components/patient/PatientRowQuickInfo";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { TRIAGE_META, type TriageLevel } from "@/lib/conciliation/triageScale";
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { fr } from "date-fns/locale";
+
 
 export const Route = createFileRoute("/_authenticated/patients/")({
   head: () => ({ meta: [{ title: "Patients — Conciliation" }] }),
@@ -51,9 +55,11 @@ function PatientsListPage() {
     },
   });
 
-  const [filterMode, setFilterMode] = useState<"all" | "todo" | "done">("all");
+  type FilterMode = "all" | "todo" | "done" | "p1" | "p2" | "p3" | "p4" | "p5";
+  const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const patientIds = useMemo(() => patients.map((p) => p.id), [patients]);
   const { data: triageMap = {} } = usePatientsTriage(patientIds);
+  const { data: quickInfoMap = {} } = usePatientsQuickInfo(patientIds);
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
@@ -67,6 +73,7 @@ function PatientsListPage() {
         const lvl = triageMap[p.id]?.level ?? 5;
         if (filterMode === "todo") return lvl <= 3;
         if (filterMode === "done") return lvl === 5;
+        if (filterMode.startsWith("p")) return lvl === Number(filterMode.slice(1));
         return true;
       })
       .sort((a, b) => {
@@ -76,6 +83,7 @@ function PatientsListPage() {
         return (b.created_at ?? "").localeCompare(a.created_at ?? "");
       });
   }, [patients, search, filterMode, triageMap]);
+
 
   const counts = useMemo(() => {
     const c: Record<TriageLevel, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
@@ -266,71 +274,110 @@ function PatientsListPage() {
         />
       )}
 
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        {([1, 2, 3, 4, 5] as TriageLevel[]).map((l) => {
-          const m = TRIAGE_META[l];
-          return (
-            <div
-              key={l}
-              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-              style={{ background: m.bg, color: m.fg, border: `1px solid ${m.ring}` }}
-              title={`${m.label} — ${m.delay}`}
-            >
-              <span className="font-bold">{m.code}</span>
-              <span className="opacity-80">{counts[l]}</span>
-            </div>
-          );
-        })}
-        <div className="ml-auto">
-          <ToggleGroup type="single" value={filterMode} onValueChange={(v) => v && setFilterMode(v as typeof filterMode)} size="sm">
-            <ToggleGroupItem value="all">Tous</ToggleGroupItem>
-            <ToggleGroupItem value="todo">À relire (P1–P3)</ToggleGroupItem>
-            <ToggleGroupItem value="done">Validés (P5)</ToggleGroupItem>
-          </ToggleGroup>
+      <TooltipProvider delayDuration={200}>
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="text-xs font-medium text-muted-foreground mr-1 uppercase tracking-wide">Tri :</span>
+          {([1, 2, 3, 4, 5] as TriageLevel[]).map((l) => {
+            const m = TRIAGE_META[l];
+            const count = counts[l];
+            const active = filterMode === (`p${l}` as FilterMode);
+            const empty = count === 0;
+            return (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setFilterMode(active ? "all" : (`p${l}` as FilterMode))}
+                className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+                  active ? "ring-2 ring-offset-1 ring-foreground/30" : "hover:brightness-95"
+                } ${empty ? "opacity-50" : ""}`}
+                style={{
+                  background: m.bg,
+                  color: m.fg,
+                  border: `1px solid ${m.ring}`,
+                }}
+                title={`${m.label} — ${m.delay}`}
+                aria-pressed={active}
+              >
+                <span
+                  className="inline-flex items-center justify-center rounded-md font-bold text-xs"
+                  style={{
+                    background: m.swatch,
+                    color: m.fg,
+                    width: 22,
+                    height: 22,
+                    border: `1px solid ${m.ring}`,
+                  }}
+                >
+                  {m.code}
+                </span>
+                <span className="leading-tight">{m.label}</span>
+                <span
+                  className="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full text-xs font-bold tabular-nums"
+                  style={{ background: m.swatch, color: m.fg }}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+          <div className="ml-auto">
+            <ToggleGroup type="single" value={filterMode} onValueChange={(v) => v && setFilterMode(v as FilterMode)} size="sm">
+              <ToggleGroupItem value="all">Tous</ToggleGroupItem>
+              <ToggleGroupItem value="todo">À relire (P1–P3)</ToggleGroupItem>
+              <ToggleGroupItem value="done">Validés (P5)</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </div>
-      </div>
 
-      <div className="relative mb-4">
-        <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
-        <Input placeholder="Rechercher un patient..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
-      </div>
+        <div className="relative mb-4">
+          <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
+          <Input placeholder="Rechercher un patient..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
 
-      <div className="grid gap-3">
-        {filtered.length === 0 && (
-          <Card><CardContent className="py-12 text-center text-muted-foreground">Aucun patient</CardContent></Card>
-        )}
-        {filtered.map((p) => (
-          <Card key={p.id} className="hover:bg-accent/50 transition">
-            <CardContent className="py-4 flex items-center gap-4">
-              <TriageBadge level={triageMap[p.id]?.level ?? 5} reason={triageMap[p.id]?.reason} />
-              <Link
-                to="/patients/$patientId"
-                params={{ patientId: p.id }}
-                className="flex items-center gap-4 flex-1 cursor-pointer"
-              >
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium">{p.nom.toUpperCase()} {p.prenom}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {p.date_naissance && `Né(e) le ${format(new Date(p.date_naissance), "d MMM yyyy", { locale: fr })}`}
-                    {p.sexe && ` • ${p.sexe}`}
+        <div className="grid gap-3">
+          {filtered.length === 0 && (
+            <Card><CardContent className="py-12 text-center text-muted-foreground">Aucun patient</CardContent></Card>
+          )}
+          {filtered.map((p) => (
+            <Card key={p.id} className="hover:bg-accent/50 transition">
+              <CardContent className="py-4 flex items-center gap-4">
+                <TriageBadge
+                  level={triageMap[p.id]?.level ?? 5}
+                  reason={triageMap[p.id]?.reason}
+                  details={triageMap[p.id]?.details}
+                />
+                <Link
+                  to="/patients/$patientId"
+                  params={{ patientId: p.id }}
+                  className="flex items-center gap-4 flex-1 cursor-pointer min-w-0"
+                >
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <User className="h-5 w-5 text-primary" />
                   </div>
-                </div>
-              </Link>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setToDelete({ id: p.id, nom: p.nom, prenom: p.prenom })}
-                aria-label="Supprimer le patient"
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{p.nom.toUpperCase()} {p.prenom}</div>
+                    <div className="text-sm text-muted-foreground truncate">
+                      {p.date_naissance && `Né(e) le ${format(new Date(p.date_naissance), "d MMM yyyy", { locale: fr })}`}
+                      {p.sexe && ` • ${p.sexe}`}
+                    </div>
+                  </div>
+                </Link>
+                <PatientRowQuickInfo info={quickInfoMap[p.id]} />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setToDelete({ id: p.id, nom: p.nom, prenom: p.prenom })}
+                  aria-label="Supprimer le patient"
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+
+        </div>
+      </TooltipProvider>
+
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
