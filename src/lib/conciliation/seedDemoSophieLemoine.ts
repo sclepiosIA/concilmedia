@@ -173,7 +173,67 @@ export async function seedDemoSophieLemoine(): Promise<string> {
     // OMISSION volontaire : Apixaban (non justifiée) → absence d'anticoagulation
     // chez une patiente en FA avec CHA2DS2-VASc = 4 → risque thromboembolique majeur.
   ].map((p) => ({ ...p, episode_id: episodeId, patient_id: patientId, actif: true }));
-  await supabase.from("prescriptions_hospitalieres").insert(presc);
+  const { data: prescRows } = await supabase
+    .from("prescriptions_hospitalieres")
+    .insert(presc)
+    .select("id, medicament");
+
+  // 9) Divergences de conciliation pré-calculées (affichage immédiat)
+  const now = new Date().toISOString();
+  const apixabanClasse = classifyDci("Apixaban");
+  const omeprazoleClasse = classifyDci("Oméprazole");
+  const omeprazoleRow = (prescRows ?? []).find((p) => p.medicament === "Oméprazole");
+
+  await supabase.from("conciliation_medicaments").insert([
+    {
+      episode_id: episodeId,
+      patient_id: patientId,
+      phase: "entree",
+      medication_domicile: {
+        dci: "Apixaban",
+        dosage: "5 mg",
+        posologie: "1 matin, 1 soir",
+        voie: "PO",
+        indication: "Anticoagulation FA (CHA2DS2-VASc 4)",
+        source: "ordonnance",
+      },
+      medication_hospitalisation: null,
+      type_divergence: "omission",
+      intention: "non_intentionnel",
+      justification: null,
+      action_corrective:
+        "Réintroduire Apixaban 5 mg x2/j — absence d'anticoagulation chez patiente en FA (risque thromboembolique majeur, AVC).",
+      statut: "non_traite",
+      pharmacien_id: null,
+      date_analyse: now,
+      date_validation: null,
+      gravite: classifyDivergenceGravite(apixabanClasse, "omission"),
+      classe_atc: apixabanClasse,
+    },
+    {
+      episode_id: episodeId,
+      patient_id: patientId,
+      phase: "entree",
+      medication_domicile: { dci: "Oméprazole" },
+      medication_hospitalisation: {
+        dci: "Oméprazole",
+        dosage: "20 mg",
+        posologie: "1 matin",
+        prescription_id: omeprazoleRow?.id,
+      },
+      type_divergence: "ajout",
+      intention: "a_evaluer",
+      justification: null,
+      action_corrective:
+        "Vérifier l'indication de l'IPP (pas d'antécédent gastro-duodénal ni de co-prescription justifiant la protection gastrique).",
+      statut: "non_traite",
+      pharmacien_id: null,
+      date_analyse: now,
+      date_validation: null,
+      gravite: classifyDivergenceGravite(omeprazoleClasse, "ajout"),
+      classe_atc: omeprazoleClasse,
+    },
+  ] as never);
 
   return patientId;
 }
