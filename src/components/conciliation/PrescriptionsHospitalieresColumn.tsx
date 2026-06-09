@@ -232,7 +232,10 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
               <div>Indication / Source</div>
               <div></div>
             </div>
-            {data.map((p) => (
+            {data.map((p) => {
+              const [m, mi, s, c] = resolvePrises(p);
+              const hasPrises = m || mi || s || c;
+              return (
               <div
                 key={p.id}
                 className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-2 px-3 py-2 items-center hover:bg-muted/30 transition-colors text-xs"
@@ -253,16 +256,16 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
                   {p.nom_commercial && p.nom_commercial !== p.medicament && (
                     <div className="text-[11px] text-muted-foreground ml-4 mt-0.5">{p.nom_commercial}</div>
                   )}
-                  {p.posologie && !(p.posologie_matin || p.posologie_midi || p.posologie_soir || p.posologie_coucher) && (
+                  {p.posologie && !hasPrises && (
                     <div className="text-[11px] text-muted-foreground ml-4 mt-0.5">{p.posologie}</div>
                   )}
                 </div>
 
                 <div className="flex gap-1 justify-start md:justify-center">
-                  <PriseCell value={p.posologie_matin} icon={Sun} label="Matin" />
-                  <PriseCell value={p.posologie_midi} icon={CloudSun} label="Midi" />
-                  <PriseCell value={p.posologie_soir} icon={Sunset} label="Soir" />
-                  <PriseCell value={p.posologie_coucher} icon={Moon} label="Coucher" />
+                  <PriseCell value={m} icon={Sun} label="Matin" />
+                  <PriseCell value={mi} icon={CloudSun} label="Midi" />
+                  <PriseCell value={s} icon={Sunset} label="Soir" />
+                  <PriseCell value={c} icon={Moon} label="Coucher" />
                 </div>
 
                 <div className="flex flex-col gap-0.5 text-[11px] min-w-[120px]">
