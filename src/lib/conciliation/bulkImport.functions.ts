@@ -168,6 +168,9 @@ const CommitInput = z.object({
   items: z.array(DossierSchema.extend({
     existing_patient_id: z.string().uuid().nullable().optional(),
     source_file: z.string().optional(),
+    file_base64: z.string().optional(),
+    mime_type: z.string().optional(),
+    file_size: z.number().optional(),
   })).min(1).max(20),
   auto_create_episode: z.boolean().optional().default(true),
 });
