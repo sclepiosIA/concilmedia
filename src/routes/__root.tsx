@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -94,9 +94,18 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const lastUserIdRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      // On ignore les événements qui ne changent pas l'identité (TOKEN_REFRESHED,
+      // INITIAL_SESSION, USER_UPDATED, et SIGNED_IN ré-émis au retour de focus).
+      // Sans ça, l'app re-fetch tout dès qu'on revient sur l'onglet ou ~1 fois/h.
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT") return;
+      const newUserId = session?.user?.id ?? null;
+      const prev = lastUserIdRef.current;
+      if (prev !== undefined && prev === newUserId) return; // pas de vrai changement
+      lastUserIdRef.current = newUserId;
+      if (prev === undefined) return; // première hydratation, rien à invalider
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
     });
