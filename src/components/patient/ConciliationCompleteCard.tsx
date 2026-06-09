@@ -166,6 +166,39 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
   });
 
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve((r.result as string).split(",")[1] ?? "");
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+  }
+
+  const uploadDocMut = useMutation({
+    mutationFn: async (file: File) => {
+      if (!analysisId) throw new Error("Aucune analyse");
+      if (file.type !== "application/pdf") throw new Error("Seuls les PDF sont acceptés.");
+      if (file.size > 10 * 1024 * 1024) throw new Error("Fichier trop volumineux (max 10 Mo).");
+      const base64 = await fileToBase64(file);
+      return uploadDocFn({
+        data: {
+          analysisId,
+          patientId,
+          episodeId: null,
+          fileName: file.name,
+          mimeType: file.type,
+          base64,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Document pharmacien uploadé");
+      qc.invalidateQueries({ queryKey: ["pharmacist-doc", analysisId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-4">
       {/* Header status + actions */}
