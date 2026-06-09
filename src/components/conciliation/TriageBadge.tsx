@@ -1,13 +1,97 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { TRIAGE_META, type TriageLevel } from "@/lib/conciliation/triageScale";
+import { TRIAGE_META, type TriageLevel, type TriageDetails, type NiveauRisque } from "@/lib/conciliation/triageScale";
 
 interface TriageBadgeProps {
   level: TriageLevel;
   reason?: string;
+  details?: TriageDetails;
   size?: "sm" | "md";
 }
 
-export function TriageBadge({ level, reason, size = "md" }: TriageBadgeProps) {
+const GRAVITE_DOT: Record<string, string> = {
+  mineur: "bg-yellow-500",
+  modere: "bg-orange-500",
+  majeur: "bg-red-500",
+  critique: "bg-red-700",
+};
+
+const RISK_LABEL: Record<NiveauRisque, string> = {
+  faible: "Faible",
+  modere: "Modéré",
+  eleve: "Élevé",
+  critique: "Critique",
+};
+
+const RISK_DOT: Record<NiveauRisque, string> = {
+  faible: "bg-green-500",
+  modere: "bg-orange-500",
+  eleve: "bg-red-500",
+  critique: "bg-red-700",
+};
+
+function TriageDetailsBlock({ details, reason }: { details?: TriageDetails; reason?: string }) {
+  if (!details) {
+    return reason ? <div className="text-xs italic opacity-90 pt-1">{reason}</div> : null;
+  }
+  const { divergences, nbNonIntentionnelles, worstRisk, hasValidation, hasActiveEpisode, pendingSinceHours } = details;
+  const totalDiv = divergences.mineur + divergences.modere + divergences.majeur + divergences.critique;
+  return (
+    <div className="space-y-1.5 text-xs">
+      <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
+        <span className="opacity-70">Épisode actif</span>
+        <span className="font-medium">{hasActiveEpisode ? "Oui" : "Non"}</span>
+
+        <span className="opacity-70">Validation pharmacien</span>
+        <span className="font-medium">{hasValidation ? "✔ Oui" : "✘ Non"}</span>
+
+        {worstRisk && (
+          <>
+            <span className="opacity-70">Score de risque</span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className={`inline-block w-1.5 h-1.5 rounded-full ${RISK_DOT[worstRisk]}`} />
+              <span className="font-medium">{RISK_LABEL[worstRisk]}</span>
+            </span>
+          </>
+        )}
+
+        {pendingSinceHours != null && (
+          <>
+            <span className="opacity-70">En attente depuis</span>
+            <span className="font-medium">{pendingSinceHours} h</span>
+          </>
+        )}
+      </div>
+
+      {totalDiv > 0 && (
+        <div className="border-t border-border/40 pt-1.5">
+          <div className="opacity-70 mb-1">Divergences non résolues</div>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+            {(["critique", "majeur", "modere", "mineur"] as const).map((g) =>
+              divergences[g] > 0 ? (
+                <span key={g} className="inline-flex items-center gap-1">
+                  <span className={`inline-block w-1.5 h-1.5 rounded-full ${GRAVITE_DOT[g]}`} />
+                  <span className="font-medium tabular-nums">{divergences[g]}</span>
+                  <span className="opacity-70">{g}</span>
+                </span>
+              ) : null,
+            )}
+          </div>
+          {nbNonIntentionnelles > 0 && (
+            <div className="opacity-80 mt-0.5">
+              dont <span className="font-medium">{nbNonIntentionnelles}</span> non intentionnelle(s)
+            </div>
+          )}
+        </div>
+      )}
+
+      {reason && (
+        <div className="border-t border-border/40 pt-1.5 italic opacity-80">{reason}</div>
+      )}
+    </div>
+  );
+}
+
+export function TriageBadge({ level, reason, details, size = "md" }: TriageBadgeProps) {
   const meta = TRIAGE_META[level];
   const px = size === "sm" ? 24 : 30;
   return (
@@ -30,11 +114,13 @@ export function TriageBadge({ level, reason, size = "md" }: TriageBadgeProps) {
             {meta.code}
           </span>
         </TooltipTrigger>
-        <TooltipContent side="right" className="max-w-xs">
-          <div className="space-y-0.5">
-            <div className="font-semibold">{meta.code} — {meta.label}</div>
-            <div className="text-xs opacity-90">{meta.delay}</div>
-            {reason && <div className="text-xs pt-1 border-t border-border/40 mt-1">{reason}</div>}
+        <TooltipContent side="right" className="max-w-sm">
+          <div className="space-y-1.5">
+            <div>
+              <div className="font-semibold text-sm">{meta.code} — {meta.label}</div>
+              <div className="text-xs opacity-80">{meta.delay}</div>
+            </div>
+            <TriageDetailsBlock details={details} reason={reason} />
           </div>
         </TooltipContent>
       </Tooltip>
