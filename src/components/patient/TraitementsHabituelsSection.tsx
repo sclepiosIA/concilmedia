@@ -142,83 +142,115 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
             Aucun traitement habituel renseigné
           </CardContent>
         </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-0 divide-y">
-            {/* En-tête */}
-            <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-2 text-[11px] uppercase tracking-wide text-muted-foreground bg-muted/40">
-              <div>Médicament</div>
-              <div className="text-center">M • Mi • S • Co</div>
-              <div>Indication / Source</div>
-              <div></div>
-            </div>
-            {data.map((t) => (
-              <div
-                key={t.id}
-                className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-3 items-center hover:bg-muted/30 transition-colors"
-              >
-                {/* Médicament */}
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Pill className="h-4 w-4 text-primary shrink-0" />
-                    <span className="font-medium truncate">{t.dci || t.nom_commercial}</span>
-                    {t.dosage && (
-                      <Badge variant="outline" className="font-mono text-xs">
-                        {t.dosage}{t.dosage_unite ? ` ${t.dosage_unite}` : ""}
-                      </Badge>
+      ) : (() => {
+        // Regroupement par prescripteur (via source_document_id → documents_sources)
+        const sourceById = new Map(sources.map((s) => [s.id, s] as const));
+        const UNKNOWN_KEY = "__unknown__";
+        const groups = new Map<string, { label: string; specialty: string | null; date: string | null; sourceId: string | null; items: Traitement[] }>();
+        for (const t of data) {
+          const src = t.source_document_id ? sourceById.get(t.source_document_id) : null;
+          const key = src?.prescriber_name?.trim() ? `${src.prescriber_name}|${src.prescription_date ?? ""}` : (t.source_document_id ?? UNKNOWN_KEY);
+          const existing = groups.get(key) ?? {
+            label: src?.prescriber_name?.trim() || (src?.file_name ?? "Prescripteur non identifié"),
+            specialty: src?.prescriber_specialty ?? null,
+            date: src?.prescription_date ?? null,
+            sourceId: t.source_document_id ?? null,
+            items: [] as Traitement[],
+          };
+          existing.items.push(t);
+          groups.set(key, existing);
+        }
+        const groupList = Array.from(groups.entries()).sort(([, a], [, b]) => (b.date ?? "").localeCompare(a.date ?? ""));
+
+        return (
+          <Accordion type="multiple" defaultValue={groupList.map(([k]) => k)} className="space-y-2">
+            {groupList.map(([key, g]) => (
+              <AccordionItem key={key} value={key} className="border rounded-md bg-card">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <div className="flex items-center gap-3 flex-wrap text-left">
+                    <Stethoscope className="h-4 w-4 text-primary shrink-0" />
+                    <span className="font-medium">{g.label}</span>
+                    {g.specialty && <Badge variant="secondary" className="text-xs">{g.specialty}</Badge>}
+                    {g.date && (
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(g.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
+                      </span>
                     )}
-                    {t.voie_administration && (
-                      <Badge variant="secondary" className="text-xs">{t.voie_administration}</Badge>
-                    )}
+                    <Badge variant="outline" className="text-xs">{g.items.length} ligne{g.items.length > 1 ? "s" : ""}</Badge>
+                    {g.sourceId && <SourceDocumentLink documentId={g.sourceId} label="PDF" />}
                   </div>
-                  {t.dci && t.nom_commercial && t.dci !== t.nom_commercial && (
-                    <div className="text-xs text-muted-foreground ml-6 mt-0.5">{t.nom_commercial}</div>
-                  )}
-                </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-0 pb-0">
+                  <div className="divide-y">
+                    {g.items.map((t) => (
+                      <div
+                        key={t.id}
+                        className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-4 px-4 py-3 items-center hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Pill className="h-4 w-4 text-primary shrink-0" />
+                            <span className="font-medium truncate">{t.dci || t.nom_commercial}</span>
+                            {t.dosage && (
+                              <Badge variant="outline" className="font-mono text-xs">
+                                {t.dosage}{t.dosage_unite ? ` ${t.dosage_unite}` : ""}
+                              </Badge>
+                            )}
+                            {t.voie_administration && (
+                              <Badge variant="secondary" className="text-xs">{t.voie_administration}</Badge>
+                            )}
+                          </div>
+                          {t.dci && t.nom_commercial && t.dci !== t.nom_commercial && (
+                            <div className="text-xs text-muted-foreground ml-6 mt-0.5">{t.nom_commercial}</div>
+                          )}
+                        </div>
 
-                {/* Schéma de prise */}
-                <div className="flex gap-1 justify-start md:justify-center">
-                  <PriseCell value={t.posologie_matin} icon={Sun} label="Matin" />
-                  <PriseCell value={t.posologie_midi} icon={CloudSun} label="Midi" />
-                  <PriseCell value={t.posologie_soir} icon={Sunset} label="Soir" />
-                  <PriseCell value={t.posologie_coucher} icon={Moon} label="Coucher" />
-                </div>
+                        <div className="flex gap-1 justify-start md:justify-center">
+                          <PriseCell value={t.posologie_matin} icon={Sun} label="Matin" />
+                          <PriseCell value={t.posologie_midi} icon={CloudSun} label="Midi" />
+                          <PriseCell value={t.posologie_soir} icon={Sunset} label="Soir" />
+                          <PriseCell value={t.posologie_coucher} icon={Moon} label="Coucher" />
+                        </div>
 
-                {/* Indication / durée / source */}
-                <div className="flex flex-col gap-1 text-xs min-w-[160px]">
-                  {t.posologie_texte && (
-                    <span className="text-foreground/80 italic">{t.posologie_texte}</span>
-                  )}
-                  {t.indication && <span className="text-foreground/80">{t.indication}</span>}
-                  {t.duree && (
-                    <span className="text-foreground/80">
-                      <span className="font-medium">Durée :</span> {t.duree}
-                    </span>
-                  )}
-                  {t.source && (
-                    <span className="text-muted-foreground">
-                      Source : {SOURCE_LABEL[t.source] ?? t.source}
-                    </span>
-                  )}
-                  {t.source_document_id && <SourceDocumentLink documentId={t.source_document_id} />}
-                </div>
+                        <div className="flex flex-col gap-1 text-xs min-w-[160px]">
+                          {t.posologie_texte && (
+                            <span className="text-foreground/80 italic">{t.posologie_texte}</span>
+                          )}
+                          {t.indication && <span className="text-foreground/80">{t.indication}</span>}
+                          {t.duree && (
+                            <span className="text-foreground/80">
+                              <span className="font-medium">Durée :</span> {t.duree}
+                            </span>
+                          )}
+                          {t.source && !t.source_document_id && (
+                            <span className="text-muted-foreground">
+                              Source : {SOURCE_LABEL[t.source] ?? t.source}
+                            </span>
+                          )}
+                        </div>
 
-                {/* Actions */}
-                <div className="flex justify-end">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => del.mutate(t.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+                        <div className="flex justify-end">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => del.mutate(t.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </CardContent>
-        </Card>
-      )}
+          </Accordion>
+        );
+      })()}
+    </div>
+  );
+}
     </div>
   );
 }
