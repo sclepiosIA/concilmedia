@@ -299,12 +299,10 @@ function PatientsListPage() {
         {filtered.length === 0 && (
           <Card><CardContent className="py-12 text-center text-muted-foreground">Aucun patient</CardContent></Card>
         )}
-        {filtered.map((p) => {
-          const triage = triageMap[p.id];
-          return (
+        {filtered.map((p) => (
           <Card key={p.id} className="hover:bg-accent/50 transition">
             <CardContent className="py-4 flex items-center gap-4">
-              <TriageBadge level={triage?.level ?? 5} reason={triage?.reason} />
+              <TriageBadge level={triageMap[p.id]?.level ?? 5} reason={triageMap[p.id]?.reason} />
               <Link
                 to="/patients/$patientId"
                 params={{ patientId: p.id }}
@@ -331,8 +329,7 @@ function PatientsListPage() {
               </Button>
             </CardContent>
           </Card>
-          );
-        })}
+        ))}
       </div>
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
