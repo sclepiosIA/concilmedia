@@ -261,6 +261,30 @@ function PatientsListPage() {
         />
       )}
 
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        {([1, 2, 3, 4, 5] as TriageLevel[]).map((l) => {
+          const m = TRIAGE_META[l];
+          return (
+            <div
+              key={l}
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+              style={{ background: m.bg, color: m.fg, border: `1px solid ${m.ring}` }}
+              title={`${m.label} — ${m.delay}`}
+            >
+              <span className="font-bold">{m.code}</span>
+              <span className="opacity-80">{counts[l]}</span>
+            </div>
+          );
+        })}
+        <div className="ml-auto">
+          <ToggleGroup type="single" value={filterMode} onValueChange={(v) => v && setFilterMode(v as typeof filterMode)} size="sm">
+            <ToggleGroupItem value="all">Tous</ToggleGroupItem>
+            <ToggleGroupItem value="todo">À relire (P1–P3)</ToggleGroupItem>
+            <ToggleGroupItem value="done">Validés (P5)</ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+      </div>
+
       <div className="relative mb-4">
         <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
         <Input placeholder="Rechercher un patient..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
