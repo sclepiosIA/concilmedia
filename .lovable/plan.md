@@ -1,59 +1,58 @@
 ## Objectif
 
-1. Remplacer l'analyse pharmaceutique IA "légère" actuelle par une **conciliation pharmaceutique complète** (le même niveau de détail que l'analyse d'épisode existante : interactions, doublons, contre-indications, médicaments à haut risque, allergies croisées, adaptations posologiques, surveillance bio, conclusion clinique).
-2. L'afficher en **section dédiée en bas de la fiche patient**, pas uniquement dans le dialog "Synthèse patient".
-3. Rendre **toutes les cards de la fiche patient repliables** pour améliorer la lisibilité.
+Permettre au pharmacien de **valider la conciliation pharmaceutique complète** proposée par l'IA :
+- validation **item par item** (chaque interaction, CI, doublon, adaptation, médicament à haut risque, allergie croisée) avec statut **Accepté / Refusé / Modifié** + commentaire optionnel
+- validation **globale** de l'analyse (signature pharmacien : nom auto via `auth.user`, horodatage), qui "fige" l'état de la conciliation
+- affichage clair du statut de validation dans la card (badge "Validée le …" / "À valider")
+- traçabilité : possibilité de relancer une nouvelle analyse IA, l'ancienne validation reste archivée
 
-## 1) Server function `analyzePatientConciliationComplete`
+## 1) Base de données — migration
 
-Nouveau fichier `src/lib/conciliation/analyzePatientConciliationComplete.functions.ts` :
-- Input : `{ patientId }`
-- Charge en parallèle : patient, allergies, antécédents, comorbidités, traitements habituels actifs, **prescriptions hospitalières actives du dernier épisode**, biologie récente (50 derniers résultats, dédupliqués par paramètre)
-- Prompt système enrichi (basé sur celui de `analyzeConciliation`) — exige le **JSON complet** avec interactions / doublons_therapeutiques / contre_indications / adaptations_posologiques / medicaments_haut_risque / allergies_croisees / surveillance / conclusion_clinique + score_risque + synthese
-- Modèle : `google/gemini-3-flash-preview` via le gateway Lovable AI déjà en place
-- Persiste dans `conciliation_ai_analyses` (avec `episode_id = null` et `patient_id` pour distinguer du dialog actuel, via une 2ᵉ ligne ou via un `analysis_type='conciliation_complete'` — colonne à ajouter)
+Nouvelle table `public.conciliation_validations` :
+- `id uuid`
+- `analysis_id uuid` → `conciliation_ai_analyses(id) ON DELETE CASCADE`
+- `patient_id uuid` → `patients(id) ON DELETE CASCADE` (pour RLS via `owns_patient`)
+- `validated_by uuid` → `auth.users(id)`
+- `validated_at timestamptz default now()`
+- `pharmacien_nom text` (saisi/affiché — fallback `auth.email`)
+- `commentaire_global text`
+- `item_decisions jsonb` — tableau `{ category, index, status: 'accepted'|'rejected'|'modified', comment?, modification? }`
+- contrainte unique `(analysis_id)` → une seule validation par analyse (relancer l'IA crée une nouvelle ligne d'analyse à valider à nouveau)
+- GRANT `SELECT/INSERT/UPDATE/DELETE` à `authenticated`, GRANT ALL à `service_role`
+- RLS activée + policy `owns_patient(patient_id)`
 
-**Migration** : ajouter `analysis_type text` sur `conciliation_ai_analyses` (`'synthese' | 'conciliation_complete'`, défaut `'synthese'` pour ne pas casser l'existant). Backfill : ne touche pas aux lignes existantes.
+## 2) Server functions
 
-## 2) UI — composant `ConciliationCompleteCard`
+`src/lib/conciliation/validateConciliation.functions.ts` :
+- `saveConciliationValidation({ analysisId, patientId, pharmacienNom, commentaireGlobal, itemDecisions })` — upsert sur `analysis_id`
+- `getConciliationValidation({ analysisId })` — récupère la dernière validation
 
-Nouveau composant `src/components/patient/ConciliationCompleteCard.tsx` :
-- Bouton "Lancer la conciliation complète" / "Relancer"
-- Affichage riche réutilisant le style de `AIAnalysisPanel` (déjà utilisé sur la page épisode) : score de risque, synthèse, blocs détaillés avec sévérité, mécanisme, recommandation, alternative, référence (ANSM/HAS/Vidal/RCP/STOPP-START), niveau de confiance
-- Export PDF (peut être ajouté dans une itération suivante — pas dans ce premier jet)
-- Auto-déclenchement à l'ouverture **si** le patient a un traitement domicile ET au moins une prescription hospitalière (sinon message d'attente)
+## 3) UI — extension de `ConciliationCompleteCard`
 
-## 3) Cards repliables
+- Header : badge **« À valider »** (warning) ou **« ✓ Validée par X — le … »** (success)
+- À côté de chaque alerte rendue par `ClinicalAlertsPanel`, ajouter 3 boutons compacts **Accepter / Modifier / Refuser** + champ commentaire repliable. Pour ne pas casser `ClinicalAlertsPanel` (réutilisé sur la page épisode), je passe un prop optionnel `validationMode` + `onItemDecision` + `decisions`.
+- En bas de la card, panneau de signature : champ "Nom du pharmacien" (pré-rempli avec `auth.user_metadata.full_name || email`), commentaire global, bouton **« Valider la conciliation »**.
+- Une fois validée : tous les contrôles deviennent en lecture seule, badge vert, bouton "Modifier la validation" pour rouvrir.
+- Relancer l'analyse IA → nouvelle ligne d'analyse → la validation précédente reste archivée mais l'UI repart sur "À valider".
 
-Nouveau composant `src/components/patient/CollapsibleSection.tsx` :
-- Wrapper basé sur `@/components/ui/collapsible` (shadcn — disponible)
-- Props : `title`, `icon`, `defaultOpen`, `storageKey` (mémorise l'état par patient via `localStorage`), `badge` optionnel (compteur, alerte)
-- Animation chevron, transitions natives `data-[state=open]`
+## 4) Export
 
-Appliqué à toutes les sections de `patients.$patientId.tsx` :
-- Profil clinique (`ClinicalProfileCard`)
-- Profil médicamenteux (`MedicationProfileCard`)
-- Traitements habituels
-- Prescriptions hospitalières
-- Biologie
-- **Conciliation pharmaceutique complète** (nouvelle section, en bas)
-
-Par défaut : profil + traitements + prescriptions ouverts ; biologie + conciliation repliés (ou ouvert si analyse déjà disponible).
+Le badge "✓ Validée par X" est aussi inclus dans le futur export PDF (hors scope ici, à ajouter dans une itération suivante si besoin).
 
 ## Fichiers touchés
 
 **Créés**
-- `src/lib/conciliation/analyzePatientConciliationComplete.functions.ts`
-- `src/components/patient/ConciliationCompleteCard.tsx`
-- `src/components/patient/CollapsibleSection.tsx`
-- Migration : `ALTER TABLE conciliation_ai_analyses ADD COLUMN analysis_type text DEFAULT 'synthese'`
+- Migration `conciliation_validations` (table + RLS + grants)
+- `src/lib/conciliation/validateConciliation.functions.ts`
+- `src/components/patient/ConciliationValidationPanel.tsx` (signature pharmacien)
 
 **Modifiés**
-- `src/routes/_authenticated/patients.$patientId.tsx` — wrapper `CollapsibleSection` autour de chaque section + ajout de la nouvelle section conciliation complète en bas
-- `src/integrations/supabase/types.ts` (regénéré)
+- `src/components/patient/ConciliationCompleteCard.tsx` — chargement validation, statut, signature, passage decisions à `ClinicalAlertsPanel`
+- `src/components/conciliation/ClinicalAlertsPanel.tsx` — props optionnelles `validationMode`, `decisions`, `onItemDecision` ; rendu des boutons Accepter/Modifier/Refuser + commentaire par item (sans casser l'usage existant sur la page épisode)
+- `src/integrations/supabase/types.ts` (auto-régénéré)
 
-## Hors-scope (non touché)
+## Hors-scope
 
-- Le dialog `SynthesePatientDialog` reste pour l'export PDF rapide existant
-- Le `AIAnalysisPanel` de la page épisode n'est pas modifié
-- Le système de coloration des prescriptions hospitalières reste tel quel
+- Validation à plusieurs niveaux (pharmacien + médecin)
+- Workflow de notification
+- Export PDF de la conciliation validée (peut suivre)
