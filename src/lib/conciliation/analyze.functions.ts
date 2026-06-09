@@ -12,6 +12,10 @@ export type AIAnalysisPayload = {
   contre_indications: Array<{ medicament: string; raison: string; recommandation: string }>;
   redondances_classe: Array<{ classe: string; medicaments: string[] }>;
   adaptations_posologiques: Array<{ medicament: string; raison: string; recommandation: string }>;
+  medicaments_haut_risque?: Array<{ medicament: string; classe: string; raison: string }>;
+  allergies_croisees?: Array<{ allergene: string; medicament: string; risque: string }>;
+  surveillance?: Array<{ parametre: string; frequence: string; justification: string }>;
+  conclusion_clinique?: string;
 };
 
 export const analyzeConciliation = createServerFn({ method: "POST" })
