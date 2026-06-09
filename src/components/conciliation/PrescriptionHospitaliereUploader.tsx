@@ -2,7 +2,38 @@ import { useState, type ChangeEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, Sparkles, Loader2, Check, X } from "lucide-react";
+import { Upload, FileText, Sparkles, Loader2, Check, X, Sunrise, Sun, Sunset, Moon } from "lucide-react";
+
+function PreviewPriseCell({
+  value,
+  icon: Icon,
+  label,
+  shortLabel,
+}: {
+  value: string | null | undefined;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  shortLabel: string;
+}) {
+  const v = (value ?? "").toString().trim();
+  const active = v !== "" && v !== "0";
+  return (
+    <div
+      aria-label={`${label} : ${active ? v : "aucune prise"}`}
+      className={`flex h-11 w-11 flex-col items-center justify-center rounded-md border text-[11px] font-semibold transition-colors ${
+        active
+          ? "border-primary/50 bg-primary/10 text-primary shadow-sm"
+          : "border-border bg-muted/30 text-muted-foreground/45"
+      }`}
+    >
+      <span className="mb-0.5 flex items-center gap-0.5 text-[9px] uppercase leading-none text-current">
+        <Icon className="h-3.5 w-3.5" />
+        {shortLabel}
+      </span>
+      <span className="leading-none">{active ? v : "—"}</span>
+    </div>
+  );
+}
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { extractOrdonnance, importExtractedHospitalPrescriptions, type ExtractedMedication } from "@/lib/conciliation/extractOrdonnance.functions";
@@ -118,14 +149,15 @@ export function PrescriptionHospitaliereUploader({ episodeId, patientId }: { epi
             {meds.map((m, i) => (
               <div key={i} className="p-2 text-sm">
                 <div className="font-medium">{m.dci}{m.nom_commercial && <span className="text-muted-foreground"> ({m.nom_commercial})</span>}</div>
-                <div className="flex gap-1 flex-wrap mt-1">
+                <div className="flex gap-1 flex-wrap mt-1 items-center">
                   {m.dosage && <Badge variant="outline" className="text-xs">{m.dosage} {m.dosage_unite ?? ""}</Badge>}
                   {m.voie_administration && <Badge variant="secondary" className="text-xs">{m.voie_administration}</Badge>}
-                  {(m.posologie_matin || m.posologie_midi || m.posologie_soir || m.posologie_coucher) && (
-                    <Badge variant="outline" className="text-xs">
-                      {[m.posologie_matin && `${m.posologie_matin}M`, m.posologie_midi && `${m.posologie_midi}Mi`, m.posologie_soir && `${m.posologie_soir}S`, m.posologie_coucher && `${m.posologie_coucher}C`].filter(Boolean).join(" / ")}
-                    </Badge>
-                  )}
+                </div>
+                <div className="flex gap-1 mt-2">
+                  <PreviewPriseCell value={m.posologie_matin} icon={Sunrise} label="Matin" shortLabel="M" />
+                  <PreviewPriseCell value={m.posologie_midi} icon={Sun} label="Midi" shortLabel="Mi" />
+                  <PreviewPriseCell value={m.posologie_soir} icon={Sunset} label="Soir" shortLabel="S" />
+                  <PreviewPriseCell value={m.posologie_coucher} icon={Moon} label="Coucher" shortLabel="Co" />
                 </div>
                 {m.posologie_texte && <div className="text-xs text-muted-foreground mt-1">{m.posologie_texte}</div>}
               </div>
