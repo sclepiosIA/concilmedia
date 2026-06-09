@@ -8,6 +8,7 @@ import { Hospital, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PrescriptionHospitaliereUploader } from "./PrescriptionHospitaliereUploader";
 
 export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { episodeId: string; patientId: string }) {
   const qc = useQueryClient();
