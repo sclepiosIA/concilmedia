@@ -10,6 +10,7 @@ import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, F
 import { analyzePatientConciliationComplete } from "@/lib/conciliation/analyzePatientConciliationComplete.functions";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
+import { PharmacistDocumentCompareCard } from "@/components/conciliation/PharmacistDocumentCompareCard";
 import {
   saveConciliationValidation,
   getConciliationValidation,
