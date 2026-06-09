@@ -118,7 +118,7 @@ Règles :
 
     let patient_updated = false;
     if (Object.keys(patientUpdate).length > 0) {
-      const { error } = await supabase.from("patients").update(patientUpdate).eq("id", data.patientId);
+      const { error } = await supabase.from("patients").update(patientUpdate as never).eq("id", data.patientId);
       if (!error) patient_updated = true;
     }
 
