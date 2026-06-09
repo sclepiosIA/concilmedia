@@ -6,8 +6,8 @@
 
 /*
  * ConcilMed·IA — Design tokens
- * Charte: papier / encre / bleu primaire + sémantique de gravité.
- * Toutes les couleurs en oklch (conversion des hex de la charte).
+ * Charte issue du logo : Navy profond + Teal/Cyan.
+ * Typographie : Sora (titres) + Manrope (corps).
  */
 
 @theme inline {
@@ -54,7 +54,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* ConcilMed·IA — palette charte (exposée en utilitaires Tailwind) */
+  /* Charte ConcilMed·IA */
   --color-paper: var(--paper);
   --color-paper-2: var(--paper-2);
   --color-paper-3: var(--paper-3);
@@ -65,14 +65,32 @@
   --color-line: var(--line);
   --color-line-soft: var(--line-soft);
 
-  --color-blue-50: var(--blue-50);
-  --color-blue-100: var(--blue-100);
-  --color-blue-200: var(--blue-200);
-  --color-blue-400: var(--blue-400);
-  --color-blue-500: var(--blue-500);
-  --color-blue-600: var(--blue-600);
-  --color-blue-700: var(--blue-700);
-  --color-blue-900: var(--blue-900);
+  --color-navy-50: var(--navy-50);
+  --color-navy-100: var(--navy-100);
+  --color-navy-200: var(--navy-200);
+  --color-navy-400: var(--navy-400);
+  --color-navy-500: var(--navy-500);
+  --color-navy-600: var(--navy-600);
+  --color-navy-700: var(--navy-700);
+  --color-navy-900: var(--navy-900);
+
+  --color-teal-50: var(--teal-50);
+  --color-teal-100: var(--teal-100);
+  --color-teal-200: var(--teal-200);
+  --color-teal-400: var(--teal-400);
+  --color-teal-500: var(--teal-500);
+  --color-teal-600: var(--teal-600);
+  --color-teal-700: var(--teal-700);
+
+  /* Legacy blue-* mappés sur navy pour rétrocompatibilité */
+  --color-blue-50: var(--navy-50);
+  --color-blue-100: var(--navy-100);
+  --color-blue-200: var(--navy-200);
+  --color-blue-400: var(--navy-400);
+  --color-blue-500: var(--navy-500);
+  --color-blue-600: var(--navy-600);
+  --color-blue-700: var(--navy-700);
+  --color-blue-900: var(--navy-900);
 
   /* Sémantique gravité */
   --color-crit: var(--crit);
@@ -87,97 +105,113 @@
   --color-ok-bg: var(--ok-bg);
   --color-ok-line: var(--ok-line);
 
-  /* Typographies */
-  --font-sans: "IBM Plex Sans", system-ui, -apple-system, Segoe UI, sans-serif;
-  --font-serif: "Newsreader", Georgia, serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  /* Typographies — Sora (display) + Manrope (sans) */
+  --font-sans: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Sora", "Manrope", system-ui, sans-serif;
+  --font-serif: "Sora", system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace;
 }
 
 :root {
-  --radius: 0.625rem; /* ~10px */
+  --radius: 0.75rem;
 
-  /* Papier / encre */
-  --paper:      oklch(0.992 0.004 247);
-  --paper-2:    oklch(0.971 0.009 247);
-  --paper-3:    oklch(0.942 0.015 247);
-  --line:       oklch(0.898 0.019 247);
-  --line-soft:  oklch(0.933 0.013 247);
-  --ink:        oklch(0.252 0.030 257);
-  --ink-2:      oklch(0.396 0.028 257);
-  --ink-3:      oklch(0.567 0.024 257);
-  --ink-4:      oklch(0.703 0.022 257);
+  /* Papier / encre — fonds froids, neutres */
+  --paper:      oklch(0.985 0.005 240);
+  --paper-2:    oklch(1 0 0);
+  --paper-3:    oklch(0.962 0.011 235);
+  --line:       oklch(0.905 0.018 235);
+  --line-soft:  oklch(0.940 0.012 235);
+  --ink:        oklch(0.205 0.055 264);   /* navy-900 */
+  --ink-2:      oklch(0.345 0.062 264);
+  --ink-3:      oklch(0.540 0.040 250);
+  --ink-4:      oklch(0.700 0.025 245);
 
-  /* Bleu primaire */
-  --blue-50:  oklch(0.957 0.024 262);
-  --blue-100: oklch(0.928 0.039 262);
-  --blue-200: oklch(0.853 0.073 262);
-  --blue-400: oklch(0.654 0.165 262);
-  --blue-500: oklch(0.561 0.196 262);
-  --blue-600: oklch(0.482 0.196 262);
-  --blue-700: oklch(0.391 0.166 263);
-  --blue-900: oklch(0.273 0.114 264);
+  /* Navy (primaire) — extrait du logo #0d1b3d → #1a2e5c */
+  --navy-50:   oklch(0.962 0.018 260);
+  --navy-100:  oklch(0.920 0.034 260);
+  --navy-200:  oklch(0.830 0.062 262);
+  --navy-400:  oklch(0.520 0.130 263);
+  --navy-500:  oklch(0.420 0.130 263);
+  --navy-600:  oklch(0.345 0.115 263);
+  --navy-700:  oklch(0.280 0.095 264);
+  --navy-900:  oklch(0.205 0.075 264);
+
+  /* Teal (accent IA) — extrait #2dd4bf / #14b8a6 */
+  --teal-50:   oklch(0.965 0.025 178);
+  --teal-100:  oklch(0.928 0.055 178);
+  --teal-200:  oklch(0.870 0.090 178);
+  --teal-400:  oklch(0.780 0.140 178);
+  --teal-500:  oklch(0.720 0.155 178);
+  --teal-600:  oklch(0.620 0.135 180);
+  --teal-700:  oklch(0.520 0.115 184);
 
   /* Sémantique */
-  --crit:      oklch(0.538 0.182 27);
-  --crit-bg:   oklch(0.946 0.020 25);
-  --crit-line: oklch(0.860 0.045 25);
-  --major:     oklch(0.560 0.114 60);
-  --major-bg:  oklch(0.954 0.032 80);
-  --major-line:oklch(0.890 0.062 85);
-  --minor:     oklch(0.482 0.196 262);
-  --minor-bg:  oklch(0.948 0.024 263);
-  --ok:        oklch(0.500 0.097 161);
-  --ok-bg:     oklch(0.954 0.030 155);
-  --ok-line:   oklch(0.880 0.058 155);
+  --crit:      oklch(0.560 0.190 27);
+  --crit-bg:   oklch(0.962 0.025 25);
+  --crit-line: oklch(0.870 0.060 25);
+  --major:     oklch(0.620 0.135 60);
+  --major-bg:  oklch(0.962 0.040 80);
+  --major-line:oklch(0.890 0.075 80);
+  --minor:     oklch(0.620 0.135 180);
+  --minor-bg:  oklch(0.962 0.030 180);
+  --ok:        oklch(0.560 0.110 165);
+  --ok-bg:     oklch(0.960 0.034 160);
+  --ok-line:   oklch(0.885 0.065 160);
+
+  /* Gradients & shadows brand */
+  --gradient-brand: linear-gradient(135deg, var(--navy-700) 0%, var(--teal-600) 100%);
+  --gradient-brand-soft: linear-gradient(135deg, color-mix(in oklab, var(--navy-700) 10%, transparent) 0%, color-mix(in oklab, var(--teal-500) 14%, transparent) 100%);
+  --shadow-brand: 0 10px 30px -10px color-mix(in oklab, var(--navy-900) 28%, transparent);
+  --shadow-soft: 0 1px 2px color-mix(in oklab, var(--navy-900) 4%, transparent),
+                 0 8px 24px -12px color-mix(in oklab, var(--navy-900) 12%, transparent);
 
   /* shadcn semantic tokens — mappés sur la charte */
   --background:            var(--paper);
   --foreground:            var(--ink);
-  --card:                  oklch(1 0 0);
+  --card:                  var(--paper-2);
   --card-foreground:       var(--ink);
-  --popover:               oklch(1 0 0);
+  --popover:               var(--paper-2);
   --popover-foreground:    var(--ink);
-  --primary:               var(--blue-600);
-  --primary-foreground:    var(--paper);
-  --secondary:             var(--paper-2);
+  --primary:               var(--navy-700);
+  --primary-foreground:    oklch(0.985 0.005 240);
+  --secondary:             var(--paper-3);
   --secondary-foreground:  var(--ink);
-  --muted:                 var(--paper-2);
+  --muted:                 var(--paper-3);
   --muted-foreground:      var(--ink-3);
-  --accent:                var(--paper-3);
-  --accent-foreground:     var(--blue-700);
+  --accent:                var(--teal-50);
+  --accent-foreground:     var(--teal-700);
   --destructive:           var(--crit);
   --destructive-foreground:var(--paper);
   --border:                var(--line);
   --input:                 var(--line);
-  --ring:                  var(--blue-400);
+  --ring:                  var(--teal-600);
 
-  --chart-1: var(--blue-600);
-  --chart-2: var(--ok);
+  --chart-1: var(--navy-700);
+  --chart-2: var(--teal-500);
   --chart-3: var(--major);
   --chart-4: var(--crit);
-  --chart-5: var(--blue-400);
+  --chart-5: var(--navy-400);
 
   --sidebar:                       var(--paper-2);
   --sidebar-foreground:            var(--ink);
-  --sidebar-primary:               var(--blue-600);
+  --sidebar-primary:               var(--navy-700);
   --sidebar-primary-foreground:    var(--paper);
-  --sidebar-accent:                var(--paper-3);
-  --sidebar-accent-foreground:     var(--blue-700);
+  --sidebar-accent:                var(--teal-50);
+  --sidebar-accent-foreground:     var(--teal-700);
   --sidebar-border:                var(--line);
-  --sidebar-ring:                  var(--blue-400);
+  --sidebar-ring:                  var(--teal-600);
 }
 
 .dark {
-  /* Dérive sombre — encre claire sur papier sombre */
-  --paper:      oklch(0.196 0.020 257);
-  --paper-2:    oklch(0.245 0.022 257);
-  --paper-3:    oklch(0.295 0.024 257);
-  --line:       oklch(0.345 0.022 257);
-  --line-soft:  oklch(0.305 0.020 257);
-  --ink:        oklch(0.962 0.008 247);
-  --ink-2:      oklch(0.860 0.014 247);
-  --ink-3:      oklch(0.720 0.018 257);
-  --ink-4:      oklch(0.580 0.020 257);
+  --paper:      oklch(0.180 0.030 264);
+  --paper-2:    oklch(0.232 0.034 264);
+  --paper-3:    oklch(0.282 0.036 264);
+  --line:       oklch(0.345 0.034 264);
+  --line-soft:  oklch(0.305 0.030 264);
+  --ink:        oklch(0.965 0.010 230);
+  --ink-2:      oklch(0.860 0.018 230);
+  --ink-3:      oklch(0.720 0.020 240);
+  --ink-4:      oklch(0.580 0.022 245);
 
   --background:            var(--paper);
   --foreground:            var(--ink);
@@ -185,28 +219,28 @@
   --card-foreground:       var(--ink);
   --popover:               var(--paper-2);
   --popover-foreground:    var(--ink);
-  --primary:               var(--blue-400);
-  --primary-foreground:    oklch(0.196 0.020 257);
+  --primary:               var(--teal-500);
+  --primary-foreground:    oklch(0.180 0.030 264);
   --secondary:             var(--paper-3);
   --secondary-foreground:  var(--ink);
   --muted:                 var(--paper-3);
   --muted-foreground:      var(--ink-3);
   --accent:                var(--paper-3);
-  --accent-foreground:     var(--ink);
+  --accent-foreground:     var(--teal-200);
   --destructive:           var(--crit);
   --destructive-foreground:var(--paper);
   --border:                var(--line);
   --input:                 var(--line);
-  --ring:                  var(--blue-400);
+  --ring:                  var(--teal-500);
 
   --sidebar:                       var(--paper-2);
   --sidebar-foreground:            var(--ink);
-  --sidebar-primary:               var(--blue-400);
-  --sidebar-primary-foreground:    oklch(0.196 0.020 257);
+  --sidebar-primary:               var(--teal-500);
+  --sidebar-primary-foreground:    oklch(0.180 0.030 264);
   --sidebar-accent:                var(--paper-3);
-  --sidebar-accent-foreground:     var(--ink);
+  --sidebar-accent-foreground:     var(--teal-200);
   --sidebar-border:                var(--line);
-  --sidebar-ring:                  var(--blue-400);
+  --sidebar-ring:                  var(--teal-500);
 }
 
 @layer base {
@@ -221,19 +255,45 @@
     -webkit-font-smoothing: antialiased;
     line-height: 1.55;
   }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
 }
 
 /* Utilitaires charte */
+@utility font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
 @utility font-serif-display {
-  font-family: var(--font-serif);
-  font-feature-settings: "ss01", "ss02";
-  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+@utility bg-gradient-brand {
+  background-image: var(--gradient-brand);
+}
+
+@utility bg-gradient-brand-soft {
+  background-image: var(--gradient-brand-soft);
+}
+
+@utility text-gradient-brand {
+  background-image: var(--gradient-brand);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
 @utility shadow-elegant {
-  box-shadow:
-    0 4px 16px color-mix(in oklab, var(--blue-900) 8%, transparent),
-    0 1px 3px color-mix(in oklab, var(--blue-900) 6%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+
+@utility shadow-brand {
+  box-shadow: var(--shadow-brand);
 }
 
 @keyframes accordion-down {
