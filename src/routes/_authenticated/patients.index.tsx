@@ -17,6 +17,7 @@ import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialo
 import { fr } from "date-fns/locale";
 import { seedDemoJeanMartin } from "@/lib/conciliation/seedDemoJeanMartin";
 import { seedDemoSophieLemoine } from "@/lib/conciliation/seedDemoSophieLemoine";
+import { seedDemoJeanPierreMoreau } from "@/lib/conciliation/seedDemoJeanPierreMoreau";
 
 export const Route = createFileRoute("/_authenticated/patients/")({
   head: () => ({ meta: [{ title: "Patients — Conciliation" }] }),
