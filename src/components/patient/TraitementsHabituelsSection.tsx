@@ -12,6 +12,7 @@ import {
 import { Trash2, Pill, Sun, CloudSun, Sunset, Moon } from "lucide-react";
 import { toast } from "sonner";
 import { OrdonnanceUploader } from "@/components/conciliation/OrdonnanceUploader";
+import { SourceDocumentLink } from "@/components/conciliation/SourceDocumentLink";
 
 
 type Traitement = {
@@ -29,6 +30,7 @@ type Traitement = {
   indication: string | null;
   duree: string | null;
   source: string | null;
+  source_document_id: string | null;
 };
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -153,6 +155,7 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
                       Source : {SOURCE_LABEL[t.source] ?? t.source}
                     </span>
                   )}
+                  {t.source_document_id && <SourceDocumentLink documentId={t.source_document_id} />}
                 </div>
 
                 {/* Actions */}

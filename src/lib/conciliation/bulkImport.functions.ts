@@ -168,6 +168,9 @@ const CommitInput = z.object({
   items: z.array(DossierSchema.extend({
     existing_patient_id: z.string().uuid().nullable().optional(),
     source_file: z.string().optional(),
+    file_base64: z.string().optional(),
+    mime_type: z.string().optional(),
+    file_size: z.number().optional(),
   })).min(1).max(20),
   auto_create_episode: z.boolean().optional().default(true),
 });
@@ -185,7 +188,7 @@ export const commitBulkImport = createServerFn({ method: "POST" })
     };
 
     // Groupe les items par patient (existant ou nouveau) pour agréger les prescriptions hospi
-    type PendingHospi = { patientId: string; prescriptions: typeof data.items[number]["prescriptions_hospitalieres"]; context: { motif?: string | null; service?: string | null; date_admission?: string | null } };
+    type PendingHospi = { patientId: string; prescriptions: typeof data.items[number]["prescriptions_hospitalieres"]; context: { motif?: string | null; service?: string | null; date_admission?: string | null }; sourceDocumentId: string | null };
     const hospiByPatient = new Map<string, PendingHospi>();
 
     for (const item of data.items) {
@@ -207,6 +210,36 @@ export const commitBulkImport = createServerFn({ method: "POST" })
           summary.created++;
         } else {
           summary.updated++;
+        }
+
+        // ────────────── Traçabilité : upload du PDF source ──────────────
+        let sourceDocumentId: string | null = null;
+        if (item.file_base64 && item.mime_type) {
+          try {
+            const bin = Uint8Array.from(atob(item.file_base64), (c) => c.charCodeAt(0));
+            const hashBuf = await crypto.subtle.digest("SHA-256", bin);
+            const hashHex = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+            const safeName = (item.source_file ?? "document.pdf").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
+            const storagePath = `${userId}/${patientId}/${hashHex.slice(0, 16)}_${safeName}`;
+            const { error: upErr } = await supabase.storage
+              .from("ordonnances")
+              .upload(storagePath, bin, { contentType: item.mime_type, upsert: true });
+            if (upErr) throw upErr;
+            const { data: doc, error: docErr } = await supabase.from("documents_sources").insert({
+              patient_id: patientId,
+              storage_path: storagePath,
+              file_name: item.source_file ?? "document.pdf",
+              mime_type: item.mime_type,
+              file_size: item.file_size ?? bin.length,
+              hash_sha256: hashHex,
+              document_type: item.document_type,
+              uploaded_by: userId,
+            } as never).select("id").single();
+            if (docErr || !doc) throw docErr ?? new Error("Création document source échouée");
+            sourceDocumentId = (doc as { id: string }).id;
+          } catch (e) {
+            console.warn("Source document upload failed:", e);
+          }
         }
 
         // Dédup si patient existant
@@ -234,18 +267,21 @@ export const commitBulkImport = createServerFn({ method: "POST" })
         if (newAntecedents.length) {
           await supabase.from("antecedents").insert(newAntecedents.map((a) => ({
             patient_id: patientId!, type: a.type, description: a.description, date_evenement: a.date_evenement ?? null,
+            source_document_id: sourceDocumentId,
           })) as never);
         }
         const newComorb = item.comorbidites.filter((c) => !existingComorb.has(c.libelle.toLowerCase().trim()));
         if (newComorb.length) {
           await supabase.from("comorbidites").insert(newComorb.map((c) => ({
             patient_id: patientId!, libelle: c.libelle, statut: c.statut,
+            source_document_id: sourceDocumentId,
           })) as never);
         }
         const newAllergies = item.allergies.filter((a) => !existingAllergies.has(a.substance.toLowerCase().trim()));
         if (newAllergies.length) {
           await supabase.from("allergies").insert(newAllergies.map((a) => ({
             patient_id: patientId!, substance: a.substance, reaction: a.reaction ?? null, severite: a.severite ?? null,
+            source_document_id: sourceDocumentId,
           })) as never);
         }
         const newBio = item.biologie.filter((b) => !existingBio.has(`${b.parametre.toLowerCase()}|${b.date_prelevement ?? ""}`));
@@ -253,6 +289,7 @@ export const commitBulkImport = createServerFn({ method: "POST" })
           await supabase.from("biologie_resultats").insert(newBio.map((b) => ({
             patient_id: patientId!, parametre: b.parametre, valeur: b.valeur ?? null, unite: b.unite ?? null,
             valeur_texte: b.valeur_texte ?? null, date_prelevement: b.date_prelevement ?? null, source: "pdf_import",
+            source_document_id: sourceDocumentId,
           })) as never);
         }
         const newTraitements = item.traitements.filter((t) => !existingTraitements.has((t.dci ?? "").toLowerCase().trim()));
@@ -265,6 +302,7 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             posologie_texte: t.posologie_texte ?? null,
             indication: t.indication ?? null, duree: t.duree ?? null,
             source: "pdf_import", actif: true,
+            source_document_id: sourceDocumentId,
           })) as never);
         }
 
@@ -275,8 +313,10 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             patientId,
             prescriptions: [],
             context: { motif: null, service: null, date_admission: null },
+            sourceDocumentId,
           };
           existing.prescriptions.push(...(item.prescriptions_hospitalieres ?? []));
+          existing.sourceDocumentId = existing.sourceDocumentId ?? sourceDocumentId;
           if (item.episode_context) {
             existing.context.motif = existing.context.motif ?? item.episode_context.motif ?? null;
             existing.context.service = existing.context.service ?? item.episode_context.service ?? null;
@@ -302,6 +342,13 @@ export const commitBulkImport = createServerFn({ method: "POST" })
         if (error || !ep) throw new Error(error?.message ?? "Création épisode échouée");
         const episodeId = (ep as { id: string }).id;
 
+        // Lier le document source à l'épisode si possible
+        if (pending.sourceDocumentId) {
+          await supabase.from("documents_sources")
+            .update({ episode_id: episodeId } as never)
+            .eq("id", pending.sourceDocumentId);
+        }
+
         // Dédup par medicament (lowercase)
         const seen = new Set<string>();
         const rows = pending.prescriptions
@@ -322,6 +369,7 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             date_debut: p.date_debut ?? new Date().toISOString().slice(0, 10),
             date_fin: p.date_fin ?? null,
             actif: true,
+            source_document_id: pending.sourceDocumentId,
           }));
         if (rows.length) {
           await supabase.from("prescriptions_hospitalieres").insert(rows as never);

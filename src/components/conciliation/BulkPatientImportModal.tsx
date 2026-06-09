@@ -106,9 +106,17 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
   const importMut = useMutation({
     mutationFn: async () => {
       const ready = items.filter((i) => i.status === "ready" && i.dossier);
-      const payload = ready.map((i) => targetPatientId
-        ? { ...i.dossier!, existing_patient_id: targetPatientId }
-        : i.dossier!);
+      const payload = await Promise.all(ready.map(async (i) => {
+        const b64 = await fileToBase64(i.file);
+        const base = {
+          ...i.dossier!,
+          file_base64: b64,
+          mime_type: i.file.type || "application/pdf",
+          file_size: i.file.size,
+          source_file: i.file.name,
+        };
+        return targetPatientId ? { ...base, existing_patient_id: targetPatientId } : base;
+      }));
       return commit({ data: { items: payload } });
     },
     onSuccess: (r) => {

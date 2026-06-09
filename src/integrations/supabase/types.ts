@@ -23,6 +23,7 @@ export type Database = {
           patient_id: string
           reaction: string | null
           severite: string | null
+          source_document_id: string | null
           substance: string
         }
         Insert: {
@@ -33,6 +34,7 @@ export type Database = {
           patient_id: string
           reaction?: string | null
           severite?: string | null
+          source_document_id?: string | null
           substance: string
         }
         Update: {
@@ -43,6 +45,7 @@ export type Database = {
           patient_id?: string
           reaction?: string | null
           severite?: string | null
+          source_document_id?: string | null
           substance?: string
         }
         Relationships: [
@@ -51,6 +54,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "allergies_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -63,6 +73,7 @@ export type Database = {
           description: string
           id: string
           patient_id: string
+          source_document_id: string | null
           type: string
         }
         Insert: {
@@ -72,6 +83,7 @@ export type Database = {
           description: string
           id?: string
           patient_id: string
+          source_document_id?: string | null
           type: string
         }
         Update: {
@@ -81,6 +93,7 @@ export type Database = {
           description?: string
           id?: string
           patient_id?: string
+          source_document_id?: string | null
           type?: string
         }
         Relationships: [
@@ -89,6 +102,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "antecedents_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -101,6 +121,7 @@ export type Database = {
           parametre: string
           patient_id: string
           source: string
+          source_document_id: string | null
           unite: string | null
           valeur: number | null
           valeur_texte: string | null
@@ -112,6 +133,7 @@ export type Database = {
           parametre: string
           patient_id: string
           source?: string
+          source_document_id?: string | null
           unite?: string | null
           valeur?: number | null
           valeur_texte?: string | null
@@ -123,6 +145,7 @@ export type Database = {
           parametre?: string
           patient_id?: string
           source?: string
+          source_document_id?: string | null
           unite?: string | null
           valeur?: number | null
           valeur_texte?: string | null
@@ -135,6 +158,13 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "biologie_resultats_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_sources"
+            referencedColumns: ["id"]
+          },
         ]
       }
       comorbidites: {
@@ -144,6 +174,7 @@ export type Database = {
           id: string
           libelle: string
           patient_id: string
+          source_document_id: string | null
           statut: string
         }
         Insert: {
@@ -152,6 +183,7 @@ export type Database = {
           id?: string
           libelle: string
           patient_id: string
+          source_document_id?: string | null
           statut?: string
         }
         Update: {
@@ -160,6 +192,7 @@ export type Database = {
           id?: string
           libelle?: string
           patient_id?: string
+          source_document_id?: string | null
           statut?: string
         }
         Relationships: [
@@ -168,6 +201,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comorbidites_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -285,6 +325,63 @@ export type Database = {
           },
           {
             foreignKeyName: "conciliation_medicaments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents_sources: {
+        Row: {
+          created_at: string
+          document_type: string | null
+          episode_id: string | null
+          file_name: string
+          file_size: number | null
+          hash_sha256: string | null
+          id: string
+          mime_type: string
+          patient_id: string
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_type?: string | null
+          episode_id?: string | null
+          file_name: string
+          file_size?: number | null
+          hash_sha256?: string | null
+          id?: string
+          mime_type: string
+          patient_id: string
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_type?: string | null
+          episode_id?: string | null
+          file_name?: string
+          file_size?: number | null
+          hash_sha256?: string | null
+          id?: string
+          mime_type?: string
+          patient_id?: string
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_sources_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_sources_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
@@ -499,6 +596,7 @@ export type Database = {
           patient_id: string
           posologie: string | null
           prescripteur: string | null
+          source_document_id: string | null
           voie_administration: string | null
         }
         Insert: {
@@ -514,6 +612,7 @@ export type Database = {
           patient_id: string
           posologie?: string | null
           prescripteur?: string | null
+          source_document_id?: string | null
           voie_administration?: string | null
         }
         Update: {
@@ -529,6 +628,7 @@ export type Database = {
           patient_id?: string
           posologie?: string | null
           prescripteur?: string | null
+          source_document_id?: string | null
           voie_administration?: string | null
         }
         Relationships: [
@@ -544,6 +644,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_hospitalieres_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -607,6 +714,7 @@ export type Database = {
           posologie_soir: string | null
           posologie_texte: string | null
           source: string | null
+          source_document_id: string | null
           updated_at: string
           voie_administration: string | null
         }
@@ -627,6 +735,7 @@ export type Database = {
           posologie_soir?: string | null
           posologie_texte?: string | null
           source?: string | null
+          source_document_id?: string | null
           updated_at?: string
           voie_administration?: string | null
         }
@@ -647,6 +756,7 @@ export type Database = {
           posologie_soir?: string | null
           posologie_texte?: string | null
           source?: string | null
+          source_document_id?: string | null
           updated_at?: string
           voie_administration?: string | null
         }
@@ -656,6 +766,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traitements_habituels_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_sources"
             referencedColumns: ["id"]
           },
         ]
