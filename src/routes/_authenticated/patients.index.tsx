@@ -141,6 +141,21 @@ function PatientsListPage() {
         >
           <FlaskConical className="h-4 w-4 mr-1" /> Démo Sophie Lemoine
         </Button>
+        <Button
+          variant="outline"
+          onClick={async () => {
+            try {
+              const id = await seedDemoJeanPierreMoreau();
+              qc.invalidateQueries({ queryKey: ["patients"] });
+              toast.success("Patient démo Jean-Pierre Moreau créé");
+              window.location.href = `/patients/${id}`;
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Erreur");
+            }
+          }}
+        >
+          <FlaskConical className="h-4 w-4 mr-1" /> Démo J-P Moreau
+        </Button>
         <Button variant="outline" onClick={() => setBulkOpen(true)}>
           <Sparkles className="h-4 w-4 mr-1" /> Import PDF en masse
         </Button>
