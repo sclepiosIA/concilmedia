@@ -4,9 +4,31 @@ import { z } from "zod";
 
 const Input = z.object({ episodeId: z.string().uuid() });
 
+export type DivergenceConciliation = {
+  type: "omission" | "ajout_non_justifie" | "switch" | "modification_posologie" | "substitution_classe";
+  medicament_ville: string | null;
+  medicament_hopital: string | null;
+  severite: "mineure" | "moderee" | "majeure" | "critique";
+  justification_clinique: string;
+  risque?: string;
+  recommandation: string;
+  alternative?: string;
+  reference?: string;
+  confiance?: number;
+};
+
+export type ActionPrioritaire = {
+  action: string;
+  urgence: "immediate" | "24h" | "differee";
+  destinataire: "prescripteur" | "IDE" | "patient" | string;
+  justification?: string;
+};
+
 export type AIAnalysisPayload = {
   synthese: string;
   score_risque: number;
+  divergences_conciliation?: DivergenceConciliation[];
+  actions_prioritaires?: ActionPrioritaire[];
   interactions: Array<{ dci_1: string; dci_2: string; severite: string; mecanisme: string; recommandation: string; risque?: string; reference?: string; alternative?: string; confiance?: number }>;
   doublons_therapeutiques: Array<{ medicaments: string[]; classe: string; recommandation: string; severite?: string; mecanisme?: string; risque?: string; reference?: string; alternative?: string; confiance?: number }>;
   contre_indications: Array<{ medicament: string; raison: string; recommandation: string; severite?: string; mecanisme?: string; risque?: string; reference?: string; alternative?: string; confiance?: number }>;
