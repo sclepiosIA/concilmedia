@@ -63,6 +63,8 @@ const PrescriptionHospiSchema = z.object({
   posologie: z.string().optional().nullable(),
   voie_administration: z.string().optional().nullable(),
   indication: z.string().optional().nullable(),
+  date_debut: z.string().optional().nullable(),
+  date_fin: z.string().optional().nullable(),
 });
 
 const EpisodeContextSchema = z.object({
