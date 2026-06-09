@@ -305,7 +305,7 @@ export async function seedDemoJeanPierreMoreau(): Promise<string> {
       posologie: "1 matin",
       prescription_id: findRx("Empagliflozine")?.id,
     },
-    type_divergence: "modification",
+    type_divergence: "modification_dose",
     intention: "non_intentionnel",
     justification: null,
     action_corrective:
