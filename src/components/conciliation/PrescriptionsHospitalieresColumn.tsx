@@ -68,6 +68,12 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
             <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => del.mutate(p.id)}><Trash2 className="h-3 w-3" /></Button>
           </div>
         ))}
+        <div className="pt-2 border-t">
+          <div className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+            <Sparkles className="h-3 w-3" /> Importer par OCR
+          </div>
+          <PrescriptionHospitaliereUploader episodeId={episodeId} patientId={patientId} />
+        </div>
       </CardContent>
     </Card>
   );
