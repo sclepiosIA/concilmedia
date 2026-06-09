@@ -75,7 +75,6 @@ function confidenceColor(c: number) {
 }
 
 interface AlertItemProps {
-  id: string;
   title: string;
   medicaments?: string;
   subtitle?: string;
@@ -90,7 +89,6 @@ interface AlertItemProps {
 }
 
 function AlertItem({
-  id,
   title,
   medicaments,
   subtitle,
@@ -198,7 +196,6 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
           {interactions.map((i, k) => (
             <AlertItem
               key={`int-${k}`}
-              id={`int-${k}`}
               title={`${i.dci_1} ↔ ${i.dci_2}`}
               medicaments={`${i.dci_1}, ${i.dci_2}`}
               severite={i.severite}
@@ -218,7 +215,6 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
           {ci.map((c, k) => (
             <AlertItem
               key={`ci-${k}`}
-              id={`ci-${k}`}
               title={c.medicament}
               medicaments={c.medicament}
               subtitle={c.raison}
@@ -239,7 +235,6 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
           {adaptations.map((a, k) => (
             <AlertItem
               key={`ad-${k}`}
-              id={`ad-${k}`}
               title={a.medicament}
               medicaments={a.medicament}
               subtitle={a.raison}
@@ -260,7 +255,6 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
           {doublons.map((d, k) => (
             <AlertItem
               key={`db-${k}`}
-              id={`db-${k}`}
               title={d.medicaments.join(" + ")}
               medicaments={d.medicaments.join(", ")}
               subtitle={`Classe : ${d.classe}`}
@@ -281,7 +275,6 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
           {allergies.map((a, k) => (
             <AlertItem
               key={`al-${k}`}
-              id={`al-${k}`}
               title={`${a.allergene} ↔ ${a.medicament}`}
               medicaments={a.medicament}
               severite={a.severite ?? "majeure"}
@@ -300,7 +293,6 @@ export function ClinicalAlertsPanel({ payload }: { payload: AIAnalysisPayload })
           {hautRisque.map((h, k) => (
             <AlertItem
               key={`hr-${k}`}
-              id={`hr-${k}`}
               title={h.medicament}
               medicaments={h.medicament}
               subtitle={`Classe : ${h.classe}`}
