@@ -52,34 +52,39 @@ function PatientsListPage() {
   });
 
   const [filterMode, setFilterMode] = useState<"all" | "todo" | "done">("all");
-  const patientIds = patients.map((p) => p.id);
+  const patientIds = useMemo(() => patients.map((p) => p.id), [patients]);
   const { data: triageMap = {} } = usePatientsTriage(patientIds);
 
-  const filteredBySearch = patients.filter(
-    (p) =>
-      `${p.nom} ${p.prenom}`.toLowerCase().includes(search.toLowerCase()) ||
-      p.nir?.includes(search),
-  );
+  const filtered = useMemo(() => {
+    const s = search.toLowerCase();
+    return patients
+      .filter(
+        (p) =>
+          `${p.nom} ${p.prenom}`.toLowerCase().includes(s) ||
+          p.nir?.includes(search),
+      )
+      .filter((p) => {
+        const lvl = triageMap[p.id]?.level ?? 5;
+        if (filterMode === "todo") return lvl <= 3;
+        if (filterMode === "done") return lvl === 5;
+        return true;
+      })
+      .sort((a, b) => {
+        const la = triageMap[a.id]?.level ?? 5;
+        const lb = triageMap[b.id]?.level ?? 5;
+        if (la !== lb) return la - lb;
+        return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+      });
+  }, [patients, search, filterMode, triageMap]);
 
-  const filtered = filteredBySearch
-    .filter((p) => {
-      const lvl = triageMap[p.id]?.level ?? 5;
-      if (filterMode === "todo") return lvl <= 3;
-      if (filterMode === "done") return lvl === 5;
-      return true;
-    })
-    .sort((a, b) => {
-      const la = triageMap[a.id]?.level ?? 5;
-      const lb = triageMap[b.id]?.level ?? 5;
-      if (la !== lb) return la - lb;
-      return (b.created_at ?? "").localeCompare(a.created_at ?? "");
-    });
-
-  const counts: Record<TriageLevel, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-  for (const p of patients) {
-    const lvl = (triageMap[p.id]?.level ?? 5) as TriageLevel;
-    counts[lvl] += 1;
-  }
+  const counts = useMemo(() => {
+    const c: Record<TriageLevel, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    for (const p of patients) {
+      const lvl = (triageMap[p.id]?.level ?? 5) as TriageLevel;
+      c[lvl] += 1;
+    }
+    return c;
+  }, [patients, triageMap]);
 
   const createMut = useMutation({
     mutationFn: async (input: { nom: string; prenom: string; date_naissance: string; sexe: string; poids_kg?: number; taille_cm?: number }) => {
