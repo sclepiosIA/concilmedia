@@ -1,97 +1,63 @@
 ## Objectif
 
-Améliorer la lisibilité de la légende de tri en haut de `/patients`, enrichir le tooltip du badge **P** (priorité FRENCH-MED), et ajouter des aperçus au survol pour **traitements / antécédents / allergies / alertes** directement sur chaque ligne de la liste patients.
+Éliminer les rechargements involontaires : retour sur l'onglet, navigation entre pages, et "refresh seul" aléatoire pendant l'utilisation.
 
----
+## Diagnostic
 
-## 1. Légende en haut — meilleure lisibilité
+Trois sources principales identifiées dans le code :
 
-Fichier : `src/routes/_authenticated/patients.index.tsx` (chips P1…P5 lignes 269-291).
+1. **`src/routes/__root.tsx` (lignes 97-104)** — le listener `supabase.auth.onAuthStateChange` appelle `router.invalidate()` + `queryClient.invalidateQueries()` sur **tous** les événements `SIGNED_IN` et `USER_UPDATED`. Or Supabase émet `SIGNED_IN` :
+   - au tout premier `getSession()` (donc à chaque retour sur l'onglet quand le SDK re-synchronise),
+   - à chaque rafraîchissement de token (toutes les ~50 minutes),
+   - quand l'onglet reprend le focus après une mise en veille.
+   → **C'est la cause n°1 du "ça refresh tout seul"** : toute l'app perd son cache et recharge.
 
-Actuellement on a juste `P1 12` dans une pastille colorée — il faut deviner ce que c'est. Refonte :
+2. **TanStack Router** — `defaultPreloadStaleTime: 0` (correct avec Query) combiné avec `staleTime: 60_000` sur Query est OK, mais `router.invalidate()` du point 1 vide les loaders ET les queries en même temps, ce qui re-fetch toute la page visible.
 
-- Remplacer chaque chip par une "pill" plus large avec : badge couleur **+ libellé court** (`Immédiat`, `< 1 h`, `< 6 h`, `< 24 h`, `Validés`) + compteur en pastille à droite.
-- Police légèrement plus grande (`text-sm`), padding plus généreux, contraste renforcé (utiliser `m.fg` sur `m.bg` mais aussi un fond plus opaque que `--triage-x-bg` quand `count > 0`, et état "grisé" quand `count === 0`).
-- Rendre les pills cliquables : un clic filtre la liste sur ce palier (état `filterMode` étendu pour accepter `"p1" | "p2" | … | "p5"` en plus de `all/todo/done`). Un second clic désactive.
-- Préfixer par un petit label discret `Tri : ` pour clarifier le sens.
+3. **Pages détail patient/épisode** — les requêtes sont dans des `useQuery` au lieu d'un `loader` + `useSuspenseQuery`. À la première visite d'une page, on voit "Chargement…" même si la donnée est déjà en cache parent (liste patients). Pas critique mais contribue à l'impression de "refresh".
 
-Le `ToggleGroup` "Tous / À relire / Validés" reste à droite.
+## Changements
 
-## 2. Tooltip du badge P enrichi
+### 1. Stabiliser le listener auth (priorité 1 — résout 90 % du problème)
 
-Fichier : `src/components/conciliation/TriageBadge.tsx` + `src/hooks/usePatientsTriage.ts`.
+Dans `src/routes/__root.tsx`, ne déclencher l'invalidation **que** sur les vrais changements de session :
 
-Aujourd'hui le tooltip affiche seulement `code — label`, `delay`, et `reason`. On enrichit pour donner au pharmacien tout ce dont il a besoin pour décider sans cliquer.
+- ignorer `SIGNED_IN` quand l'`access_token` n'a pas changé (cas du re-focus / re-hydratation),
+- ignorer `USER_UPDATED` (n'impacte que `auth.user`, pas les données métier),
+- sur `TOKEN_REFRESHED` ne rien faire (le client Supabase met le token à jour seul),
+- ne réagir réellement qu'aux transitions **non authentifié → authentifié** et **authentifié → non authentifié**.
 
-Étendre `TriageResult` (dans `triageScale.ts`) avec un champ optionnel `details` :
+Mémoriser le dernier `userId` connu dans un `ref` pour détecter le vrai changement.
 
-```ts
-details?: {
-  divergences: { critique: number; majeur: number; modere: number; mineur: number };
-  nbNonIntentionnelles: number;
-  worstRisk: NiveauRisque | null;
-  hasValidation: boolean;
-  hasActiveEpisode: boolean;
-  pendingSinceHours: number | null;   // ancienneté de l'analyse IA non relue
-};
-```
+### 2. Affiner les invalidations après mutations
 
-`computePatientTriage` et `usePatientsTriage` remplissent ces champs (les données sont déjà calculées localement, c'est juste de l'exposition).
+Dans `patients.$patientId.tsx`, les mutations `uploadLettre` / `reanalyze` invalident 5 clés à la suite. C'est correct fonctionnellement, mais on peut grouper sous un préfixe commun `["patient-data", patientId]` pour réduire à un seul `invalidateQueries({ queryKey: ["patient-data", patientId] })`. Optionnel — on garde si ça allège visiblement les flashs.
 
-`TriageBadge` accepte une nouvelle prop optionnelle `details` et son tooltip affiche, en plus de l'existant :
-- Une ligne "Divergences :" avec mini-puces colorées par gravité et compteurs (ex: `● 1 critique · ● 2 majeures · ● 3 modérées`), masque les zéros.
-- "Dont non intentionnelles : N" si > 0.
-- "Score de risque : Critique/Élevé/…" avec dot coloré.
-- "Validation pharmacien : ✔ oui / ✘ non".
-- "Épisode actif : oui/non".
-- "En attente depuis : 52 h" si `pendingSinceHours != null`.
-- `reason` conservé en italique en bas.
+### 3. Pages détail : loader + useSuspenseQuery (optionnel, qualité perçue)
 
-Largeur tooltip portée à `max-w-sm`, typographie clarifiée.
+Pour `patients.$patientId` et `episodes.$episodeId` :
+- déclarer `queryOptions` réutilisables,
+- amorcer le cache dans `loader: ({ context, params }) => context.queryClient.ensureQueryData(...)`,
+- consommer via `useSuspenseQuery` → plus de "Chargement…" à la navigation depuis la liste (la donnée est pré-chargée pendant l'hover via `defaultPreload: "intent"`).
 
-## 3. Tooltips au survol de chaque dossier patient
+Ajout dans `src/router.tsx` : `defaultPreload: "intent"` pour pré-charger les routes au survol des liens.
 
-Fichier : `src/routes/_authenticated/patients.index.tsx` (ligne patient 302-332) + nouveau composant `src/components/patient/PatientRowQuickInfo.tsx`.
+### 4. Tooltips et UI : pas de toucher
 
-À droite du nom (avant le bouton supprimer), ajouter 4 petites icônes-badges discrètes, chacune avec un compteur :
+`refetchOnWindowFocus: false`, `refetchOnReconnect: false`, `refetchOnMount: false` sont déjà bien configurés globalement — on n'y touche pas.
 
-| Icône (lucide) | Libellé | Source | Tooltip au survol |
-|---|---|---|---|
-| `Pill` | Traitements | `traitements_habituels` actifs | Liste : `DCI (dosage, voie) — fréquence`, max 8 + "…et N de plus" |
-| `Stethoscope` | Antécédents | `comorbidites` (statut actif) | Liste : `intitulé — date début` |
-| `ShieldAlert` | Allergies | `allergies` | Liste : `substance — réaction — sévérité` avec puce colorée par sévérité |
-| `AlertTriangle` | Alertes | divergences non résolues + dernière analyse IA (`conciliation_ai_analyses`) | Top 5 alertes : `gravité — libellé`, lien implicite (la carte entière reste le lien vers le patient) |
+## Vérification
 
-Si le compteur est à 0, l'icône est rendue grisée (opacité 40 %) sans tooltip "rien à signaler" parasite (on garde un tooltip court "Aucune allergie", etc.).
+Après modifications, valider en preview :
 
-Comportement & performance :
-- Un seul hook batché `usePatientsQuickInfo(patientIds: string[])` (nouveau fichier `src/hooks/usePatientsQuickInfo.ts`) qui fait 4 requêtes Supabase `in("patient_id", ids)` en parallèle, agrège par `patient_id`, mêmes options que `usePatientsTriage` (`staleTime 5 min`, pas de refetch focus/mount/reconnect, `keepPreviousData`).
-- Pour les alertes : on réutilise `divs` (conciliation_medicaments non résolus, déjà chargé côté triage mais ici on garde un hook dédié pour éviter le couplage). On agrège top 5 par gravité décroissante.
-- Le clic sur les badges ne navigue pas (les icônes sont dans un `span` à part, hors du `<Link>`), mais le survol affiche le tooltip via `Tooltip` shadcn (déjà importé).
+1. Ouvrir la liste patients, changer d'onglet 1 min, revenir → **aucun spinner**, aucun re-fetch (vérifier dans Network).
+2. Naviguer Patients → fiche patient → épisode → retour → la donnée s'affiche instantanément sans "Chargement…".
+3. Laisser l'onglet ouvert 1 h (jusqu'au TOKEN_REFRESHED) → pas de re-render global.
+4. Se déconnecter / se reconnecter → l'app se réinitialise bien (le seul cas où on **veut** invalider).
 
-## 4. Composant `PatientRowQuickInfo`
+## Détails techniques
 
-Petit composant pur affichage :
-
-```tsx
-<PatientRowQuickInfo info={quickInfoMap[p.id]} />
-```
-
-Rend les 4 icônes-badges + compteurs + tooltips. Conserve `TooltipProvider` unique en haut de la liste (passe `delayDuration={200}`) pour éviter de multiplier les providers.
-
-## 5. Détails techniques
-
-### Fichiers modifiés
-- `src/lib/conciliation/triageScale.ts` — ajoute `details` à `TriageResult`, le remplit dans `computePatientTriage`.
-- `src/hooks/usePatientsTriage.ts` — transmet les chiffres déjà calculés (divergences par gravité, worstRisk, validations, ancienneté) dans `details`.
-- `src/components/conciliation/TriageBadge.tsx` — tooltip enrichi.
-- `src/routes/_authenticated/patients.index.tsx` — légende refondue (pills cliquables), filtres P1…P5, intégration `PatientRowQuickInfo`, wrap par un seul `TooltipProvider`.
-
-### Fichiers créés
-- `src/hooks/usePatientsQuickInfo.ts` — fetch batché (traitements / comorbidités / allergies / divergences) + agrégation.
-- `src/components/patient/PatientRowQuickInfo.tsx` — affichage des 4 icônes + tooltips.
-
-### Hors-périmètre
-- Pas de changement backend / SQL / RLS (toutes les tables sont déjà lisibles côté authentifié).
-- Pas de modification de la page patient détaillée.
-- Pas de modification du calcul de priorité lui-même (juste exposition des détails déjà calculés).
+- Fichier principal modifié : `src/routes/__root.tsx` (~10 lignes dans `useEffect`).
+- Fichier secondaire : `src/router.tsx` (ajout `defaultPreload: "intent"`).
+- Optionnel : refactor `patients.$patientId.tsx` et `episodes.$episodeId.tsx` pour pattern loader + `useSuspenseQuery`.
+- Aucun changement de schéma BDD, aucune migration.
