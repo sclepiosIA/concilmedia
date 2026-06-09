@@ -9,7 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Trash2, Pill, Sun, CloudSun, Sunset, Moon, FileText, Clock, Stethoscope } from "lucide-react";
+import { Trash2, Pill, Sunrise, Sun, Sunset, Moon, FileText, Clock, Stethoscope } from "lucide-react";
 import { OrdonnanceUploader } from "@/components/conciliation/OrdonnanceUploader";
 import { SourceDocumentLink } from "@/components/conciliation/SourceDocumentLink";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -41,21 +41,26 @@ const SOURCE_LABEL: Record<string, string> = {
   autre: "Autre",
 };
 
-function PriseCell({ value, icon: Icon, label }: { value: string | null; icon: React.ComponentType<{ className?: string }>; label: string }) {
-  const active = value && value !== "0" && value.trim() !== "";
+function PriseCell({ value, icon: Icon, label, shortLabel }: { value: string | null; icon: React.ComponentType<{ className?: string }>; label: string; shortLabel: string }) {
+  const normalizedValue = value?.trim() ?? "";
+  const active = normalizedValue !== "" && normalizedValue !== "0";
   return (
     <TooltipProvider delayDuration={150}>
       <Tooltip>
         <TooltipTrigger asChild>
           <div
-            className={`flex flex-col items-center justify-center w-10 h-10 rounded-md border text-xs font-medium transition-colors ${
+            aria-label={`${label} : ${active ? normalizedValue : "aucune prise"}`}
+            className={`flex h-12 w-12 flex-col items-center justify-center rounded-md border text-[11px] font-semibold transition-colors ${
               active
-                ? "bg-primary/10 border-primary/40 text-primary"
-                : "bg-muted/30 border-border text-muted-foreground/40"
+                ? "border-primary/50 bg-primary/10 text-primary shadow-sm"
+                : "border-border bg-muted/30 text-muted-foreground/45"
             }`}
           >
-            <Icon className="h-3 w-3 mb-0.5" />
-            <span className="leading-none">{active ? value : "—"}</span>
+            <span className="mb-0.5 flex items-center gap-0.5 text-[9px] uppercase leading-none text-current">
+              <Icon className="h-4 w-4" />
+              {shortLabel}
+            </span>
+            <span className="leading-none">{active ? normalizedValue : "—"}</span>
           </div>
         </TooltipTrigger>
         <TooltipContent side="top">{label}</TooltipContent>
@@ -205,10 +210,10 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
                         </div>
 
                         <div className="flex gap-1 justify-start md:justify-center">
-                          <PriseCell value={t.posologie_matin} icon={Sun} label="Matin" />
-                          <PriseCell value={t.posologie_midi} icon={CloudSun} label="Midi" />
-                          <PriseCell value={t.posologie_soir} icon={Sunset} label="Soir" />
-                          <PriseCell value={t.posologie_coucher} icon={Moon} label="Coucher" />
+                          <PriseCell value={t.posologie_matin} icon={Sunrise} label="Matin" shortLabel="M" />
+                          <PriseCell value={t.posologie_midi} icon={Sun} label="Midi" shortLabel="Mi" />
+                          <PriseCell value={t.posologie_soir} icon={Sunset} label="Soir" shortLabel="S" />
+                          <PriseCell value={t.posologie_coucher} icon={Moon} label="Coucher" shortLabel="Co" />
                         </div>
 
                         <div className="flex flex-col gap-1 text-xs min-w-[160px]">
