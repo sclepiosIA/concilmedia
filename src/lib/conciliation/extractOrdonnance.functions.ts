@@ -158,3 +158,31 @@ export const importExtractedMedications = createServerFn({ method: "POST" })
     void context.userId;
     return { inserted: rows.length };
   });
+
+const ImportHospitalInput = z.object({
+  episodeId: z.string().uuid(),
+  patientId: z.string().uuid(),
+  medications: z.array(z.record(z.string(), z.unknown())),
+});
+
+export const importExtractedHospitalPrescriptions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => ImportHospitalInput.parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const rows = data.medications.map((m) => ({
+      episode_id: data.episodeId,
+      patient_id: data.patientId,
+      medicament: String(m.dci ?? "Inconnu"),
+      dosage: m.dosage ? `${m.dosage}${m.dosage_unite ? " " + m.dosage_unite : ""}` : null,
+      posologie: m.posologie_texte ? String(m.posologie_texte) : null,
+      voie_administration: m.voie_administration ? String(m.voie_administration) : null,
+      prescripteur: m.prescripteur ? String(m.prescripteur) : null,
+      indication: m.indication ? String(m.indication) : null,
+      actif: true,
+    }));
+    if (rows.length === 0) return { inserted: 0 };
+    const { error } = await supabaseAdmin.from("prescriptions_hospitalieres").insert(rows as never);
+    if (error) throw new Error(error.message);
+    return { inserted: rows.length };
+  });
