@@ -52,13 +52,13 @@ export const analyzePatientSynthesis = createServerFn({ method: "POST" })
 {
   "synthese":"3-4 phrases citant les valeurs bio pertinentes",
   "score_risque":0-100,
-  "interactions":[{"dci_1":"","dci_2":"","severite":"mineure|moderee|majeure|contre_indication","mecanisme":"","recommandation":""}],
-  "doublons_therapeutiques":[{"medicaments":[""],"classe":"","recommandation":""}],
-  "contre_indications":[{"medicament":"","raison":"","recommandation":""}],
+  "interactions":[{"dci_1":"","dci_2":"","severite":"mineure|moderee|majeure|contre_indication","mecanisme":"explication pharmacologique","risque":"conséquence clinique","recommandation":"action pratique","reference":"ANSM Thésaurus / HAS / Vidal / RCP / STOPP-START"}],
+  "doublons_therapeutiques":[{"medicaments":[""],"classe":"","severite":"","mecanisme":"","risque":"","recommandation":"","reference":""}],
+  "contre_indications":[{"medicament":"","raison":"","severite":"majeure|contre_indication","mecanisme":"","risque":"","recommandation":"","reference":""}],
   "redondances_classe":[{"classe":"","medicaments":[""]}],
-  "adaptations_posologiques":[{"medicament":"","raison":"","recommandation":""}],
-  "medicaments_haut_risque":[{"medicament":"","classe":"","raison":""}],
-  "allergies_croisees":[{"allergene":"","medicament":"","risque":""}],
+  "adaptations_posologiques":[{"medicament":"","raison":"","severite":"","mecanisme":"","risque":"","recommandation":"posologie cible","reference":"GPR / RCP / Vidal"}],
+  "medicaments_haut_risque":[{"medicament":"","classe":"","raison":"","severite":"majeure","risque":"","recommandation":"","reference":"ISMP / HAS Never Events"}],
+  "allergies_croisees":[{"allergene":"","medicament":"","risque":"","severite":"majeure|contre_indication","recommandation":"alternative","reference":"RCP / ANSM"}],
   "surveillance":[{"parametre":"","frequence":"","justification":""}],
   "conclusion_clinique":"1-2 phrases — style compte-rendu hospitalier (profil risque, vigilance prioritaire)"
 }
@@ -67,7 +67,8 @@ Règles cliniques :
 - Si INR > 4, alerter sur anticoagulants/antiagrégants.
 - Si K+ anormal, alerter IEC/ARA2/spironolactone/AINS.
 - Vérifier allergies croisées (pénicilline↔céphalo, AINS↔aspirine, sulfamides).
-- Cite la valeur biologique précise dans "raison".
+- Cite la valeur biologique précise dans "raison" et "risque".
+- Chaque alerte DOIT contenir severite, mecanisme, risque clinique, recommandation pratique ET reference de bonne pratique (ANSM, HAS, Vidal, RCP, STOPP/START, GPR, ISMP).
 Réponds UNIQUEMENT avec le JSON.`;
 
     let result;
