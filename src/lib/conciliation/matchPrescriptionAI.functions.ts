@@ -61,27 +61,46 @@ Classe la prescription :
 
 Réponds en français, raison courte (<200 caractères), recommandation seulement si statut ≠ vert.`;
 
+    // Tentative 1 : structured output. Fallback : parsing JSON manuel.
+    let output: z.infer<typeof AISchema> | null = null;
     try {
-      const { experimental_output: output } = await generateText({
-        model: gateway("google/gemini-3-flash-preview"),
+      const res = await generateText({
+        model: gateway("google/gemini-2.5-flash"),
         prompt,
         experimental_output: Output.object({ schema: AISchema }),
       });
-
-      await supabase
-        .from("prescriptions_hospitalieres")
-        .update({
-          match_status: output.status,
-          match_reason: output.reason,
-          match_recommandation: output.recommandation ?? null,
-          match_source: "ia",
-          match_analyzed_at: new Date().toISOString(),
-        })
-        .eq("id", data.prescriptionId);
-
-      return output;
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur IA";
-      throw new Error(msg);
+      output = res.experimental_output;
+    } catch {
+      try {
+        const res = await generateText({
+          model: gateway("google/gemini-2.5-flash"),
+          prompt:
+            prompt +
+            `\n\nRéponds UNIQUEMENT avec un JSON valide de la forme :\n{"status":"vert|jaune|orange|rouge","reason":"...","recommandation":"..."}`,
+        });
+        const txt = res.text.trim().replace(/^```json\s*|\s*```$/g, "");
+        const match = txt.match(/\{[\s\S]*\}/);
+        if (match) output = AISchema.parse(JSON.parse(match[0]));
+      } catch {
+        /* ignore, géré ci-dessous */
+      }
     }
+
+    if (!output) {
+      // Pas d'analyse IA possible : on laisse la prescription en l'état (analyse déterministe déjà enregistrée).
+      throw new Error("Analyse IA non disponible pour cette prescription");
+    }
+
+    await supabase
+      .from("prescriptions_hospitalieres")
+      .update({
+        match_status: output.status,
+        match_reason: output.reason,
+        match_recommandation: output.recommandation ?? null,
+        match_source: "ia",
+        match_analyzed_at: new Date().toISOString(),
+      })
+      .eq("id", data.prescriptionId);
+
+    return output;
   });
