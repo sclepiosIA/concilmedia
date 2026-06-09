@@ -16,6 +16,7 @@ import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImp
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { fr } from "date-fns/locale";
 import { seedDemoJeanMartin } from "@/lib/conciliation/seedDemoJeanMartin";
+import { seedDemoSophieLemoine } from "@/lib/conciliation/seedDemoSophieLemoine";
 
 export const Route = createFileRoute("/_authenticated/patients/")({
   head: () => ({ meta: [{ title: "Patients — Conciliation" }] }),
@@ -123,6 +124,21 @@ function PatientsListPage() {
           }}
         >
           <FlaskConical className="h-4 w-4 mr-1" /> Démo Jean Martin
+        </Button>
+        <Button
+          variant="outline"
+          onClick={async () => {
+            try {
+              const id = await seedDemoSophieLemoine();
+              qc.invalidateQueries({ queryKey: ["patients"] });
+              toast.success("Patient démo Sophie Lemoine créé");
+              window.location.href = `/patients/${id}`;
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Erreur");
+            }
+          }}
+        >
+          <FlaskConical className="h-4 w-4 mr-1" /> Démo Sophie Lemoine
         </Button>
         <Button variant="outline" onClick={() => setBulkOpen(true)}>
           <Sparkles className="h-4 w-4 mr-1" /> Import PDF en masse
