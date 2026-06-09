@@ -1,4 +1,6 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useId, useState } from "react";
 import {
   Collapsible,
@@ -7,16 +9,33 @@ import {
 import {
   AlertTriangle,
   BookOpen,
+  Check,
   ChevronDown,
   ShieldAlert,
   Stethoscope,
   Sliders,
   Copy,
+  Pencil,
   Pill,
   Repeat,
   Sparkles,
+  X,
 } from "lucide-react";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
+import type { ItemDecision } from "@/lib/conciliation/validateConciliation.functions";
+
+export type AlertCategory = ItemDecision["category"];
+
+export interface ValidationControl {
+  decisions: Record<string, ItemDecision>;
+  onDecision: (key: string, decision: ItemDecision | null) => void;
+  readOnly?: boolean;
+}
+
+function decisionKey(category: AlertCategory, index: number) {
+  return `${category}:${index}`;
+}
+
 
 type Severity = "mineure" | "moderee" | "majeure" | "contre_indication" | string;
 
