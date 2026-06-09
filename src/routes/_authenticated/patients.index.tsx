@@ -371,3 +371,45 @@ function PatientsListPage() {
     </div>
   );
 }
+
+function TriagePill({
+  level,
+  count,
+  active,
+  onToggle,
+}: {
+  level: TriageLevel;
+  count: number;
+  active: boolean;
+  onToggle: () => void;
+}) {
+  const m = TRIAGE_META[level];
+  const empty = count === 0;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+        active ? "ring-2 ring-offset-1 ring-foreground/30" : "hover:brightness-95"
+      } ${empty ? "opacity-50" : ""}`}
+      style={{ background: m.bg, color: m.fg, border: `1px solid ${m.ring}` }}
+      title={`${m.label} — ${m.delay}`}
+      aria-pressed={active}
+    >
+      <span
+        className="inline-flex items-center justify-center rounded-md font-bold text-xs"
+        style={{ background: m.swatch, color: m.fg, width: 22, height: 22, border: `1px solid ${m.ring}` }}
+      >
+        {m.code}
+      </span>
+      <span className="leading-tight">{m.label}</span>
+      <span
+        className="inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full text-xs font-bold tabular-nums"
+        style={{ background: m.swatch, color: m.fg }}
+      >
+        {count}
+      </span>
+    </button>
+  );
+}
+
