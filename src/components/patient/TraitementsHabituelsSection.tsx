@@ -9,10 +9,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Trash2, Pill, Sun, CloudSun, Sunset, Moon, FileText, Clock } from "lucide-react";
+import { Trash2, Pill, Sun, CloudSun, Sunset, Moon, FileText, Clock, Stethoscope, User } from "lucide-react";
 import { toast } from "sonner";
 import { OrdonnanceUploader } from "@/components/conciliation/OrdonnanceUploader";
 import { SourceDocumentLink } from "@/components/conciliation/SourceDocumentLink";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
 type Traitement = {
@@ -76,6 +77,16 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
           .eq("patient_id", patientId)
           .order("created_at", { ascending: false })
       ).data ?? []) as Traitement[],
+  });
+  const { data: sources = [] } = useQuery({
+    queryKey: ["documents_sources", patientId],
+    queryFn: async () =>
+      ((
+        await supabase
+          .from("documents_sources")
+          .select("id, prescriber_name, prescriber_specialty, prescription_date, document_type, file_name")
+          .eq("patient_id", patientId)
+      ).data ?? []) as Array<{ id: string; prescriber_name: string | null; prescriber_specialty: string | null; prescription_date: string | null; document_type: string | null; file_name: string | null }>,
   });
   const del = useMutation({
     mutationFn: async (id: string) => {
