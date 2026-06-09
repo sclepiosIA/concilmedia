@@ -334,7 +334,7 @@ export async function seedDemoJeanPierreMoreau(): Promise<string> {
       posologie: "1 matin",
       prescription_id: findRx("Lisinopril")?.id,
     },
-    type_divergence: "modification",
+    type_divergence: "modification_dose",
     intention: "a_evaluer",
     justification: null,
     action_corrective:
