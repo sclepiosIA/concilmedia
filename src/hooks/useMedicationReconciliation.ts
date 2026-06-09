@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -242,6 +243,48 @@ export function useMedicationReconciliation(episodeId: string) {
     omissions: conciliations.filter((c) => c.type_divergence === "omission").length,
     modifications: conciliations.filter((c) => c.type_divergence.startsWith("modification")).length,
   };
+
+  // Détection automatique : déclenchée une fois par épisode quand on dispose
+  // d'au moins un traitement habituel et d'au moins une prescription hospitalière,
+  // et qu'aucune divergence n'a encore été calculée.
+  const autoTriggered = useRef<string | null>(null);
+  useEffect(() => {
+    if (!episodeId || isLoading) return;
+    if (conciliations.length > 0) return;
+    if (autoTriggered.current === episodeId) return;
+    if (detectDivergences.isPending) return;
+    let cancelled = false;
+    (async () => {
+      const { data: ep } = await supabase
+        .from("episodes")
+        .select("patient_id")
+        .eq("id", episodeId)
+        .maybeSingle();
+      if (!ep || cancelled) return;
+      const [{ count: nbT }, { count: nbP }] = await Promise.all([
+        supabase
+          .from("traitements_habituels")
+          .select("id", { count: "exact", head: true })
+          .eq("patient_id", ep.patient_id)
+          .eq("actif", true),
+        supabase
+          .from("prescriptions_hospitalieres")
+          .select("id", { count: "exact", head: true })
+          .eq("episode_id", episodeId)
+          .eq("actif", true),
+      ]);
+      if (cancelled) return;
+      if ((nbT ?? 0) > 0 && (nbP ?? 0) > 0) {
+        autoTriggered.current = episodeId;
+        detectDivergences.mutate();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [episodeId, isLoading, conciliations.length]);
+
 
   return {
     conciliations,
