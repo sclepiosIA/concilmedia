@@ -696,6 +696,42 @@ export type Database = {
           },
         ]
       }
+      traitement_sources: {
+        Row: {
+          created_at: string
+          id: string
+          source_document_id: string
+          traitement_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          source_document_id: string
+          traitement_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          source_document_id?: string
+          traitement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traitement_sources_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traitement_sources_traitement_id_fkey"
+            columns: ["traitement_id"]
+            isOneToOne: false
+            referencedRelation: "traitements_habituels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       traitements_habituels: {
         Row: {
           actif: boolean
