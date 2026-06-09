@@ -602,6 +602,11 @@ export type Database = {
           episode_id: string
           id: string
           indication: string | null
+          match_analyzed_at: string | null
+          match_reason: string | null
+          match_recommandation: string | null
+          match_source: string | null
+          match_status: string | null
           medicament: string
           nom_commercial: string | null
           patient_id: string
@@ -625,6 +630,11 @@ export type Database = {
           episode_id: string
           id?: string
           indication?: string | null
+          match_analyzed_at?: string | null
+          match_reason?: string | null
+          match_recommandation?: string | null
+          match_source?: string | null
+          match_status?: string | null
           medicament: string
           nom_commercial?: string | null
           patient_id: string
@@ -648,6 +658,11 @@ export type Database = {
           episode_id?: string
           id?: string
           indication?: string | null
+          match_analyzed_at?: string | null
+          match_reason?: string | null
+          match_recommandation?: string | null
+          match_source?: string | null
+          match_status?: string | null
           medicament?: string
           nom_commercial?: string | null
           patient_id?: string

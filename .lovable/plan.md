@@ -1,62 +1,83 @@
-# Plan — Optimisation Datathon Conciliation Médicamenteuse IA
 
 ## Objectif
-Transformer l'app en démonstrateur hospitalier crédible. Lecture du dossier patient en < 5 s, synthèse IA proéminente, design médical épuré (bleu/vert/orange/rouge sur fond clair).
 
-## 1. Audit ciblé (avant édition)
-- Vérifier la présence réelle des sections "Systèmes atteints" et "Organes concernés" (probablement dans `ComorbiditesSection` ou `ClinicalProfileCard`).
-- Recenser les composants de la fiche patient : `ClinicalProfileCard`, `MedicationProfileCard`, `EpisodesSection`, `TraitementsHabituelsSection`, `BiologieSection`, `SynthesePatientDialog`, `OrdonnanceUploader`, `BulkPatientImportModal`.
-- Confirmer l'état actuel de l'upload multi-fichiers (déjà refait dans `OrdonnanceUploader`, à vérifier aussi `BulkPatientImportModal`).
+Chaque prescription hospitalière reçoit un statut de concordance affiché sous forme de **fond de ligne teinté + badge cliquable** :
 
-## 2. Nettoyage
-- Supprimer "Systèmes atteints" et "Organes concernés" partout où ils apparaissent (UI uniquement, on ne touche pas la BDD).
+| Couleur | Sens |
+|---|---|
+| 🟢 Vert | Identique à l'ordonnance initiale (DCI, dose, posologie) — aucune alerte |
+| 🟡 Jaune | Différent mais adaptation logique/attendue (ex. switch IV→PO, ajustement rénal) |
+| 🟠 Orange | Différent et probablement non souhaité (oubli, divergence non justifiée) |
+| 🔴 Rouge | Erreur ou hors-AMM (surdosage, contre-indication, voie inadaptée) |
 
-## 3. Refonte `ClinicalProfileCard` → "PROFIL PATIENT ET VIGILANCE MÉDICAMENTEUSE"
-Section unique, visible en haut, structurée en tuiles :
-1. **Comorbidités** — badges colorés (HTA, diabète, IRC, obésité…), détection auto à partir des libellés.
-2. **IMC automatique** — calcul poids/taille, catégorie OMS (insuffisance / normal / surpoids / obésité I-II-III), badge couleur.
-3. **Allergies** — badges rouges si présentes, badge vert "Aucune allergie connue" sinon.
-4. **Profil de risque clinique** — cardiovasculaire / rénal / métabolique / obésité, code couleur (vert/orange/rouge).
-5. **Points de vigilance pour la conciliation** — liste auto selon comorbidités + traitements (antidiabétiques, adaptations rénales, antihypertenseurs, interactions, manquants/ajoutés, haut risque).
-6. **Complexité patient** — score + niveau (Faible/Modéré/Élevé) basé sur âge, nb traitements, comorbidités, IR, facteurs de risque (utiliser `complexityScore.ts` + extensions).
+## Architecture — moteur hybride
 
-Composant `ClinicalProfileCard` lit `patients` (poids, taille, date_naissance), `comorbidites`, `allergies`, `traitements_habituels`.
+### 1. Couche déterministe (instantanée, client)
+Nouveau fichier `src/lib/conciliation/prescriptionMatch.ts` (pur, testable) :
+- `matchPrescription(hosp, domicileList)` retourne `{ status, reason, matchedDomicile }`
+- Règles immédiates :
+  - **VERT** : DCI normalisée identique + même dosage + même posologie M/Mi/S/Co (ou même `posologie` parsée) + même voie
+  - **ROUGE** : dose journalière > seuil AMM connu (table simple par DCI courantes — paracétamol 4g, ibuprofène 1.2g, etc.) ou voie incohérente
+  - **ORANGE** : DCI présente au domicile mais dose/posologie diverge sans motif détecté
+  - **JAUNE** : motif déterministe détecté (ex. forme IV vs PO du même DCI, ou ajout d'un médicament d'une classe déjà présente)
+  - **GRIS / non évalué** : pas de domicile connu → on déclenche l'IA
+- Sortie : statut + raison courte affichée dans le tooltip
 
-## 4. Synthèse IA en tête de fiche patient
-Nouveau composant `AISynthesisHeader` placé juste après l'en-tête patient, AVANT Épisodes :
-- Cartes-stat (icônes + chiffres) : Médicaments identifiés, Interactions, Divergences, Manquants, Adaptations posologiques, Haut risque.
-- Bloc "Recommandations IA" (3-5 puces clés).
-- Bouton "Analyse IA complète" déclenche `analyzePatientSynthesis` (déjà existant) et stocke résultat ; affiche dernier résultat si présent dans `conciliation_ai_analyses`.
+### 2. Couche IA (Lovable AI, asynchrone, server)
+Nouveau server function `src/lib/conciliation/matchPrescriptionAI.functions.ts` :
+- Input : la prescription hospitalière + liste des traitements habituels du patient + allergies + comorbidités (contexte clinique)
+- Modèle : `google/gemini-3-flash-preview` via `ai-gateway.server`, sortie structurée Zod `{ status: "vert"|"jaune"|"orange"|"rouge", reason: string, recommandation?: string }`
+- Appelée uniquement quand le déterministe renvoie **JAUNE** ou **ORANGE** (cas ambigus) — vert/rouge restent côté client pour la réactivité
 
-## 5. Import multi-documents
-- `OrdonnanceUploader` : déjà multi-fichiers. Ajouter accept explicite multi (image+pdf), bouton "Ajouter d'autres documents" toujours visible après import, possibilité d'ajouter en plusieurs vagues sans reset.
-- Vérifier que `BulkPatientImportModal` accepte aussi multi-files (à patcher si non).
+### 3. Persistance
+Nouvelles colonnes sur `prescriptions_hospitalieres` :
+- `match_status` (text: vert/jaune/orange/rouge/en_cours)
+- `match_reason` (text)
+- `match_source` (text: deterministe/ia)
+- `match_analyzed_at` (timestamptz)
 
-## 6. Design hospitalier
-- Tokens dans `src/styles.css` : `--medical-blue`, `--clinical-green`, `--vigilance-orange`, `--risk-red` (déjà partiellement via tailwind colors). Ajouter helpers `bg-medical-*` si besoin.
-- Fond clair `bg-background`, cartes blanches avec bordure douce, headings semibold uppercase tracking-wide pour sections cliniques.
-- Badges cohérents : variant `outline` + classes utilitaires couleur tonale.
-- Pas de surcharge : grille 2 col desktop / 1 col mobile pour les tuiles du profil.
+Migration Supabase pour les ajouter (sans toucher aux policies existantes).
 
-## 7. Garde-fous
-- Aucune migration BDD.
-- Pas de changement de logique métier conciliation/IA backend.
-- Conserver toutes les routes et fonctionnalités existantes.
+### 4. Déclenchement temps réel
+Dans `PrescriptionsHospitalieresColumn.tsx` et `PrescriptionHospitaliereUploader.tsx` :
+- À chaque **insertion** (manuelle + import OCR) ou **update** d'une prescription :
+  1. Exécute `matchPrescription()` côté client → statut immédiat
+  2. Persiste `match_status/reason/source=deterministe`
+  3. Si statut ∈ {jaune, orange} → appel `matchPrescriptionAI` en arrière-plan (mutation react-query, `match_source=ia` au retour)
+- Recalcul si les traitements domicile changent : invalidation de la query + ré-exécution batchée via un bouton "Réanalyser" (évite spam IA)
 
-## Fichiers modifiés (estimé)
-- `src/components/patient/ClinicalProfileCard.tsx` (refonte)
-- `src/components/patient/AISynthesisHeader.tsx` (nouveau)
-- `src/routes/_authenticated/patients.$patientId.tsx` (ordre des sections + synthèse en tête)
-- `src/lib/clinical/complexityScore.ts` (étendre inputs)
-- `src/components/patient/ComorbiditesSection.tsx` (retirer systèmes/organes si présent)
-- `src/components/conciliation/OrdonnanceUploader.tsx` (peaufinage multi)
-- `src/styles.css` (tokens couleurs médicales si manquants)
+## UI
 
-## Étapes d'exécution
-1. Audit fichiers cités.
-2. Nettoyage systèmes/organes.
-3. Refonte `ClinicalProfileCard` (tuiles + IMC + complexité étendue).
-4. Création `AISynthesisHeader` + intégration en haut.
-5. Peaufinage upload multi.
-6. Ajustements design tokens.
-7. Vérification build + preview.
+Dans `PrescriptionsHospitalieresColumn.tsx` :
+- Chaque ligne reçoit un fond teinté discret selon `match_status` :
+  - vert : `bg-green-50 dark:bg-green-950/30 border-l-2 border-green-500`
+  - jaune : `bg-yellow-50 ... border-yellow-500`
+  - orange : `bg-orange-50 ... border-orange-500`
+  - rouge : `bg-red-50 ... border-red-500`
+  - en_cours : `bg-muted/20` + petit Loader2 spin
+- Nouveau composant `MatchBadge` à gauche de la ligne :
+  - Icône (CheckCircle2 / AlertCircle / AlertTriangle / XCircle / Loader2)
+  - Tooltip détaillant `match_reason` + indicateur source (déterministe/IA)
+  - Click → popover avec recommandation IA si disponible
+
+Légende repliable en haut de la colonne (4 puces couleur + libellé).
+
+## Fichiers touchés
+
+**Créés :**
+- `src/lib/conciliation/prescriptionMatch.ts` — règles déterministes + table seuils AMM
+- `src/lib/conciliation/matchPrescriptionAI.functions.ts` — server function IA
+- `src/components/conciliation/MatchStatusBadge.tsx` — badge + tooltip + popover
+- Migration : colonnes `match_*` sur `prescriptions_hospitalieres`
+
+**Modifiés :**
+- `src/components/conciliation/PrescriptionsHospitalieresColumn.tsx` — fond ligne, badge, hook de matching à l'insert/update, légende
+- `src/components/conciliation/PrescriptionHospitaliereUploader.tsx` — déclenchement du matching après import OCR
+- `src/integrations/supabase/types.ts` — régénéré après migration
+
+## Points de validation
+
+- Aucune erreur RLS (les colonnes ajoutées héritent des policies existantes)
+- Pas d'appel IA si pas de traitement domicile (statut "non évalué" gris)
+- Pas de spam IA : 1 appel par prescription ambiguë, résultat persisté
+- Le matching s'exécute aussi pour les prescriptions importées en masse via OCR

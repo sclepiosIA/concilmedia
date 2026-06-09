@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,9 +13,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Hospital, Pill, Plus, Trash2, Sparkles, Sunrise, Sun, Sunset, Moon } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { PrescriptionHospitaliereUploader } from "./PrescriptionHospitaliereUploader";
+import { MatchStatusBadge, MatchLegend } from "./MatchStatusBadge";
+import {
+  matchPrescription,
+  STATUS_META,
+  type MatchStatus,
+  type DomicileTraitement,
+  type HospPrescription,
+} from "@/lib/conciliation/prescriptionMatch";
+import { matchPrescriptionAI } from "@/lib/conciliation/matchPrescriptionAI.functions";
 
 type Prescription = {
   id: string;
@@ -31,6 +41,10 @@ type Prescription = {
   indication: string | null;
   prescripteur: string | null;
   source: string | null;
+  match_status: string | null;
+  match_reason: string | null;
+  match_source: string | null;
+  match_recommandation: string | null;
 };
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -110,6 +124,67 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
           .order("created_at", { ascending: false })
       ).data ?? []) as unknown as Prescription[],
   });
+
+  const { data: domicile = [] } = useQuery({
+    queryKey: ["traitements", patientId],
+    queryFn: async () =>
+      ((
+        await supabase
+          .from("traitements_habituels")
+          .select("id,dci,nom_commercial,dosage,dosage_unite,voie_administration,posologie_matin,posologie_midi,posologie_soir,posologie_coucher,posologie_texte")
+          .eq("patient_id", patientId)
+          .eq("actif", true)
+      ).data ?? []) as unknown as DomicileTraitement[],
+  });
+
+  const runAI = useServerFn(matchPrescriptionAI);
+  const evaluatedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!data.length) return;
+    for (const p of data) {
+      if (p.match_status && p.match_status !== "en_cours") continue;
+      if (evaluatedRef.current.has(p.id)) continue;
+      evaluatedRef.current.add(p.id);
+
+      const result = matchPrescription(p as HospPrescription, domicile);
+      const initialStatus: MatchStatus = result.needsAI ? "en_cours" : result.status;
+
+      void supabase
+        .from("prescriptions_hospitalieres")
+        .update({
+          match_status: initialStatus,
+          match_reason: result.reason,
+          match_source: "deterministe",
+          match_analyzed_at: new Date().toISOString(),
+        })
+        .eq("id", p.id)
+        .then(() => {
+          if (!result.needsAI) {
+            qc.invalidateQueries({ queryKey: ["prescriptions", episodeId] });
+            return;
+          }
+          runAI({ data: { prescriptionId: p.id, patientId } })
+            .catch((e: unknown) => {
+              const msg = e instanceof Error ? e.message : "Erreur IA";
+              supabase
+                .from("prescriptions_hospitalieres")
+                .update({
+                  match_status: result.status === "gris" ? "gris" : "orange",
+                  match_reason: `${result.reason} (IA indisponible : ${msg})`,
+                  match_source: "deterministe",
+                })
+                .eq("id", p.id)
+                .then(() => qc.invalidateQueries({ queryKey: ["prescriptions", episodeId] }));
+            })
+            .finally(() => {
+              qc.invalidateQueries({ queryKey: ["prescriptions", episodeId] });
+            });
+        });
+    }
+  }, [data, domicile, runAI, qc, episodeId, patientId]);
+
+
 
   const add = useMutation({
     mutationFn: async (v: Record<string, string>) => {
@@ -233,7 +308,11 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
           </div>
         ) : (
           <div className="divide-y">
-            <div className="hidden md:grid grid-cols-[1fr_auto_auto_auto] gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted/40">
+            <div className="px-3 py-1.5 bg-muted/40 border-b">
+              <MatchLegend />
+            </div>
+            <div className="hidden md:grid grid-cols-[auto_1fr_auto_auto_auto] gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted/40">
+              <div></div>
               <div>Médicament</div>
               <div className="text-center">M • Mi • S • Co</div>
               <div>Indication / Source</div>
@@ -242,11 +321,19 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
             {data.map((p) => {
               const [m, mi, s, c] = resolvePrises(p);
               const hasPrises = m || mi || s || c;
+              const status = (p.match_status as MatchStatus) ?? "en_cours";
+              const meta = STATUS_META[status] ?? STATUS_META.en_cours;
               return (
               <div
                 key={p.id}
-                className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-2 px-3 py-2 items-center hover:bg-muted/30 transition-colors text-xs"
+                className={`grid grid-cols-1 md:grid-cols-[auto_1fr_auto_auto_auto] gap-2 px-3 py-2 items-center hover:bg-muted/30 transition-colors text-xs ${meta.bg} ${meta.border}`}
               >
+                <MatchStatusBadge
+                  status={status}
+                  reason={p.match_reason}
+                  recommandation={p.match_recommandation}
+                  source={p.match_source}
+                />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <Pill className="h-3 w-3 text-primary shrink-0" />
