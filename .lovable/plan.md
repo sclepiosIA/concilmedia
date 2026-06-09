@@ -1,75 +1,62 @@
+# Plan — Optimisation Datathon Conciliation Médicamenteuse IA
+
 ## Objectif
+Transformer l'app en démonstrateur hospitalier crédible. Lecture du dossier patient en < 5 s, synthèse IA proéminente, design médical épuré (bleu/vert/orange/rouge sur fond clair).
 
-Depuis la fiche patient, importer plusieurs PDF en une fois → produire :
-1. **Toujours** : enrichissement du dossier patient (ATCD / comorbidités / allergies / biologie / traitements habituels) avec dédup (déjà en place).
-2. **Toujours** : **Fiche de synthèse patient** (vue + export PDF) regroupant identité, ATCD, comorbidités, allergies, bio récente, traitements habituels, et analyse IA (interactions, doublons, adaptations DFG).
-3. **Si une ordonnance hospitalière est détectée** dans les PDF : création auto d'un **épisode** avec les prescriptions hospitalières + lancement détection divergences + analyse IA → conciliation complète accessible depuis la fiche patient.
-4. **Export PDF** des deux livrables (synthèse patient & fiche de conciliation d'épisode).
+## 1. Audit ciblé (avant édition)
+- Vérifier la présence réelle des sections "Systèmes atteints" et "Organes concernés" (probablement dans `ComorbiditesSection` ou `ClinicalProfileCard`).
+- Recenser les composants de la fiche patient : `ClinicalProfileCard`, `MedicationProfileCard`, `EpisodesSection`, `TraitementsHabituelsSection`, `BiologieSection`, `SynthesePatientDialog`, `OrdonnanceUploader`, `BulkPatientImportModal`.
+- Confirmer l'état actuel de l'upload multi-fichiers (déjà refait dans `OrdonnanceUploader`, à vérifier aussi `BulkPatientImportModal`).
 
-## Plan technique
+## 2. Nettoyage
+- Supprimer "Systèmes atteints" et "Organes concernés" partout où ils apparaissent (UI uniquement, on ne touche pas la BDD).
 
-### 1. Extraction : classifier le type de document et capter les prescriptions hospi
-Fichier : `src/lib/conciliation/bulkImport.functions.ts`
-- Étendre `DossierSchema` :
-  - `document_type`: `"ordonnance_ville" | "ordonnance_hospitaliere" | "compte_rendu" | "bilan_bio" | "autre"`
-  - `prescriptions_hospitalieres`: tableau (mêmes champs que `TraitementSchema` + `voie`, `frequence`, `duree`, `motif`)
-  - `episode_context` optionnel : `{ motif, service, date_admission }`
-- Mettre à jour le system prompt pour :
-  - classifier le document
-  - distinguer "traitements habituels du patient" (→ `traitements`) vs "prescription faite à l'hôpital pendant ce séjour" (→ `prescriptions_hospitalieres`)
-  - capter motif / service / date admission si présents
+## 3. Refonte `ClinicalProfileCard` → "PROFIL PATIENT ET VIGILANCE MÉDICAMENTEUSE"
+Section unique, visible en haut, structurée en tuiles :
+1. **Comorbidités** — badges colorés (HTA, diabète, IRC, obésité…), détection auto à partir des libellés.
+2. **IMC automatique** — calcul poids/taille, catégorie OMS (insuffisance / normal / surpoids / obésité I-II-III), badge couleur.
+3. **Allergies** — badges rouges si présentes, badge vert "Aucune allergie connue" sinon.
+4. **Profil de risque clinique** — cardiovasculaire / rénal / métabolique / obésité, code couleur (vert/orange/rouge).
+5. **Points de vigilance pour la conciliation** — liste auto selon comorbidités + traitements (antidiabétiques, adaptations rénales, antihypertenseurs, interactions, manquants/ajoutés, haut risque).
+6. **Complexité patient** — score + niveau (Faible/Modéré/Élevé) basé sur âge, nb traitements, comorbidités, IR, facteurs de risque (utiliser `complexityScore.ts` + extensions).
 
-### 2. Commit : créer un épisode si ordo hospi détectée
-Fichier : `src/lib/conciliation/bulkImport.functions.ts` (`commitBulkImport`)
-- Ajouter param `auto_create_episode: boolean` (default true quand `targetPatientId` fourni).
-- Après ingestion des entités du patient :
-  - Agréger toutes les `prescriptions_hospitalieres` de tous les items pour ce patient.
-  - S'il y en a ≥1 OU si un item a `document_type === "ordonnance_hospitaliere"` : créer un épisode (`motif` = premier `episode_context.motif` trouvé sinon "Hospitalisation – import PDF", `service` idem sinon "Médecine") et insérer toutes les prescriptions dans `prescriptions_hospitalieres` (avec dédup sur `dci`).
-  - Retourner `created_episode_ids: string[]` dans le summary.
+Composant `ClinicalProfileCard` lit `patients` (poids, taille, date_naissance), `comorbidites`, `allergies`, `traitements_habituels`.
 
-### 3. UI : feedback dans le modal d'import
-Fichier : `src/components/conciliation/BulkPatientImportModal.tsx`
-- Onglet review : badge "Ordo hospi" / "Bilan bio" / "Ordo ville" selon `document_type`.
-- 5e onglet "Prescriptions hospi" listant les prescriptions extraites (éditable comme les traitements).
-- Écran final "done" : si `created_episode_ids.length > 0`, bouton **"Ouvrir la conciliation →"** qui navigue vers `/episodes/{id}`.
+## 4. Synthèse IA en tête de fiche patient
+Nouveau composant `AISynthesisHeader` placé juste après l'en-tête patient, AVANT Épisodes :
+- Cartes-stat (icônes + chiffres) : Médicaments identifiés, Interactions, Divergences, Manquants, Adaptations posologiques, Haut risque.
+- Bloc "Recommandations IA" (3-5 puces clés).
+- Bouton "Analyse IA complète" déclenche `analyzePatientSynthesis` (déjà existant) et stocke résultat ; affiche dernier résultat si présent dans `conciliation_ai_analyses`.
 
-### 4. Fiche de synthèse patient (vue + export PDF)
-Nouveau fichier : `src/components/patient/SynthesePatientCard.tsx`
-- Composant affichable dans un dialog/onglet de la fiche patient, regroupant :
-  - bandeau identité + alertes (allergies sévères, DFG bas, INR haut)
-  - sections compactes ATCD / Comorbidités / Allergies / Bio récente (1 valeur/paramètre) / Traitements habituels actifs
-  - bloc Analyse IA (si présente — sinon bouton "Lancer l'analyse" qui appelle une nouvelle serverFn `analyzePatientSynthesis` patient-only, sans épisode)
-- Nouveau serverFn : `src/lib/conciliation/analyzePatientSynthesis.functions.ts` (clone de `analyzeConciliation` mais sans `prescriptions_hospitalieres`, persiste dans une nouvelle colonne `patient_synthesis_analyses` ou réutilise `conciliation_ai_analyses` avec `episode_id NULL`).
+## 5. Import multi-documents
+- `OrdonnanceUploader` : déjà multi-fichiers. Ajouter accept explicite multi (image+pdf), bouton "Ajouter d'autres documents" toujours visible après import, possibilité d'ajouter en plusieurs vagues sans reset.
+- Vérifier que `BulkPatientImportModal` accepte aussi multi-files (à patcher si non).
 
-Bouton "Synthèse patient" ajouté dans `src/routes/_authenticated/patients.$patientId.tsx` à côté de "Nouvel épisode".
+## 6. Design hospitalier
+- Tokens dans `src/styles.css` : `--medical-blue`, `--clinical-green`, `--vigilance-orange`, `--risk-red` (déjà partiellement via tailwind colors). Ajouter helpers `bg-medical-*` si besoin.
+- Fond clair `bg-background`, cartes blanches avec bordure douce, headings semibold uppercase tracking-wide pour sections cliniques.
+- Badges cohérents : variant `outline` + classes utilitaires couleur tonale.
+- Pas de surcharge : grille 2 col desktop / 1 col mobile pour les tuiles du profil.
 
-### 5. Export PDF
-Route serveur : `src/routes/api/patients.$patientId.synthese-pdf.ts` (GET)
-- Charge le patient + toutes les entités + dernière analyse IA.
-- Génère un PDF (lib JS pure compatible Worker : **`pdf-lib`**, déjà compatible Cloudflare) avec mise en page A4 :
-  - en-tête : identité + date du jour + alertes
-  - sections tabulaires (ATCD, comorb, allergies, bio, traitements)
-  - encart "Analyse pharmaceutique IA"
-- Renvoie `application/pdf` en téléchargement.
-- Bouton "Exporter PDF" sur `SynthesePatientCard`.
+## 7. Garde-fous
+- Aucune migration BDD.
+- Pas de changement de logique métier conciliation/IA backend.
+- Conserver toutes les routes et fonctionnalités existantes.
 
-Idem pour épisode : `src/routes/api/episodes.$episodeId.conciliation-pdf.ts`
-- Identité + contexte épisode
-- Tableau **BMO domicile vs Prescription hospi** côte à côte
-- Tableau des divergences avec statut / justification
-- Encart analyse IA
-- Bouton "Exporter PDF" sur la page `episodes.$episodeId.tsx`.
+## Fichiers modifiés (estimé)
+- `src/components/patient/ClinicalProfileCard.tsx` (refonte)
+- `src/components/patient/AISynthesisHeader.tsx` (nouveau)
+- `src/routes/_authenticated/patients.$patientId.tsx` (ordre des sections + synthèse en tête)
+- `src/lib/clinical/complexityScore.ts` (étendre inputs)
+- `src/components/patient/ComorbiditesSection.tsx` (retirer systèmes/organes si présent)
+- `src/components/conciliation/OrdonnanceUploader.tsx` (peaufinage multi)
+- `src/styles.css` (tokens couleurs médicales si manquants)
 
-⚠️ `pdf-lib` ne fait pas la mise en page haut niveau → on génère manuellement (texte + tables simples). Pas de dépendance Node-only.
-
-### 6. Migration mineure
-Si on choisit `conciliation_ai_analyses` avec `episode_id NULL` pour les analyses patient-only : ALTER la colonne `episode_id` en nullable. Sinon, créer table `patient_synthesis_analyses(patient_id, payload, model, created_at)` avec GRANT + RLS via `owns_patient`.
-Décision : **rendre `episode_id` nullable** (1 ligne SQL, pas de nouvelle table).
-
-## Hors scope
-- OCR de PDF scannés (déjà géré par Gemini multimodal).
-- Réconciliation cross-épisodes (historique).
-- Signature électronique du PDF.
-
-## Questions ouvertes
-Aucune — on lance l'implémentation au feu vert.
+## Étapes d'exécution
+1. Audit fichiers cités.
+2. Nettoyage systèmes/organes.
+3. Refonte `ClinicalProfileCard` (tuiles + IMC + complexité étendue).
+4. Création `AISynthesisHeader` + intégration en haut.
+5. Peaufinage upload multi.
+6. Ajustements design tokens.
+7. Vérification build + preview.
