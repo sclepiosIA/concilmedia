@@ -16,7 +16,7 @@ import { RiskScoreBadge } from "@/components/conciliation/RiskScoreBadge";
 import { ClinicalRecommendationsCard } from "@/components/conciliation/ClinicalRecommendationsCard";
 import { DivergencesSummaryCard } from "@/components/conciliation/DivergencesSummaryCard";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
-import { BilanEntreeSection } from "@/components/episode/BilanEntreeSection";
+
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
 import type { RiskResult } from "@/lib/conciliation/riskScore";
@@ -148,8 +148,6 @@ function EpisodeConciliationPage() {
           </div>
         </CardContent>
       </Card>
-
-      <BilanEntreeSection episodeId={episodeId} />
 
       <div className="my-4">
         <DivergencesSummaryCard conciliations={recon.conciliations} />
