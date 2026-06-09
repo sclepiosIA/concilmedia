@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { SourceDocumentLink } from "@/components/conciliation/SourceDocumentLink";
 
 export function AntecedentsSection({ patientId }: { patientId: string }) {
   const qc = useQueryClient();
@@ -49,9 +50,10 @@ export function AntecedentsSection({ patientId }: { patientId: string }) {
       {data.map((a) => (
         <Card key={a.id}>
           <CardContent className="py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Badge variant="outline">{a.type}</Badge>
               <span>{a.description}</span>
+              <SourceDocumentLink documentId={(a as { source_document_id?: string | null }).source_document_id} />
             </div>
             <Button size="icon" variant="ghost" onClick={() => delMut.mutate(a.id)}><Trash2 className="h-4 w-4" /></Button>
           </CardContent>
