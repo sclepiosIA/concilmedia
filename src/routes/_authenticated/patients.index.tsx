@@ -326,7 +326,8 @@ function PatientsListPage() {
               </Button>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
