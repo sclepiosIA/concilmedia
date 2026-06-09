@@ -96,9 +96,6 @@ function PatientDetailPage() {
             )}
           </div>
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={() => setBulkOpen(true)}>
-              <Sparkles className="h-4 w-4 mr-1" /> Importer PDF (IA)
-            </Button>
             <Button variant="outline" onClick={() => setSyntheseOpen(true)}>
               <FileText className="h-4 w-4 mr-1" /> Synthèse patient
             </Button>
