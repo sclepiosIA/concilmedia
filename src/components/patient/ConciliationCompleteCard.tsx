@@ -32,6 +32,8 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
   const saveFn = useServerFn(saveConciliationValidation);
   const getValidationFn = useServerFn(getConciliationValidation);
   const deleteValidationFn = useServerFn(deleteConciliationValidation);
+  const uploadDocFn = useServerFn(uploadPharmacistDoc);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: latest } = useQuery({
     queryKey: ["patient-conciliation-complete", patientId],
