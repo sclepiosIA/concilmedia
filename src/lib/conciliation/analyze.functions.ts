@@ -12,6 +12,10 @@ export type AIAnalysisPayload = {
   contre_indications: Array<{ medicament: string; raison: string; recommandation: string }>;
   redondances_classe: Array<{ classe: string; medicaments: string[] }>;
   adaptations_posologiques: Array<{ medicament: string; raison: string; recommandation: string }>;
+  medicaments_haut_risque?: Array<{ medicament: string; classe: string; raison: string }>;
+  allergies_croisees?: Array<{ allergene: string; medicament: string; risque: string }>;
+  surveillance?: Array<{ parametre: string; frequence: string; justification: string }>;
+  conclusion_clinique?: string;
 };
 
 export const analyzeConciliation = createServerFn({ method: "POST" })
@@ -77,13 +81,19 @@ Analyse le dossier patient (incluant biologie_recente : DFG, créatinine, kalié
   "doublons_therapeutiques": [{"medicaments":["..."],"classe":"...","recommandation":"..."}],
   "contre_indications": [{"medicament":"...","raison":"allergie/comorbidité/biologie","recommandation":"..."}],
   "redondances_classe": [{"classe":"...","medicaments":["..."]}],
-  "adaptations_posologiques": [{"medicament":"...","raison":"DFG=X mL/min / insuffisance hépatique / âge / hyperkaliémie / INR","recommandation":"..."}]
+  "adaptations_posologiques": [{"medicament":"...","raison":"DFG=X mL/min / insuffisance hépatique / âge / hyperkaliémie / INR","recommandation":"..."}],
+  "medicaments_haut_risque": [{"medicament":"...","classe":"anticoagulant|insuline|opioïde|antiépileptique|chimio|...","raison":"..."}],
+  "allergies_croisees": [{"allergene":"...","medicament":"...","risque":"..."}],
+  "surveillance": [{"parametre":"DFG|K+|INR|glycémie|TA|...","frequence":"...","justification":"..."}],
+  "conclusion_clinique": "1-2 phrases de synthèse finale style compte-rendu hospitalier (profil de risque global + vigilance prioritaire + verdict divergences)"
 }
 Règles cliniques :
 - Si DFG < 60 mL/min, vérifier systématiquement chaque médicament à élimination rénale (metformine, IEC/ARA2, AINS, anticoagulants, antibiotiques) et proposer adaptation.
 - Si INR > 4, alerter sur risque hémorragique des anticoagulants/antiagrégants.
 - Si K+ anormal, alerter sur IEC/ARA2/spironolactone/AINS.
 - Cite la valeur biologique précise dans le champ "raison".
+- Pour chaque allergie documentée, vérifier les allergies croisées (ex: pénicilline ↔ céphalosporines, AINS ↔ aspirine).
+- conclusion_clinique : ton neutre, factuel, exploitable pour le dossier patient.
 Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
 
     let result;

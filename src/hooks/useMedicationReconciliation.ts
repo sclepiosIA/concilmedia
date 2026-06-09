@@ -124,6 +124,8 @@ export function useMedicationReconciliation(episodeId: string) {
       };
 
       const divergences: Array<Omit<MedicationConciliation, "id" | "created_at">> = [];
+      const matchedPrescIds = new Set<string>();
+
       for (const t of traitements ?? []) {
         const dci = (t.dci || t.nom_commercial || "").toLowerCase();
         if (!dci || existingDci.has(dci)) continue;
@@ -158,30 +160,64 @@ export function useMedicationReconciliation(episodeId: string) {
             gravite: classifyDivergenceGravite(classe, "omission"),
             classe_atc: classe,
           });
-        } else if (t.dosage && match.dosage && t.dosage !== match.dosage) {
-          divergences.push({
-            episode_id: episodeId,
-            patient_id: episode.patient_id,
-            phase: "entree",
-            medication_domicile: domicile,
-            medication_hospitalisation: {
-              dci: match.medicament,
-              dosage: match.dosage ?? undefined,
-              posologie: match.posologie ?? undefined,
-              prescription_id: match.id,
-            },
-            type_divergence: "modification_dose",
-            intention: "a_evaluer",
-            justification: null,
-            action_corrective: null,
-            statut: "non_traite",
-            pharmacien_id: null,
-            date_analyse: new Date().toISOString(),
-            date_validation: null,
-            gravite: classifyDivergenceGravite(classe, "modification_dose"),
-            classe_atc: classe,
-          });
+        } else {
+          matchedPrescIds.add(match.id);
+          const hospi = {
+            dci: match.medicament,
+            dosage: match.dosage ?? undefined,
+            posologie: match.posologie ?? undefined,
+            prescription_id: match.id,
+          };
+          const doseMismatch = t.dosage && match.dosage && !match.dosage.includes(String(t.dosage));
+          const freqMismatch =
+            domicile.posologie && match.posologie &&
+            domicile.posologie.replace(/\s+/g, "").toLowerCase() !==
+              match.posologie.replace(/\s+/g, "").toLowerCase();
+          if (doseMismatch) {
+            divergences.push({
+              episode_id: episodeId, patient_id: episode.patient_id, phase: "entree",
+              medication_domicile: domicile, medication_hospitalisation: hospi,
+              type_divergence: "modification_dose", intention: "a_evaluer",
+              justification: null, action_corrective: null, statut: "non_traite",
+              pharmacien_id: null, date_analyse: new Date().toISOString(), date_validation: null,
+              gravite: classifyDivergenceGravite(classe, "modification_dose"), classe_atc: classe,
+            });
+          } else if (freqMismatch) {
+            divergences.push({
+              episode_id: episodeId, patient_id: episode.patient_id, phase: "entree",
+              medication_domicile: domicile, medication_hospitalisation: hospi,
+              type_divergence: "modification_freq", intention: "a_evaluer",
+              justification: null, action_corrective: null, statut: "non_traite",
+              pharmacien_id: null, date_analyse: new Date().toISOString(), date_validation: null,
+              gravite: classifyDivergenceGravite(classe, "modification_freq"), classe_atc: classe,
+            });
+          }
         }
+      }
+
+      // Ajouts : médicaments prescrits à l'hôpital mais absents du domicile
+      for (const p of prescriptions ?? []) {
+        if (matchedPrescIds.has(p.id)) continue;
+        const med = (p.medicament ?? "").toLowerCase();
+        if (!med) continue;
+        const alreadyDom = (traitements ?? []).some(
+          (t) => (t.dci || t.nom_commercial || "").toLowerCase().includes(med) ||
+                 med.includes((t.dci || t.nom_commercial || "").toLowerCase()),
+        );
+        if (alreadyDom) continue;
+        const classe = classifyDci(p.medicament ?? "");
+        divergences.push({
+          episode_id: episodeId, patient_id: episode.patient_id, phase: "entree",
+          medication_domicile: { dci: p.medicament ?? "—" },
+          medication_hospitalisation: {
+            dci: p.medicament, dosage: p.dosage ?? undefined,
+            posologie: p.posologie ?? undefined, prescription_id: p.id,
+          },
+          type_divergence: "ajout", intention: "a_evaluer",
+          justification: null, action_corrective: null, statut: "non_traite",
+          pharmacien_id: null, date_analyse: new Date().toISOString(), date_validation: null,
+          gravite: classifyDivergenceGravite(classe, "ajout"), classe_atc: classe,
+        });
       }
 
       if (divergences.length) {
