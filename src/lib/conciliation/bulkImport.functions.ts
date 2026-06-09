@@ -114,7 +114,7 @@ Réponds STRICTEMENT en JSON valide (aucun texte avant/après, pas de markdown) 
   "allergies": [{ "substance":"Pénicilline", "reaction":"urticaire", "severite":"legere|moderee|severe|anaphylaxie" }],
   "biologie": [{ "parametre":"DFG", "valeur":45, "unite":"mL/min/1,73m²", "date_prelevement":"YYYY-MM-DD" }],
   "traitements": [{ "dci":"Metformine", "nom_commercial":"Glucophage", "dosage":"500", "dosage_unite":"mg", "voie_administration":"PO", "posologie_matin":"1", "posologie_soir":"1", "posologie_texte":"phrase libre si schéma complexe", "indication":"diabète", "duree":"3 mois | au long cours | non précisée" }],
-  "prescriptions_hospitalieres": [{ "medicament":"Enoxaparine 4000 UI", "dosage":"4000 UI", "posologie":"1 inj/j SC", "voie_administration":"SC", "indication":"thromboprophylaxie" }],
+  "prescriptions_hospitalieres": [{ "medicament":"Enoxaparine 4000 UI", "dosage":"4000 UI", "posologie":"1 inj/j SC", "voie_administration":"SC", "indication":"thromboprophylaxie", "date_debut":"YYYY-MM-DD (date du jour J / date de prescription)", "date_fin":"YYYY-MM-DD ou null" }],
   "episode_context": { "motif":"...", "service":"...", "date_admission":"YYYY-MM-DD" }
 }
 Règles CRUCIALES de classification :
