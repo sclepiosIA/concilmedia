@@ -1,83 +1,59 @@
-
 ## Objectif
 
-Chaque prescription hospitalière reçoit un statut de concordance affiché sous forme de **fond de ligne teinté + badge cliquable** :
+1. Remplacer l'analyse pharmaceutique IA "légère" actuelle par une **conciliation pharmaceutique complète** (le même niveau de détail que l'analyse d'épisode existante : interactions, doublons, contre-indications, médicaments à haut risque, allergies croisées, adaptations posologiques, surveillance bio, conclusion clinique).
+2. L'afficher en **section dédiée en bas de la fiche patient**, pas uniquement dans le dialog "Synthèse patient".
+3. Rendre **toutes les cards de la fiche patient repliables** pour améliorer la lisibilité.
 
-| Couleur | Sens |
-|---|---|
-| 🟢 Vert | Identique à l'ordonnance initiale (DCI, dose, posologie) — aucune alerte |
-| 🟡 Jaune | Différent mais adaptation logique/attendue (ex. switch IV→PO, ajustement rénal) |
-| 🟠 Orange | Différent et probablement non souhaité (oubli, divergence non justifiée) |
-| 🔴 Rouge | Erreur ou hors-AMM (surdosage, contre-indication, voie inadaptée) |
+## 1) Server function `analyzePatientConciliationComplete`
 
-## Architecture — moteur hybride
+Nouveau fichier `src/lib/conciliation/analyzePatientConciliationComplete.functions.ts` :
+- Input : `{ patientId }`
+- Charge en parallèle : patient, allergies, antécédents, comorbidités, traitements habituels actifs, **prescriptions hospitalières actives du dernier épisode**, biologie récente (50 derniers résultats, dédupliqués par paramètre)
+- Prompt système enrichi (basé sur celui de `analyzeConciliation`) — exige le **JSON complet** avec interactions / doublons_therapeutiques / contre_indications / adaptations_posologiques / medicaments_haut_risque / allergies_croisees / surveillance / conclusion_clinique + score_risque + synthese
+- Modèle : `google/gemini-3-flash-preview` via le gateway Lovable AI déjà en place
+- Persiste dans `conciliation_ai_analyses` (avec `episode_id = null` et `patient_id` pour distinguer du dialog actuel, via une 2ᵉ ligne ou via un `analysis_type='conciliation_complete'` — colonne à ajouter)
 
-### 1. Couche déterministe (instantanée, client)
-Nouveau fichier `src/lib/conciliation/prescriptionMatch.ts` (pur, testable) :
-- `matchPrescription(hosp, domicileList)` retourne `{ status, reason, matchedDomicile }`
-- Règles immédiates :
-  - **VERT** : DCI normalisée identique + même dosage + même posologie M/Mi/S/Co (ou même `posologie` parsée) + même voie
-  - **ROUGE** : dose journalière > seuil AMM connu (table simple par DCI courantes — paracétamol 4g, ibuprofène 1.2g, etc.) ou voie incohérente
-  - **ORANGE** : DCI présente au domicile mais dose/posologie diverge sans motif détecté
-  - **JAUNE** : motif déterministe détecté (ex. forme IV vs PO du même DCI, ou ajout d'un médicament d'une classe déjà présente)
-  - **GRIS / non évalué** : pas de domicile connu → on déclenche l'IA
-- Sortie : statut + raison courte affichée dans le tooltip
+**Migration** : ajouter `analysis_type text` sur `conciliation_ai_analyses` (`'synthese' | 'conciliation_complete'`, défaut `'synthese'` pour ne pas casser l'existant). Backfill : ne touche pas aux lignes existantes.
 
-### 2. Couche IA (Lovable AI, asynchrone, server)
-Nouveau server function `src/lib/conciliation/matchPrescriptionAI.functions.ts` :
-- Input : la prescription hospitalière + liste des traitements habituels du patient + allergies + comorbidités (contexte clinique)
-- Modèle : `google/gemini-3-flash-preview` via `ai-gateway.server`, sortie structurée Zod `{ status: "vert"|"jaune"|"orange"|"rouge", reason: string, recommandation?: string }`
-- Appelée uniquement quand le déterministe renvoie **JAUNE** ou **ORANGE** (cas ambigus) — vert/rouge restent côté client pour la réactivité
+## 2) UI — composant `ConciliationCompleteCard`
 
-### 3. Persistance
-Nouvelles colonnes sur `prescriptions_hospitalieres` :
-- `match_status` (text: vert/jaune/orange/rouge/en_cours)
-- `match_reason` (text)
-- `match_source` (text: deterministe/ia)
-- `match_analyzed_at` (timestamptz)
+Nouveau composant `src/components/patient/ConciliationCompleteCard.tsx` :
+- Bouton "Lancer la conciliation complète" / "Relancer"
+- Affichage riche réutilisant le style de `AIAnalysisPanel` (déjà utilisé sur la page épisode) : score de risque, synthèse, blocs détaillés avec sévérité, mécanisme, recommandation, alternative, référence (ANSM/HAS/Vidal/RCP/STOPP-START), niveau de confiance
+- Export PDF (peut être ajouté dans une itération suivante — pas dans ce premier jet)
+- Auto-déclenchement à l'ouverture **si** le patient a un traitement domicile ET au moins une prescription hospitalière (sinon message d'attente)
 
-Migration Supabase pour les ajouter (sans toucher aux policies existantes).
+## 3) Cards repliables
 
-### 4. Déclenchement temps réel
-Dans `PrescriptionsHospitalieresColumn.tsx` et `PrescriptionHospitaliereUploader.tsx` :
-- À chaque **insertion** (manuelle + import OCR) ou **update** d'une prescription :
-  1. Exécute `matchPrescription()` côté client → statut immédiat
-  2. Persiste `match_status/reason/source=deterministe`
-  3. Si statut ∈ {jaune, orange} → appel `matchPrescriptionAI` en arrière-plan (mutation react-query, `match_source=ia` au retour)
-- Recalcul si les traitements domicile changent : invalidation de la query + ré-exécution batchée via un bouton "Réanalyser" (évite spam IA)
+Nouveau composant `src/components/patient/CollapsibleSection.tsx` :
+- Wrapper basé sur `@/components/ui/collapsible` (shadcn — disponible)
+- Props : `title`, `icon`, `defaultOpen`, `storageKey` (mémorise l'état par patient via `localStorage`), `badge` optionnel (compteur, alerte)
+- Animation chevron, transitions natives `data-[state=open]`
 
-## UI
+Appliqué à toutes les sections de `patients.$patientId.tsx` :
+- Profil clinique (`ClinicalProfileCard`)
+- Profil médicamenteux (`MedicationProfileCard`)
+- Traitements habituels
+- Prescriptions hospitalières
+- Biologie
+- **Conciliation pharmaceutique complète** (nouvelle section, en bas)
 
-Dans `PrescriptionsHospitalieresColumn.tsx` :
-- Chaque ligne reçoit un fond teinté discret selon `match_status` :
-  - vert : `bg-green-50 dark:bg-green-950/30 border-l-2 border-green-500`
-  - jaune : `bg-yellow-50 ... border-yellow-500`
-  - orange : `bg-orange-50 ... border-orange-500`
-  - rouge : `bg-red-50 ... border-red-500`
-  - en_cours : `bg-muted/20` + petit Loader2 spin
-- Nouveau composant `MatchBadge` à gauche de la ligne :
-  - Icône (CheckCircle2 / AlertCircle / AlertTriangle / XCircle / Loader2)
-  - Tooltip détaillant `match_reason` + indicateur source (déterministe/IA)
-  - Click → popover avec recommandation IA si disponible
-
-Légende repliable en haut de la colonne (4 puces couleur + libellé).
+Par défaut : profil + traitements + prescriptions ouverts ; biologie + conciliation repliés (ou ouvert si analyse déjà disponible).
 
 ## Fichiers touchés
 
-**Créés :**
-- `src/lib/conciliation/prescriptionMatch.ts` — règles déterministes + table seuils AMM
-- `src/lib/conciliation/matchPrescriptionAI.functions.ts` — server function IA
-- `src/components/conciliation/MatchStatusBadge.tsx` — badge + tooltip + popover
-- Migration : colonnes `match_*` sur `prescriptions_hospitalieres`
+**Créés**
+- `src/lib/conciliation/analyzePatientConciliationComplete.functions.ts`
+- `src/components/patient/ConciliationCompleteCard.tsx`
+- `src/components/patient/CollapsibleSection.tsx`
+- Migration : `ALTER TABLE conciliation_ai_analyses ADD COLUMN analysis_type text DEFAULT 'synthese'`
 
-**Modifiés :**
-- `src/components/conciliation/PrescriptionsHospitalieresColumn.tsx` — fond ligne, badge, hook de matching à l'insert/update, légende
-- `src/components/conciliation/PrescriptionHospitaliereUploader.tsx` — déclenchement du matching après import OCR
-- `src/integrations/supabase/types.ts` — régénéré après migration
+**Modifiés**
+- `src/routes/_authenticated/patients.$patientId.tsx` — wrapper `CollapsibleSection` autour de chaque section + ajout de la nouvelle section conciliation complète en bas
+- `src/integrations/supabase/types.ts` (regénéré)
 
-## Points de validation
+## Hors-scope (non touché)
 
-- Aucune erreur RLS (les colonnes ajoutées héritent des policies existantes)
-- Pas d'appel IA si pas de traitement domicile (statut "non évalué" gris)
-- Pas de spam IA : 1 appel par prescription ambiguë, résultat persisté
-- Le matching s'exécute aussi pour les prescriptions importées en masse via OCR
+- Le dialog `SynthesePatientDialog` reste pour l'export PDF rapide existant
+- Le `AIAnalysisPanel` de la page épisode n'est pas modifié
+- Le système de coloration des prescriptions hospitalières reste tel quel

@@ -1,0 +1,2 @@
+ALTER TABLE public.conciliation_ai_analyses ADD COLUMN IF NOT EXISTS analysis_type text NOT NULL DEFAULT 'synthese';
+CREATE INDEX IF NOT EXISTS idx_cai_patient_type ON public.conciliation_ai_analyses (patient_id, analysis_type, created_at DESC);
