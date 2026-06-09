@@ -125,6 +125,67 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
       ).data ?? []) as unknown as Prescription[],
   });
 
+  const { data: domicile = [] } = useQuery({
+    queryKey: ["traitements", patientId],
+    queryFn: async () =>
+      ((
+        await supabase
+          .from("traitements_habituels")
+          .select("id,dci,nom_commercial,dosage,dosage_unite,voie_administration,posologie_matin,posologie_midi,posologie_soir,posologie_coucher,posologie_texte")
+          .eq("patient_id", patientId)
+          .eq("actif", true)
+      ).data ?? []) as unknown as DomicileTraitement[],
+  });
+
+  const runAI = useServerFn(matchPrescriptionAI);
+  const evaluatedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!data.length) return;
+    for (const p of data) {
+      if (p.match_status && p.match_status !== "en_cours") continue;
+      if (evaluatedRef.current.has(p.id)) continue;
+      evaluatedRef.current.add(p.id);
+
+      const result = matchPrescription(p as HospPrescription, domicile);
+      const initialStatus: MatchStatus = result.needsAI ? "en_cours" : result.status;
+
+      void supabase
+        .from("prescriptions_hospitalieres")
+        .update({
+          match_status: initialStatus,
+          match_reason: result.reason,
+          match_source: "deterministe",
+          match_analyzed_at: new Date().toISOString(),
+        })
+        .eq("id", p.id)
+        .then(() => {
+          if (!result.needsAI) {
+            qc.invalidateQueries({ queryKey: ["prescriptions", episodeId] });
+            return;
+          }
+          runAI({ data: { prescriptionId: p.id, patientId } })
+            .catch((e: unknown) => {
+              const msg = e instanceof Error ? e.message : "Erreur IA";
+              supabase
+                .from("prescriptions_hospitalieres")
+                .update({
+                  match_status: result.status === "gris" ? "gris" : "orange",
+                  match_reason: `${result.reason} (IA indisponible : ${msg})`,
+                  match_source: "deterministe",
+                })
+                .eq("id", p.id)
+                .then(() => qc.invalidateQueries({ queryKey: ["prescriptions", episodeId] }));
+            })
+            .finally(() => {
+              qc.invalidateQueries({ queryKey: ["prescriptions", episodeId] });
+            });
+        });
+    }
+  }, [data, domicile, runAI, qc, episodeId, patientId]);
+
+
+
   const add = useMutation({
     mutationFn: async (v: Record<string, string>) => {
       if (!v.medicament) throw new Error("Médicament requis");
