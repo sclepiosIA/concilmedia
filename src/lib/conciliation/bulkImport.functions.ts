@@ -319,6 +319,8 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             posologie: p.posologie ?? null,
             voie_administration: p.voie_administration ?? null,
             indication: p.indication ?? null,
+            date_debut: p.date_debut ?? new Date().toISOString().slice(0, 10),
+            date_fin: p.date_fin ?? null,
             actif: true,
           }));
         if (rows.length) {
