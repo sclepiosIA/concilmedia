@@ -101,8 +101,8 @@ Règles :
             { type: "text", text: "Voici la lettre d'admission à analyser." },
             {
               type: "file",
-              data: `data:${data.mimeType};base64,${data.fileBase64}`,
-              mediaType: data.mimeType,
+              data: `data:${mimeType};base64,${fileBase64}`,
+              mediaType: mimeType,
             },
           ],
         },
