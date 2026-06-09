@@ -125,6 +125,9 @@ type Omission = { id: string; episode_id: string; traitement_id: string; justifi
 export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { episodeId: string; patientId: string }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [justifyId, setJustifyId] = useState<string | null>(null);
+  const [justifyText, setJustifyText] = useState("");
+
 
   const { data = [] } = useQuery({
     queryKey: ["prescriptions", episodeId],
