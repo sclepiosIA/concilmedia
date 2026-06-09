@@ -1,60 +1,69 @@
-# Comparaison conciliation IA vs pharmacien
+## Refonte globale UI — charte ConcilMed·IA
 
-## Objectif
-Sous le bloc "Validation pharmacien" (ConciliationCompleteCard), permettre d'uploader un PDF de conciliation validée par le pharmacien (liste des divergences entre traitement habituel et prescription hospitalière). L'IA compare ensuite ce document avec sa propre analyse et produit un rapport de cohérence.
+Refonte cohérente avec l'identité visuelle du logo fourni : palette **navy profond + teal/cyan**, accent **healthcare/IA**, typographie **Sora (titres) + Manrope (corps)**. Le logo est intégré tel quel (image) dans le header.
 
-## Étapes
+### Palette extraite du logo
 
-### 1. Base de données (migration)
-Nouvelle table `pharmacist_conciliation_documents` :
-- `analysis_id` (FK conciliation_ai_analyses, unique)
-- `patient_id`, `episode_id`
-- `storage_path`, `file_name`, `mime_type`, `file_size`
-- `uploaded_by`, `uploaded_at`
-- `comparison_payload` jsonb (résultat IA)
-- `compared_at`
+| Token | Usage | Couleur |
+|---|---|---|
+| `--navy-900` | Texte fort, headers, CONCILMED | `#0d1b3d` |
+| `--navy-700` | Primary / boutons | `#1a2e5c` |
+| `--navy-500` | Hover / borders forts | `#2a4178` |
+| `--teal-500` | Accent IA, "IA" du logo, CTA secondaire | `#2dd4bf` |
+| `--teal-600` | Accent foncé, focus ring | `#0d9488` |
+| `--cyan-200` | Halos doux, backgrounds info | `#a5f3fc` |
+| `--paper` | Fond app | `#f8fafc` |
+| `--paper-2` | Cartes / sidebar | `#ffffff` |
 
-RLS : owner via `owns_patient(patient_id)`. GRANT authenticated + service_role.
-Storage : réutiliser le bucket `ordonnances` (déjà privé) sous le préfixe `pharmacist-validation/{patient_id}/`.
+Sémantique gravité conservée (crit/major/minor/ok) en harmonisant les bases vers la nouvelle palette.
 
-### 2. Server functions (`src/lib/conciliation/pharmacistDoc.functions.ts`)
-- `uploadPharmacistDoc` : reçoit `{ analysisId, patientId, episodeId, fileName, mimeType, base64 }` → upload bucket → insert row.
-- `getPharmacistDoc({ analysisId })` → row + URL signée (300s).
-- `deletePharmacistDoc({ analysisId })` → supprime fichier + row.
-- `comparePharmacistVsAI({ analysisId })` : charge le PDF (signed url), charge l'analyse IA (payload), appelle Lovable AI Gateway (`google/gemini-3-flash-preview`) en multimodal (PDF + JSON IA) avec un prompt qui extrait les divergences listées par le pharmacien puis renvoie un JSON :
-  ```
-  {
-    synthese: string,
-    concordance_globale: 0-100,
-    divergences_pharmacien: [{ medicament, type, severite_pharmacien, action }],
-    matches: [{ medicament, statut: "concordant|ia_seulement|pharmacien_seulement|divergent", commentaire }],
-    points_manques_par_ia: [...],
-    points_manques_par_pharmacien: [...],
-    conclusion: string
-  }
-  ```
-  Sauve dans `comparison_payload`.
+### 1. Tokens — `src/styles.css`
 
-### 3. UI : composant `PharmacistDocumentCompareCard.tsx`
-Inséré dans `ConciliationCompleteCard.tsx` **juste après** la `</section>` du panneau "Validation pharmacien" (ligne 459), uniquement quand `validation` existe (sinon message "Validez d'abord la conciliation").
-Contenu :
-- Zone upload PDF (drag & drop simple, input file, max 10 Mo, mime application/pdf).
-- Si document présent : lien d'aperçu (URL signée), date upload, bouton "Supprimer".
-- Bouton "Analyser la concordance" (déclenche `comparePharmacistVsAI`) avec spinner.
-- Affichage du résultat : badge de concordance globale, synthèse, deux listes (concordances / divergences) avec couleurs sémantiques (`text-ok`, `text-major`, `text-crit`), conclusion.
+- Réécriture du bloc `:root` (et `.dark`) avec les nouvelles valeurs OKLCH dérivées du navy/teal.
+- `--primary` → navy-700, `--accent` → teal-500, `--ring` → teal-600.
+- Sidebar : `--sidebar` blanc, `--sidebar-primary` navy-700, `--sidebar-accent` teal-50.
+- Ajout `--gradient-brand: linear-gradient(135deg, var(--navy-700), var(--teal-500))` et `--shadow-brand` (ombre teintée navy).
+- Polices : `--font-sans: "Manrope", ...`, `--font-display: "Sora", ...`. Suppression IBM Plex/Newsreader.
+- Nouvel utilitaire `@utility font-display` (Sora 600/700, tracking -0.02em).
 
-### 4. Hors périmètre
-- Pas de modification de `PharmacistConciliationPanel` ni du flux de validation existant.
-- Pas d'OCR custom : on s'appuie sur la lecture PDF native du modèle Gemini.
+### 2. Polices — `src/routes/__root.tsx`
 
-## Détails techniques
-- Upload côté client : lecture en base64 puis envoi à la server fn (PDF < 10 Mo).
-- `client.server` (`supabaseAdmin`) chargé via `await import` dans le handler.
-- Multimodal Gemini : message user `content` = `[{type:"text", text: prompt+payload IA}, {type:"file", file:{filename, file_data:"data:application/pdf;base64,..."}}]`.
-- Invalidation react-query : queryKey `["pharmacist-doc", analysisId]`.
+- Remplacer le `<link>` Google Fonts par Sora (400/600/700/800) + Manrope (400/500/600/700).
+- Title + meta inchangés (déjà OK).
 
-## Fichiers touchés
-- migration SQL
-- `src/lib/conciliation/pharmacistDoc.functions.ts` (nouveau)
-- `src/components/conciliation/PharmacistDocumentCompareCard.tsx` (nouveau)
-- `src/components/patient/ConciliationCompleteCard.tsx` (insertion du composant)
+### 3. Logo intégré
+
+- Upload du logo via Lovable Assets CLI depuis `/mnt/user-uploads/Logo-WhatsApp-Défi_1_-_ConcilMed_IA_1.png` → `src/assets/concilmed-logo.png.asset.json`.
+- Import dans `_authenticated/route.tsx` et `auth.tsx`.
+
+### 4. Header — `src/routes/_authenticated/route.tsx`
+
+- Remplacer l'icône `Pill` par `<img src={logo} className="h-9 w-9 rounded-full" />`.
+- Wordmark : `<span className="font-display font-bold">ConcilMed<span className="text-teal-600">·IA</span></span>` + sous-titre fin "Conciliation médicamenteuse".
+- Hauteur header 16, fond `bg-card/80 backdrop-blur` + bordure douce, sticky.
+- Nav items : pills arrondies, état actif teal underline.
+
+### 5. Page Auth — `src/routes/auth.tsx`
+
+- Hero gauche avec logo grand format + tagline "L'IA au service de la conciliation médicamenteuse" sur fond `--gradient-brand` subtil, formulaire à droite.
+
+### 6. Composants clés — légère mise au goût de la nouvelle charte
+
+- `ConciliationCompleteCard`, `AIAnalysisPanel`, `PharmacistDocumentCompareCard` : titres en `font-display`, badges concordance en teal, headers de cartes avec liseré dégradé.
+- Boutons primaires : `bg-primary` (navy) ; boutons accent IA : nouvelle variante `bg-teal-600 text-white hover:bg-teal-700`.
+- Aucune logique métier modifiée.
+
+### Hors périmètre
+
+- Pas de refonte du flux conciliation, pas de touches DB, pas de modif des server functions.
+- Pas de mode sombre revisité (juste tokens cohérents).
+- Pas de recréation SVG du logo (utilisation telle quelle).
+
+### Fichiers modifiés / créés
+
+- modifié : `src/styles.css`
+- modifié : `src/routes/__root.tsx`
+- modifié : `src/routes/_authenticated/route.tsx`
+- modifié : `src/routes/auth.tsx`
+- modifiés (légers) : `src/components/patient/ConciliationCompleteCard.tsx`, `src/components/conciliation/AIAnalysisPanel.tsx`, `src/components/conciliation/PharmacistDocumentCompareCard.tsx`
+- créé : `src/assets/concilmed-logo.png.asset.json`
