@@ -133,7 +133,29 @@ function PatientDetailPage() {
       <Card className="mb-6">
         <CardContent className="py-5 flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold">{patient.nom.toUpperCase()} {patient.prenom}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold">{patient.nom.toUpperCase()} {patient.prenom}</h1>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadLettre.isPending}
+                title={lettreAdmission ? "Lettre d'admission importée" : "Importer une lettre d'admission"}
+              >
+                <Upload className="h-4 w-4" />
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) uploadLettre.mutate(file);
+                }}
+              />
+            </div>
             <div className="text-sm text-muted-foreground mt-1">
               {patient.date_naissance && `${format(new Date(patient.date_naissance), "d MMMM yyyy", { locale: fr })}`}
               {age !== null && ` • ${age} ans`}
