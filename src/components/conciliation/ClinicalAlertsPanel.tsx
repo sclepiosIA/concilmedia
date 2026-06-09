@@ -1,9 +1,8 @@
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
   AlertTriangle,
@@ -102,6 +101,7 @@ function AlertItem({
   icon: Icon = AlertTriangle,
 }: AlertItemProps) {
   const [open, setOpen] = useState(false);
+  const detailsId = useId();
   const sev = sevStyle(severite);
   const conf = typeof confiance === "number" ? Math.max(0, Math.min(100, Math.round(confiance))) : null;
 
@@ -111,8 +111,13 @@ function AlertItem({
       onOpenChange={setOpen}
       className={`rounded-md border ${sev.container} overflow-hidden mb-2 last:mb-0`}
     >
-      <CollapsibleTrigger asChild>
-        <button type="button" className={`flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition-colors ${sev.trigger}`}>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={detailsId}
+          onClick={() => setOpen((current) => !current)}
+          className={`flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition-colors ${sev.trigger}`}
+        >
           <div className="flex items-start gap-3 flex-1 min-w-0">
             <span className={`mt-1.5 h-2.5 w-2.5 rounded-full shrink-0 ${sev.dot}`} />
             <div className="flex-1 min-w-0">
@@ -131,8 +136,7 @@ function AlertItem({
           </div>
           <ChevronDown className={`mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
         </button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+      <CollapsibleContent id={detailsId} className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
         <div className="px-3 pb-3">
           <div className="space-y-2 text-xs bg-white/80 rounded p-3 border">
           <Detail icon={Pill} label="Médicaments concernés" value={medicaments || title} />
