@@ -25,7 +25,9 @@ type Traitement = {
   posologie_midi: string | null;
   posologie_soir: string | null;
   posologie_coucher: string | null;
+  posologie_texte: string | null;
   indication: string | null;
+  duree: string | null;
   source: string | null;
 };
 
