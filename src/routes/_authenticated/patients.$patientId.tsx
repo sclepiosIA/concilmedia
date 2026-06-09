@@ -175,7 +175,7 @@ function PatientDetailPage() {
                 title={lettreAdmission ? "Remplacer la lettre d'admission" : "Importer une lettre d'admission"}
               >
                 <Upload className="h-4 w-4" />
-                <span>Lettre d'admission{lettreAdmission ? " ✓" : ""}</span>
+                <span>{uploadLettre.isPending ? "Analyse en cours…" : `Lettre d'admission${lettreAdmission ? " ✓" : ""}`}</span>
               </Button>
               <input
                 ref={fileInputRef}
