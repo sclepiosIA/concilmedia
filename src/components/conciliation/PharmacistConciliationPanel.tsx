@@ -33,16 +33,18 @@ export function PharmacistConciliationPanel({
   onValidate: (id: string) => void;
   isLoading: boolean;
 }) {
+  const actives = conciliations.filter((c) => c.statut !== "resolu");
+
   if (isLoading) return <p className="text-sm text-muted-foreground py-4">Chargement…</p>;
 
   return (
     <div className="space-y-3">
-      {conciliations.length === 0 && (
+      {actives.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-8">
           Aucune divergence active.
         </p>
       )}
-      {conciliations.map((c) => (
+      {actives.map((c) => (
         <ConciliationRow key={c.id} item={c} onUpdate={onUpdate} onValidate={onValidate} />
       ))}
     </div>
