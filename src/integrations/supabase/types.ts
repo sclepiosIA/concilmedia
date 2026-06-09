@@ -598,13 +598,20 @@ export type Database = {
           date_debut: string
           date_fin: string | null
           dosage: string | null
+          dosage_unite: string | null
           episode_id: string
           id: string
           indication: string | null
           medicament: string
+          nom_commercial: string | null
           patient_id: string
           posologie: string | null
+          posologie_coucher: string | null
+          posologie_matin: string | null
+          posologie_midi: string | null
+          posologie_soir: string | null
           prescripteur: string | null
+          source: string | null
           source_document_id: string | null
           voie_administration: string | null
         }
@@ -614,13 +621,20 @@ export type Database = {
           date_debut?: string
           date_fin?: string | null
           dosage?: string | null
+          dosage_unite?: string | null
           episode_id: string
           id?: string
           indication?: string | null
           medicament: string
+          nom_commercial?: string | null
           patient_id: string
           posologie?: string | null
+          posologie_coucher?: string | null
+          posologie_matin?: string | null
+          posologie_midi?: string | null
+          posologie_soir?: string | null
           prescripteur?: string | null
+          source?: string | null
           source_document_id?: string | null
           voie_administration?: string | null
         }
@@ -630,13 +644,20 @@ export type Database = {
           date_debut?: string
           date_fin?: string | null
           dosage?: string | null
+          dosage_unite?: string | null
           episode_id?: string
           id?: string
           indication?: string | null
           medicament?: string
+          nom_commercial?: string | null
           patient_id?: string
           posologie?: string | null
+          posologie_coucher?: string | null
+          posologie_matin?: string | null
+          posologie_midi?: string | null
+          posologie_soir?: string | null
           prescripteur?: string | null
+          source?: string | null
           source_document_id?: string | null
           voie_administration?: string | null
         }
