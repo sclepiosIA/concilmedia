@@ -115,7 +115,7 @@ function PatientDetailPage() {
       <div className="space-y-6">
         <AISynthesisHeader patientId={patientId} />
         <ClinicalProfileCard patientId={patientId} />
-        <section><h2 className="text-lg font-semibold mb-3">Épisodes</h2><EpisodesSection patientId={patientId} /></section>
+        
         <section>
           <h2 className="text-lg font-semibold mb-3">Traitements</h2>
           <div className="mb-3"><MedicationProfileCard patientId={patientId} /></div>
