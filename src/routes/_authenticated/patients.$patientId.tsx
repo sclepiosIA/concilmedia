@@ -102,8 +102,8 @@ function PatientDetailPage() {
             <Button variant="outline" onClick={() => setSyntheseOpen(true)}>
               <FileText className="h-4 w-4 mr-1" /> Synthèse patient
             </Button>
-            <Button onClick={() => createEpisode.mutate()} disabled={createEpisode.isPending}>
-              <FilePlus2 className="h-4 w-4 mr-1" /> Nouvel épisode
+            <Button onClick={() => setBulkOpen(true)}>
+              <FilePlus2 className="h-4 w-4 mr-1" /> Nouvelle conciliation
             </Button>
           </div>
         </CardContent>
