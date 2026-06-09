@@ -309,7 +309,7 @@ export const commitBulkImport = createServerFn({ method: "POST" })
         }
 
         // Agréger prescriptions hospi pour ce patient
-        const hasHospiSignal = item.document_type === "ordonnance_hospitaliere" || (item.prescriptions_hospitalieres?.length ?? 0) > 0;
+        const hasHospiSignal = item.document_type === "ordonnance_hospitaliere" || item.document_type === "lettre_admission" || (item.prescriptions_hospitalieres?.length ?? 0) > 0 || !!item.episode_context?.motif;
         if (data.auto_create_episode && hasHospiSignal && patientId) {
           const existing = hospiByPatient.get(patientId) ?? {
             patientId,
@@ -333,7 +333,7 @@ export const commitBulkImport = createServerFn({ method: "POST" })
 
     // Créer les épisodes + insérer prescriptions hospi
     for (const pending of hospiByPatient.values()) {
-      if (pending.prescriptions.length === 0) continue;
+      if (pending.prescriptions.length === 0 && !pending.context.motif) continue;
       try {
         const { data: ep, error } = await supabase.from("episodes").insert({
           patient_id: pending.patientId,
