@@ -158,6 +158,28 @@
   --ok-bg:     oklch(0.960 0.034 160);
   --ok-line:   oklch(0.885 0.065 160);
 
+  /* Échelle de tri FRENCH-MED (P1 rouge → P5 bleu) */
+  --triage-1:      oklch(0.585 0.225 27);
+  --triage-1-fg:   oklch(0.985 0.005 27);
+  --triage-1-bg:   oklch(0.965 0.030 27);
+  --triage-1-line: oklch(0.860 0.080 27);
+  --triage-2:      oklch(0.700 0.180 50);
+  --triage-2-fg:   oklch(0.205 0.075 50);
+  --triage-2-bg:   oklch(0.970 0.045 60);
+  --triage-2-line: oklch(0.880 0.090 55);
+  --triage-3:      oklch(0.840 0.165 95);
+  --triage-3-fg:   oklch(0.260 0.080 80);
+  --triage-3-bg:   oklch(0.975 0.060 95);
+  --triage-3-line: oklch(0.880 0.115 95);
+  --triage-4:      oklch(0.685 0.155 152);
+  --triage-4-fg:   oklch(0.205 0.060 160);
+  --triage-4-bg:   oklch(0.965 0.045 155);
+  --triage-4-line: oklch(0.870 0.090 155);
+  --triage-5:      oklch(0.620 0.130 245);
+  --triage-5-fg:   oklch(0.985 0.005 245);
+  --triage-5-bg:   oklch(0.965 0.030 245);
+  --triage-5-line: oklch(0.860 0.075 245);
+
   /* Gradients & shadows brand */
   --gradient-brand: linear-gradient(135deg, var(--navy-700) 0%, var(--teal-600) 100%);
   --gradient-brand-soft: linear-gradient(135deg, color-mix(in oklab, var(--navy-700) 10%, transparent) 0%, color-mix(in oklab, var(--teal-500) 14%, transparent) 100%);
