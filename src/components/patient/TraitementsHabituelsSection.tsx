@@ -12,6 +12,7 @@ import {
 import { Trash2, Pill, Sun, CloudSun, Sunset, Moon } from "lucide-react";
 import { toast } from "sonner";
 import { OrdonnanceUploader } from "@/components/conciliation/OrdonnanceUploader";
+import { SourceDocumentLink } from "@/components/conciliation/SourceDocumentLink";
 
 
 type Traitement = {
