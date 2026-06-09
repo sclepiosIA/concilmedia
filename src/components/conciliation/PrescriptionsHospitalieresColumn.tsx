@@ -108,6 +108,19 @@ function resolvePrises(p: Prescription): [string | null, string | null, string |
   }
   return parsePosologie(p.posologie);
 }
+function dciKey(s: string | null | undefined): string {
+  const raw = (s ?? "")
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  return raw.split(" ")[0] ?? "";
+}
+
+type Omission = { id: string; episode_id: string; traitement_id: string; justifiee: boolean; commentaire: string | null };
+
 
 export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { episodeId: string; patientId: string }) {
   const qc = useQueryClient();
