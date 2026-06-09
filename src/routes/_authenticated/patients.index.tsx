@@ -389,10 +389,10 @@ function TriagePill({
     <button
       type="button"
       onClick={onToggle}
-      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-foreground transition-all ${
         active ? "ring-2 ring-offset-1 ring-foreground/30" : "hover:brightness-95"
       } ${empty ? "opacity-50" : ""}`}
-      style={{ background: m.bg, color: m.fg, border: `1px solid ${m.ring}` }}
+      style={{ background: m.bg, border: `1px solid ${m.ring}` }}
       title={`${m.label} — ${m.delay}`}
       aria-pressed={active}
     >
@@ -410,6 +410,7 @@ function TriagePill({
         {count}
       </span>
     </button>
+
   );
 }
 
