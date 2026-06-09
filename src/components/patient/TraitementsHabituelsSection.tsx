@@ -251,6 +251,3 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
     </div>
   );
 }
-    </div>
-  );
-}
