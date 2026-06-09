@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, FileText, ShieldCheck, Pencil } from "lucide-react";
+import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, FileText, ShieldCheck, Pencil, ArrowLeftRight, AlertCircle, Clock } from "lucide-react";
 import { analyzePatientConciliationComplete } from "@/lib/conciliation/analyzePatientConciliationComplete.functions";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
