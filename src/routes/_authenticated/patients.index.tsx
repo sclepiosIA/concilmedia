@@ -134,7 +134,27 @@ function PatientsListPage() {
     <div className="container mx-auto px-4 py-6 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Patients</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold font-display">Patients</h1>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Échelle FRENCH-MED">
+                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-[520px] max-w-[90vw]">
+                <div className="space-y-2">
+                  <div className="font-semibold text-sm">Échelle FRENCH-MED — priorité de relecture</div>
+                  <p className="text-xs text-muted-foreground">
+                    Inspirée de la FRENCH (SFMU). 5 paliers, du plus urgent (P1) au moins urgent (P5),
+                    calculés automatiquement à partir des divergences, du score de risque et de la
+                    validation pharmacien.
+                  </p>
+                  <TriageLegend />
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <p className="text-sm text-muted-foreground">{patients.length} patient(s)</p>
         </div>
         <div className="flex items-center gap-2">
