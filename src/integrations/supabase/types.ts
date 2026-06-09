@@ -645,6 +645,79 @@ export type Database = {
         }
         Relationships: []
       }
+      pharmacist_conciliation_documents: {
+        Row: {
+          analysis_id: string
+          compared_at: string | null
+          comparison_payload: Json | null
+          created_at: string
+          episode_id: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          mime_type: string
+          patient_id: string
+          storage_path: string
+          updated_at: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          analysis_id: string
+          compared_at?: string | null
+          comparison_payload?: Json | null
+          created_at?: string
+          episode_id?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type: string
+          patient_id: string
+          storage_path: string
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          analysis_id?: string
+          compared_at?: string | null
+          comparison_payload?: Json | null
+          created_at?: string
+          episode_id?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string
+          patient_id?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacist_conciliation_documents_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: true
+            referencedRelation: "conciliation_ai_analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacist_conciliation_documents_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacist_conciliation_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prescription_omissions: {
         Row: {
           commentaire: string | null
