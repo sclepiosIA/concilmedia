@@ -73,9 +73,16 @@ const EpisodeContextSchema = z.object({
   date_admission: z.string().optional().nullable(),
 }).optional().nullable();
 
+const PrescriberSchema = z.object({
+  name: z.string().optional().nullable(),
+  specialty: z.string().optional().nullable(),
+  prescription_date: z.string().optional().nullable(),
+}).optional().nullable();
+
 const DossierSchema = z.object({
   document_type: z.enum(["ordonnance_ville", "ordonnance_hospitaliere", "lettre_admission", "compte_rendu", "bilan_bio", "autre"]).default("autre"),
   patient: PatientSchema,
+  prescriber: PrescriberSchema,
   antecedents: z.array(AntecedentSchema).default([]),
   comorbidites: z.array(ComorbiditeSchema).default([]),
   allergies: z.array(AllergieSchema).default([]),
