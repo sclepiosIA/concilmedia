@@ -342,6 +342,13 @@ export const commitBulkImport = createServerFn({ method: "POST" })
         if (error || !ep) throw new Error(error?.message ?? "Création épisode échouée");
         const episodeId = (ep as { id: string }).id;
 
+        // Lier le document source à l'épisode si possible
+        if (pending.sourceDocumentId) {
+          await supabase.from("documents_sources")
+            .update({ episode_id: episodeId } as never)
+            .eq("id", pending.sourceDocumentId);
+        }
+
         // Dédup par medicament (lowercase)
         const seen = new Set<string>();
         const rows = pending.prescriptions
@@ -362,6 +369,7 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             date_debut: p.date_debut ?? new Date().toISOString().slice(0, 10),
             date_fin: p.date_fin ?? null,
             actif: true,
+            source_document_id: pending.sourceDocumentId,
           }));
         if (rows.length) {
           await supabase.from("prescriptions_hospitalieres").insert(rows as never);
