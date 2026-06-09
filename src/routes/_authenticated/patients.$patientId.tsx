@@ -17,7 +17,6 @@ import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImp
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { MedicationProfileCard } from "@/components/patient/MedicationProfileCard";
-import { AISynthesisHeader } from "@/components/patient/AISynthesisHeader";
 
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
@@ -110,7 +109,6 @@ function PatientDetailPage() {
       <SynthesePatientDialog patientId={patientId} open={syntheseOpen} onOpenChange={setSyntheseOpen} />
 
       <div className="space-y-6">
-        <AISynthesisHeader patientId={patientId} />
         <ClinicalProfileCard patientId={patientId} />
         
         <section>
