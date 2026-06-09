@@ -53,28 +53,7 @@ export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
               </Badge>
             </div>
             <p className="text-xs">{payload.synthese}</p>
-            {payload.interactions?.length > 0 && (
-              <Section title={`Interactions (${payload.interactions.length})`}>
-                {payload.interactions.map((i, k) => (
-                  <Item key={k} title={`${i.dci_1} ↔ ${i.dci_2}`} sub={`${i.severite} — ${i.mecanisme}`} note={i.recommandation} />
-                ))}
-              </Section>
-            )}
-            {payload.contre_indications?.length > 0 && (
-              <Section title={`Contre-indications (${payload.contre_indications.length})`}>
-                {payload.contre_indications.map((c, k) => <Item key={k} title={c.medicament} sub={c.raison} note={c.recommandation} />)}
-              </Section>
-            )}
-            {payload.doublons_therapeutiques?.length > 0 && (
-              <Section title={`Doublons (${payload.doublons_therapeutiques.length})`}>
-                {payload.doublons_therapeutiques.map((d, k) => <Item key={k} title={d.medicaments.join(" + ")} sub={d.classe} note={d.recommandation} />)}
-              </Section>
-            )}
-            {payload.adaptations_posologiques?.length > 0 && (
-              <Section title={`Adaptations (${payload.adaptations_posologiques.length})`}>
-                {payload.adaptations_posologiques.map((a, k) => <Item key={k} title={a.medicament} sub={a.raison} note={a.recommandation} />)}
-              </Section>
-            )}
+            <ClinicalAlertsPanel payload={payload} />
           </div>
         )}
         {!payload && !mut.isPending && (
