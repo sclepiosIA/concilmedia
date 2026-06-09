@@ -9,8 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Trash2, Pill, Sun, CloudSun, Sunset, Moon, FileText, Clock, Stethoscope, User } from "lucide-react";
-import { toast } from "sonner";
+import { Trash2, Pill, Sun, CloudSun, Sunset, Moon, FileText, Clock, Stethoscope } from "lucide-react";
 import { OrdonnanceUploader } from "@/components/conciliation/OrdonnanceUploader";
 import { SourceDocumentLink } from "@/components/conciliation/SourceDocumentLink";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
