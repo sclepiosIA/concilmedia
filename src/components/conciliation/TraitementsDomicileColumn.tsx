@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Home, Pill, Sun, CloudSun, Sunset, Moon, Trash2 } from "lucide-react";
+import { OrdonnanceUploader } from "@/components/conciliation/OrdonnanceUploader";
 
 type Traitement = {
   id: string;
@@ -95,7 +96,8 @@ export function TraitementsDomicileColumn({ patientId }: { patientId: string }) 
           <Home className="h-4 w-4" /> Traitement domicile ({data.length})
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="space-y-3">
+        <OrdonnanceUploader patientId={patientId} />
         {data.length === 0 ? (
           <div className="py-8 text-center text-sm text-muted-foreground">
             <Pill className="h-8 w-8 mx-auto mb-2 opacity-40" />
