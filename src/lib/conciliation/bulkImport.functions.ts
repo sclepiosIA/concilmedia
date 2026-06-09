@@ -123,6 +123,7 @@ Règles CRUCIALES de classification :
 - "compte_rendu" = CRH, lettre de consultation → extrais antécédents/comorbidités/allergies/traitements habituels mentionnés.
 - "bilan_bio" = laboratoire → remplis surtout "biologie".
 - Si le document liste à la fois traitement habituel ET nouvelles prescriptions hospi, sépare-les correctement.
+- Pour chaque prescription hospitalière, EXTRAIS la date du jour de prescription (jour J) dans "date_debut" (format YYYY-MM-DD). C'est la date imprimée en tête d'ordonnance hospitalière ou à côté de chaque ligne. Si une durée ou date d'arrêt est précisée, remplis "date_fin".
 - Privilégie la DCI au nom commercial dans "traitements"; dans "prescriptions_hospitalieres" garde le libellé tel qu'écrit.
 - Biologie prioritaire : DFG, créatinine, kaliémie, natrémie, INR, TP, hémoglobine, plaquettes, leucocytes, ASAT, ALAT, glycémie, HbA1c, CRP.
 - Omets les champs inconnus, n'invente rien. Renvoie [] pour les sections vides.
