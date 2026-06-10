@@ -132,8 +132,7 @@ export const getTask = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: task, error } = await supabaseAdmin
       .from("ai_tasks")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .select("id, slug, label, description, model, system_prompt, temperature, max_tokens, current_version, provider_id, execution_mode, provider:ai_providers(id, name, kind)" as any)
+      .select("id, slug, label, description, model, system_prompt, temperature, max_tokens, current_version, provider_id, execution_mode, provider:ai_providers(id, name, kind)")
       .eq("slug", data.slug)
       .single();
     if (error) throw new Error(error.message);
