@@ -89,7 +89,7 @@ export function ConciliationCompleteCard({ patientId, autoStart = false }: { pat
   const [pharmacienNom, setPharmacienNom] = useState("");
   const [commentaireGlobal, setCommentaireGlobal] = useState("");
   const [editingValidation, setEditingValidation] = useState(false);
-  const [decisionAidCollapsed, setDecisionAidCollapsed] = useState(false);
+  const [decisionAidCollapsed, setDecisionAidCollapsed] = useState(true);
 
   // Hydrate local state from saved validation OR from auth user
   useEffect(() => {
