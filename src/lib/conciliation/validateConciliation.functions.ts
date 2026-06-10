@@ -101,6 +101,17 @@ export const saveConciliationValidation = createServerFn({ method: "POST" })
       console.warn("[validateConciliation] recordFeedbackSignals failed:", e);
     }
 
+    // Métrique : événement de validation
+    try {
+      const itemCount = Array.isArray(data.itemDecisions) ? data.itemDecisions.length : 0;
+      await supabase.from("conciliation_events").insert({
+        user_id: userId,
+        step: "validation", kind: "action",
+        patient_id: data.patientId,
+        metadata: { item_count: itemCount, analysis_id: data.analysisId } as never,
+      });
+    } catch (e) { console.warn("[validateConciliation] event log failed:", e); }
+
     return result;
   });
 
