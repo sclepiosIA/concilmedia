@@ -98,6 +98,14 @@ function BdpmAdminPage() {
             <RefreshCw className={`w-4 h-4 mr-2 ${importMut.isPending ? "animate-spin" : ""}`} />
             {importMut.isPending ? "Import en cours…" : "Synchroniser BDPM"}
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => backfillMut.mutate(undefined)}
+            disabled={backfillMut.isPending || (status?.specialites ?? 0) === 0}
+          >
+            {backfillMut.isPending ? "Backfill en cours…" : "Backfill CIS/ATC existant"}
+          </Button>
+
         </div>
         {status?.lastRun && (
           <div className="mt-4 text-xs text-muted-foreground border-t pt-3">
