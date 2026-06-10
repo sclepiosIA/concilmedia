@@ -85,8 +85,25 @@ export const saveConciliationValidation = createServerFn({ method: "POST" })
       .update({ archived: true })
       .eq("id", data.patientId);
     if (archErr) console.warn("[validateConciliation] archive failed:", archErr.message);
+
+    // RLHF — capture des signaux de feedback (pipeline d'amélioration continue).
+    try {
+      const { recordFeedbackSignals } = await import("@/lib/ai/feedbackSignals.functions");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (recordFeedbackSignals as any)({
+        data: {
+          validationId: result.id,
+          analysisId: data.analysisId,
+          patientId: data.patientId,
+        },
+      });
+    } catch (e) {
+      console.warn("[validateConciliation] recordFeedbackSignals failed:", e);
+    }
+
     return result;
   });
+
 
 const GetInput = z.object({ analysisId: z.string().uuid() });
 

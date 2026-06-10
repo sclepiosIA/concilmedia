@@ -22,6 +22,7 @@ import { Route as AuthenticatedPatientsPatientIdRouteImport } from './routes/_au
 import { Route as AuthenticatedEpisodesEpisodeIdRouteImport } from './routes/_authenticated/episodes.$episodeId'
 import { Route as AuthenticatedAdminAiRouteImport } from './routes/_authenticated/admin.ai'
 import { Route as AuthenticatedAdminAiIndexRouteImport } from './routes/_authenticated/admin.ai.index'
+import { Route as AuthenticatedAdminAiRlhfRouteImport } from './routes/_authenticated/admin.ai.rlhf'
 import { Route as AuthenticatedAdminAiProvidersRouteImport } from './routes/_authenticated/admin.ai.providers'
 import { Route as AuthenticatedAdminAiTasksSlugRouteImport } from './routes/_authenticated/admin.ai.tasks.$slug'
 
@@ -95,6 +96,12 @@ const AuthenticatedAdminAiIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAdminAiRoute,
   } as any)
+const AuthenticatedAdminAiRlhfRoute =
+  AuthenticatedAdminAiRlhfRouteImport.update({
+    id: '/rlhf',
+    path: '/rlhf',
+    getParentRoute: () => AuthenticatedAdminAiRoute,
+  } as any)
 const AuthenticatedAdminAiProvidersRoute =
   AuthenticatedAdminAiProvidersRouteImport.update({
     id: '/providers',
@@ -121,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients/': typeof AuthenticatedPatientsIndexRoute
   '/admin/ai/providers': typeof AuthenticatedAdminAiProvidersRoute
+  '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
 }
@@ -136,6 +144,7 @@ export interface FileRoutesByTo {
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients': typeof AuthenticatedPatientsIndexRoute
   '/admin/ai/providers': typeof AuthenticatedAdminAiProvidersRoute
+  '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/admin/ai': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
 }
@@ -154,6 +163,7 @@ export interface FileRoutesById {
   '/_authenticated/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/_authenticated/patients/': typeof AuthenticatedPatientsIndexRoute
   '/_authenticated/admin/ai/providers': typeof AuthenticatedAdminAiProvidersRoute
+  '/_authenticated/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/_authenticated/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/_authenticated/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
 }
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/patients/$patientId'
     | '/patients/'
     | '/admin/ai/providers'
+    | '/admin/ai/rlhf'
     | '/admin/ai/'
     | '/admin/ai/tasks/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/patients/$patientId'
     | '/patients'
     | '/admin/ai/providers'
+    | '/admin/ai/rlhf'
     | '/admin/ai'
     | '/admin/ai/tasks/$slug'
   id:
@@ -204,6 +216,7 @@ export interface FileRouteTypes {
     | '/_authenticated/patients/$patientId'
     | '/_authenticated/patients/'
     | '/_authenticated/admin/ai/providers'
+    | '/_authenticated/admin/ai/rlhf'
     | '/_authenticated/admin/ai/'
     | '/_authenticated/admin/ai/tasks/$slug'
   fileRoutesById: FileRoutesById
@@ -307,6 +320,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAiIndexRouteImport
       parentRoute: typeof AuthenticatedAdminAiRoute
     }
+    '/_authenticated/admin/ai/rlhf': {
+      id: '/_authenticated/admin/ai/rlhf'
+      path: '/rlhf'
+      fullPath: '/admin/ai/rlhf'
+      preLoaderRoute: typeof AuthenticatedAdminAiRlhfRouteImport
+      parentRoute: typeof AuthenticatedAdminAiRoute
+    }
     '/_authenticated/admin/ai/providers': {
       id: '/_authenticated/admin/ai/providers'
       path: '/providers'
@@ -326,12 +346,14 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAdminAiRouteChildren {
   AuthenticatedAdminAiProvidersRoute: typeof AuthenticatedAdminAiProvidersRoute
+  AuthenticatedAdminAiRlhfRoute: typeof AuthenticatedAdminAiRlhfRoute
   AuthenticatedAdminAiIndexRoute: typeof AuthenticatedAdminAiIndexRoute
   AuthenticatedAdminAiTasksSlugRoute: typeof AuthenticatedAdminAiTasksSlugRoute
 }
 
 const AuthenticatedAdminAiRouteChildren: AuthenticatedAdminAiRouteChildren = {
   AuthenticatedAdminAiProvidersRoute: AuthenticatedAdminAiProvidersRoute,
+  AuthenticatedAdminAiRlhfRoute: AuthenticatedAdminAiRlhfRoute,
   AuthenticatedAdminAiIndexRoute: AuthenticatedAdminAiIndexRoute,
   AuthenticatedAdminAiTasksSlugRoute: AuthenticatedAdminAiTasksSlugRoute,
 }

@@ -58,7 +58,9 @@ interface Piste {
   benefices: string[];
   miseEnOeuvre: string[];
   prerequis: string[];
+  statut?: "Livré v1" | "En cours" | "Roadmap";
 }
+
 
 const PISTES: Piste[] = [
   {
@@ -87,7 +89,9 @@ const PISTES: Piste[] = [
       "Consentement et anonymisation conformes RGPD/HDS",
       "Volume minimum de cas validés (~1000) avant fine-tuning utile",
     ],
+    statut: "Livré v1",
   },
+
   {
     id: 2,
     titre: "Ajout de la BDPM (Base de Données Publique des Médicaments)",
@@ -540,6 +544,11 @@ function AmeliorationsPage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
+                      {p.statut && (
+                        <Badge className="bg-emerald-600 hover:bg-emerald-700">
+                          {p.statut}
+                        </Badge>
+                      )}
                       <Badge variant="outline" className={HORIZON_VARIANT[p.horizon]}>
                         {p.horizon}
                       </Badge>
@@ -548,6 +557,7 @@ function AmeliorationsPage() {
                       </Badge>
                     </div>
                   </div>
+
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
                   <div>
