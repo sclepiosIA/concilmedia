@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedEvaluationRouteImport } from './routes/_authenticated/evaluation'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedArchitectureIaRouteImport } from './routes/_authenticated/architecture-ia'
+import { Route as AuthenticatedAmeliorationsRouteImport } from './routes/_authenticated/ameliorations'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedPatientsIndexRouteImport } from './routes/_authenticated/patients.index'
 import { Route as AuthenticatedPatientsPatientIdRouteImport } from './routes/_authenticated/patients.$patientId'
@@ -52,6 +53,12 @@ const AuthenticatedArchitectureIaRoute =
   AuthenticatedArchitectureIaRouteImport.update({
     id: '/architecture-ia',
     path: '/architecture-ia',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAmeliorationsRoute =
+  AuthenticatedAmeliorationsRouteImport.update({
+    id: '/ameliorations',
+    path: '/ameliorations',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -105,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/ameliorations': typeof AuthenticatedAmeliorationsRoute
   '/architecture-ia': typeof AuthenticatedArchitectureIaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
@@ -120,6 +128,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/ameliorations': typeof AuthenticatedAmeliorationsRoute
   '/architecture-ia': typeof AuthenticatedArchitectureIaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
@@ -136,6 +145,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/ameliorations': typeof AuthenticatedAmeliorationsRoute
   '/_authenticated/architecture-ia': typeof AuthenticatedArchitectureIaRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/evaluation': typeof AuthenticatedEvaluationRoute
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/admin'
+    | '/ameliorations'
     | '/architecture-ia'
     | '/dashboard'
     | '/evaluation'
@@ -168,6 +179,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/admin'
+    | '/ameliorations'
     | '/architecture-ia'
     | '/dashboard'
     | '/evaluation'
@@ -183,6 +195,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/admin'
+    | '/_authenticated/ameliorations'
     | '/_authenticated/architecture-ia'
     | '/_authenticated/dashboard'
     | '/_authenticated/evaluation'
@@ -243,6 +256,13 @@ declare module '@tanstack/react-router' {
       path: '/architecture-ia'
       fullPath: '/architecture-ia'
       preLoaderRoute: typeof AuthenticatedArchitectureIaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ameliorations': {
+      id: '/_authenticated/ameliorations'
+      path: '/ameliorations'
+      fullPath: '/ameliorations'
+      preLoaderRoute: typeof AuthenticatedAmeliorationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin': {
@@ -332,6 +352,7 @@ const AuthenticatedAdminRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedAmeliorationsRoute: typeof AuthenticatedAmeliorationsRoute
   AuthenticatedArchitectureIaRoute: typeof AuthenticatedArchitectureIaRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEvaluationRoute: typeof AuthenticatedEvaluationRoute
@@ -342,6 +363,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedAmeliorationsRoute: AuthenticatedAmeliorationsRoute,
   AuthenticatedArchitectureIaRoute: AuthenticatedArchitectureIaRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEvaluationRoute: AuthenticatedEvaluationRoute,
