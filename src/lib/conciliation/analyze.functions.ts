@@ -128,14 +128,25 @@ Règles cliniques :
 Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
     const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
+    // RLHF — injection de few-shot exemplars issus du feedback pharmacien (best-effort).
+    let __finalSystemPrompt = __systemPrompt;
+    try {
+      const { getFeedbackExemplars } = await import("@/lib/ai/feedbackSignals.functions");
+      const exemplars = await getFeedbackExemplars(__aiTaskSlug, 5);
+      if (exemplars) __finalSystemPrompt = __systemPrompt + "\n" + exemplars;
+    } catch (e) {
+      console.warn("[analyze] feedback exemplars unavailable:", e);
+    }
+
     let result;
     try {
       result = await generateText({
         ...callOptions,
         model,
-        system: __systemPrompt,
+        system: __finalSystemPrompt,
         prompt: `Dossier patient :\n${JSON.stringify(dossier, null, 2)}`,
       });
+
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes("429")) throw new Error("Limite IA atteinte, réessayez dans quelques instants.");
