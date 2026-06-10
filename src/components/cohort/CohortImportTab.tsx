@@ -10,6 +10,7 @@ import { Upload, Loader2, Plus, FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 import { createCohort, listCohorts } from "@/lib/cohort/cohort.functions";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
+import { CohortPatientsRosterUploader } from "@/components/cohort/CohortPatientsRosterUploader";
 
 export function CohortImportTab({ activeCohortId, onCohortSelected }: { activeCohortId: string | null; onCohortSelected: (id: string) => void }) {
   const qc = useQueryClient();
@@ -84,6 +85,8 @@ export function CohortImportTab({ activeCohortId, onCohortSelected }: { activeCo
           ))}
         </div>
       </Card>
+
+      <CohortPatientsRosterUploader cohortId={activeCohortId} />
 
       <Card className="p-4 space-y-3">
         <h3 className="font-semibold">Upload de fichiers patients (multi-patient)</h3>
