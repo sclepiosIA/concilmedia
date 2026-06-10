@@ -194,6 +194,7 @@ export const updateTask = createServerFn({ method: "POST" })
       temperature: data.temperature ?? null,
       max_tokens: data.max_tokens ?? null,
       current_version: nextVersion,
+      extra_config: { reasoning_effort: data.reasoning_effort ?? null },
     };
     if (data.execution_mode) update.execution_mode = data.execution_mode;
 
