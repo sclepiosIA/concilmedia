@@ -57,7 +57,7 @@ export function usePatientsTriage(patientIds: string[]) {
           .in("id", patientIds),
         supabase
           .from("traitements_habituels")
-          .select("patient_id")
+          .select("patient_id, dci, nom_commercial")
           .eq("actif", true)
           .in("patient_id", patientIds),
         supabase
