@@ -144,7 +144,9 @@ const PISTES: Piste[] = [
       "Droits de réutilisation des thésaurus (vérifier licences Thériaque/Vidal)",
       "Activation pgvector sur la base",
     ],
+    statut: "Livré v1",
   },
+
   {
     id: 4,
     titre: "Utilisation de données réelles (pas synthétiques)",
