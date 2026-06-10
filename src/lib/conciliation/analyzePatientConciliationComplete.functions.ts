@@ -217,7 +217,7 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
 
     // Garde-fou : on borne la durée d'appel et la longueur de sortie pour
     // éviter un "chargement infini" côté UI si le modèle traîne.
-    const TIMEOUT_MS = 110_000;
+    const TIMEOUT_MS = 24_000;
     const callOptionsWithDefaults: Record<string, unknown> = { ...callOptions };
     const { isGpt5Family } = await import("@/lib/ai/runAITask.server");
     const isGpt5 = isGpt5Family(__modelIdUsed, "lovable");
@@ -233,39 +233,37 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
         const key = provOpts.lovable !== undefined ? "lovable" : "openai";
         callOptionsWithDefaults.providerOptions = {
           ...provOpts,
-          [key]: { ...(provOpts[key] ?? {}), maxCompletionTokens: 4000 },
+          [key]: { ...(provOpts[key] ?? {}), maxCompletionTokens: 1600 },
         };
       } else {
-        callOptionsWithDefaults.maxOutputTokens = 4000;
+        callOptionsWithDefaults.maxOutputTokens = 1600;
       }
     }
 
 
-    let result;
+    let payload: AIAnalysisPayload;
     try {
-      result = await generateText({
+      const result = await generateText({
         ...callOptionsWithDefaults,
         model,
         system: __systemPrompt,
-        prompt: `Dossier patient complet :\n${JSON.stringify(dossier, null, 2)}`,
+        prompt: `Dossier patient complet :\n${JSON.stringify(dossier)}`,
         abortSignal: AbortSignal.timeout(TIMEOUT_MS),
       });
+      const { parseLlmJson } = await import("@/lib/llm/parseLlmJson");
+      payload = parseLlmJson<AIAnalysisPayload>(result.text);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       if (e instanceof Error && (e.name === "AbortError" || e.name === "TimeoutError" || msg.toLowerCase().includes("abort") || msg.toLowerCase().includes("timeout"))) {
-        throw new Error("Analyse IA trop longue (timeout). Réessayez ou choisissez un modèle plus rapide dans Admin IA.");
+        payload = buildFastConciliationPayload(dossier as AnalysisDossier, "l'analyse IA a dépassé le délai disponible");
+      } else if (msg.includes("429")) {
+        throw new Error("Limite IA atteinte, réessayez.");
+      } else if (msg.includes("402")) {
+        throw new Error("Crédits IA épuisés.");
+      } else {
+        console.warn("[conciliation_complete] IA indisponible, fallback rapide:", msg);
+        payload = buildFastConciliationPayload(dossier as AnalysisDossier, "l'analyse IA complète est momentanément indisponible");
       }
-      if (msg.includes("429")) throw new Error("Limite IA atteinte, réessayez.");
-      if (msg.includes("402")) throw new Error("Crédits IA épuisés.");
-      throw e;
-    }
-
-    const { parseLlmJson } = await import("@/lib/llm/parseLlmJson");
-    let payload: AIAnalysisPayload;
-    try {
-      payload = parseLlmJson<AIAnalysisPayload>(result.text);
-    } catch {
-      throw new Error("Réponse IA non parsable");
     }
 
     await supabase.from("conciliation_ai_analyses").insert({
