@@ -41,7 +41,7 @@ export const backfillBdpmEnrichment = createServerFn({ method: "POST" })
       if (Object.keys(patch).length === 0) continue;
       const { error } = await supabaseAdmin
         .from("traitements_habituels")
-        .update(patch)
+        .update(patch as never)
         .eq("id", t.id);
       if (!error) summary.traitements.updated++;
     }
@@ -64,7 +64,7 @@ export const backfillBdpmEnrichment = createServerFn({ method: "POST" })
       if (Object.keys(patch).length === 0) continue;
       const { error } = await supabaseAdmin
         .from("prescriptions_hospitalieres")
-        .update(patch)
+        .update(patch as never)
         .eq("id", r.id);
       if (!error) summary.prescriptions.updated++;
     }
