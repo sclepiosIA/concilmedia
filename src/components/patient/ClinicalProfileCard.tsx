@@ -159,7 +159,7 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
               <span className="text-muted-foreground">Aucune comorbidité renseignée</span>
             ) : (
               <div className="flex flex-wrap gap-1.5">
-                {labels.map((l) => (
+                {labels.map((l: string) => (
                   <Badge key={l} variant="outline" className="bg-white border-red-200 text-red-800">{l}</Badge>
                 ))}
               </div>
