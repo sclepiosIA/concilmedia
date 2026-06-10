@@ -77,15 +77,10 @@ Réponds UNIQUEMENT avec le JSON.`;
       ],
     });
 
-    const raw = result.text
-      .trim()
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/```$/i, "");
-
+    const { parseLlmJson } = await import("@/lib/llm/parseLlmJson");
     let parsed: { date_prelevement?: string; results: ExtractedBioResult[] };
     try {
-      parsed = JSON.parse(raw);
+      parsed = parseLlmJson<{ date_prelevement?: string; results: ExtractedBioResult[] }>(result.text);
     } catch {
       throw new Error("Impossible d'analyser la réponse IA. Réessayez avec un PDF plus net.");
     }

@@ -137,13 +137,28 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
       throw e;
     }
 
-    // Extraire JSON
-    const raw = result.text.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+    // Extraire JSON (tolérant : fences markdown + extraction objet équilibré)
+    const { parseLlmJson, LlmJsonParseError } = await import("@/lib/llm/parseLlmJson");
     let payload: AIAnalysisPayload;
     try {
-      payload = JSON.parse(raw);
-    } catch {
-      throw new Error("Réponse IA non parsable");
+      payload = parseLlmJson<AIAnalysisPayload>(result.text);
+    } catch (e) {
+      if (e instanceof LlmJsonParseError) {
+        // Retry unique avec un nudge système renforcé
+        try {
+          const retry = await generateText({
+            ...callOptions,
+            model,
+            system: __systemPrompt + "\n\nIMPORTANT: Réponds uniquement par un objet JSON valide, sans aucun texte avant ou après.",
+            prompt: `Dossier patient :\n${JSON.stringify(dossier, null, 2)}`,
+          });
+          payload = parseLlmJson<AIAnalysisPayload>(retry.text);
+        } catch {
+          throw new Error("Réponse IA non parsable (après retry)");
+        }
+      } else {
+        throw e;
+      }
     }
 
     // Enrichissement ML (Étage 4 — gravité oubli) si execution_mode = ml | both

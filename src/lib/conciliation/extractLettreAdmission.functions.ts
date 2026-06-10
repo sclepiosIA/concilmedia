@@ -111,14 +111,10 @@ Règles :
       ],
     });
 
-    const raw = result.text
-      .trim()
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/```$/i, "");
+    const { parseLlmJson } = await import("@/lib/llm/parseLlmJson");
     let parsed: ExtractedLettreAdmission;
     try {
-      parsed = JSON.parse(raw) as ExtractedLettreAdmission;
+      parsed = parseLlmJson<ExtractedLettreAdmission>(result.text);
     } catch {
       throw new Error("Impossible d'analyser la réponse IA.");
     }

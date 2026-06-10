@@ -100,14 +100,10 @@ RÈGLES :
       ],
     });
 
-    const raw = result.text
-      .trim()
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/```$/i, "");
+    const { parseLlmJson } = await import("@/lib/llm/parseLlmJson");
     let parsed: unknown;
     try {
-      parsed = JSON.parse(raw);
+      parsed = parseLlmJson(result.text);
     } catch {
       throw new Error("Réponse IA non valide pour le document pharmacien.");
     }
