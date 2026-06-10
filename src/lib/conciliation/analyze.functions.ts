@@ -15,6 +15,8 @@ export type DivergenceConciliation = {
   alternative?: string;
   reference?: string;
   confiance?: number;
+  ml_severity_score?: number; // 0..1 — Étage 4 (gravité oubli) si exécuté
+  ml_is_severe?: number; // 0/1
 };
 
 export type ActionPrioritaire = {
@@ -141,6 +143,33 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
       payload = JSON.parse(raw);
     } catch {
       throw new Error("Réponse IA non parsable");
+    }
+
+    // Enrichissement ML (Étage 4 — gravité oubli) si execution_mode = ml | both
+    try {
+      const { getTaskExecutionMode, predictLayer4Sync } = await import(
+        "@/lib/ai/mlConcilmed.server"
+      );
+      const mode = await getTaskExecutionMode("ml_omission_severity");
+      if (mode === "ml" || mode === "both") {
+        const age = dossier.patient.age ?? null;
+        const nbMeds = dossier.prescriptions_hospitalieres.length;
+        const duree = (episode as { duree_sejour?: number }).duree_sejour ?? null;
+        const service = (episode as { service?: string }).service ?? null;
+        payload.divergences_conciliation = (payload.divergences_conciliation ?? []).map((d) => {
+          if (d.type !== "omission" || !d.medicament_ville) return d;
+          const r = predictLayer4Sync({
+            norm_name: d.medicament_ville,
+            age,
+            nb_meds_hosp: nbMeds,
+            duree_sejour: duree,
+            service,
+          });
+          return { ...d, ml_severity_score: r.severity_score, ml_is_severe: r.is_severe };
+        });
+      }
+    } catch (e) {
+      console.warn("[analyze] ML layer4 enrichment failed:", e);
     }
 
     await supabase.from("conciliation_ai_analyses").insert({
