@@ -192,7 +192,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
                 <div className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-accent">
                   <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                   <div className="font-medium">Cliquez pour sélectionner vos PDF</div>
-                  <div className="text-xs text-muted-foreground mt-1">Max {MAX_FILES} fichiers, 10 Mo chacun</div>
+                  <div className="text-xs text-muted-foreground mt-1">Jusqu'à {MAX_FILES} fichiers, 10 Mo chacun · extraction par lots de {EXTRACT_CONCURRENCY} en parallèle</div>
                 </div>
               </label>
               {items.length > 0 && (
