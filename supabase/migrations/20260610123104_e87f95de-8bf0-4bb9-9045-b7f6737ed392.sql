@@ -1,0 +1,1 @@
+UPDATE public.ai_providers SET is_active = true WHERE name = 'ML ConcilMed';

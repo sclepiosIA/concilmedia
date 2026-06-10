@@ -168,28 +168,40 @@ function TaskEditor() {
           )}
         </div>
         <div>
-          <Label>Mode d'exécution</Label>
-          <RadioGroup
-            value={executionMode}
-            onValueChange={(v) => setExecutionMode(v as "llm" | "ml" | "both")}
-            className="flex flex-wrap gap-4 mt-2"
-          >
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <RadioGroupItem value="llm" id={`mode-llm-${slug}`} />
-              <span>LLM uniquement</span>
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <RadioGroupItem value="ml" id={`mode-ml-${slug}`} />
-              <span>ML uniquement (microservice)</span>
-            </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <RadioGroupItem value="both" id={`mode-both-${slug}`} />
-              <span>Les deux (côte à côte)</span>
-            </label>
-          </RadioGroup>
-          <p className="text-xs text-muted-foreground mt-1">
-            « ML » et « Les deux » nécessitent <code>ML_CONCILMED_BASE_URL</code> et <code>ML_CONCILMED_API_KEY</code>.
-          </p>
+          <Label>Moteur d'exécution</Label>
+          {(() => {
+            const ML_CAPABLE_SLUGS = new Set(["ml_prioritize_patient", "ml_omission_severity"]);
+            const mlCapable = ML_CAPABLE_SLUGS.has(slug);
+            return (
+              <>
+                <RadioGroup
+                  value={executionMode}
+                  onValueChange={(v) => setExecutionMode(v as "llm" | "ml" | "both")}
+                  className="flex flex-wrap gap-4 mt-2"
+                >
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <RadioGroupItem value="llm" id={`mode-llm-${slug}`} />
+                    <span>LLM uniquement</span>
+                  </label>
+                  <label className={`flex items-center gap-2 text-sm ${mlCapable ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}`}>
+                    <RadioGroupItem value="ml" id={`mode-ml-${slug}`} disabled={!mlCapable} />
+                    <span>ML interne uniquement</span>
+                  </label>
+                  <label className={`flex items-center gap-2 text-sm ${mlCapable ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}`}>
+                    <RadioGroupItem value="both" id={`mode-both-${slug}`} disabled={!mlCapable} />
+                    <span>LLM + ML (comparaison côte à côte)</span>
+                  </label>
+                </RadioGroup>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {mlCapable ? (
+                    <>Le moteur ML <code>ConcilMed inline</code> (modèle logistique calibré, exécuté dans le serveur — aucun secret requis) tourne en parallèle du LLM en mode « LLM + ML ». Les deux scores sont persistés dans <code>risk_scores</code> et affichés côte à côte.</>
+                  ) : (
+                    <>Cet endpoint n'a pas de jumeau ML — seul le mode « LLM uniquement » est disponible. Les endpoints avec ML interne sont <code>ml_prioritize_patient</code> et <code>ml_omission_severity</code>.</>
+                  )}
+                </p>
+              </>
+            );
+          })()}
         </div>
         <div>
           <div className="flex items-center justify-between mb-1">

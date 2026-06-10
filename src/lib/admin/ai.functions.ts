@@ -127,10 +127,16 @@ export const listTasks = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("ai_tasks")
-      .select("id, slug, label, description, model, current_version, updated_at, provider:ai_providers(id, name, kind)")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .select("id, slug, label, description, model, current_version, updated_at, execution_mode, provider:ai_providers(id, name, kind)" as any)
       .order("label", { ascending: true });
     if (error) throw new Error(error.message);
-    return data || [];
+    return ((data || []) as unknown) as Array<{
+      id: string; slug: string; label: string; description: string | null;
+      model: string; current_version: number; updated_at: string;
+      execution_mode?: "llm" | "ml" | "both";
+      provider: { id: string; name: string; kind: string } | null;
+    }>;
   });
 
 export const getTask = createServerFn({ method: "GET" })

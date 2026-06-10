@@ -251,6 +251,12 @@ function AdminAiIndex() {
                       </div>
                       <div className="mt-2 flex gap-2 items-center text-xs flex-wrap">
                         <Badge variant="secondary">{t.slug}</Badge>
+                        {(() => {
+                          const mode = (t as { execution_mode?: string }).execution_mode ?? "llm";
+                          if (mode === "ml") return <Badge className="bg-violet-600 hover:bg-violet-700">ML interne</Badge>;
+                          if (mode === "both") return <Badge className="bg-gradient-to-r from-blue-600 to-violet-600">LLM + ML</Badge>;
+                          return <Badge variant="outline">LLM</Badge>;
+                        })()}
                         <span className="text-muted-foreground">modèle :</span>
                         <code className="text-[11px] bg-muted px-1.5 py-0.5 rounded">
                           {t.model}
