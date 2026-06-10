@@ -111,7 +111,7 @@ function parseFile(file: File): Promise<ParsedRow[]> {
             if (key === "date_naissance") mapped[key] = parseDate(v);
             else if (key === "sexe") mapped[key] = parseSex(v);
             else if (key === "poids_kg" || key === "taille_cm") mapped[key] = parseNum(v);
-            else mapped[key] = v == null ? null : (String(v).trim() as never);
+            else (mapped as Record<string, unknown>)[key] = v == null ? null : String(v).trim();
           }
           if (!mapped.nom || !mapped.prenom) {
             return { row: idx + 2, error: "nom ou prénom manquant" };
