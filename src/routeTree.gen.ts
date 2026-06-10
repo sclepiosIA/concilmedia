@@ -31,6 +31,7 @@ import { Route as AuthenticatedAdminBdpmRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminAiRouteImport } from './routes/_authenticated/admin.ai'
 import { Route as AuthenticatedAdminAiIndexRouteImport } from './routes/_authenticated/admin.ai.index'
 import { Route as ApiPublicFhirSplatRouteImport } from './routes/api/public/fhir/$'
+import { Route as AuthenticatedEpisodesEpisodeIdSortieRouteImport } from './routes/_authenticated/episodes.$episodeId.sortie'
 import { Route as AuthenticatedAdminAiRlhfRouteImport } from './routes/_authenticated/admin.ai.rlhf'
 import { Route as AuthenticatedAdminAiProvidersRouteImport } from './routes/_authenticated/admin.ai.providers'
 import { Route as AuthenticatedAdminAiTasksSlugRouteImport } from './routes/_authenticated/admin.ai.tasks.$slug'
@@ -155,6 +156,12 @@ const ApiPublicFhirSplatRoute = ApiPublicFhirSplatRouteImport.update({
   path: '/api/public/fhir/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedEpisodesEpisodeIdSortieRoute =
+  AuthenticatedEpisodesEpisodeIdSortieRouteImport.update({
+    id: '/sortie',
+    path: '/sortie',
+    getParentRoute: () => AuthenticatedEpisodesEpisodeIdRoute,
+  } as any)
 const AuthenticatedAdminAiRlhfRoute =
   AuthenticatedAdminAiRlhfRouteImport.update({
     id: '/rlhf',
@@ -191,11 +198,12 @@ export interface FileRoutesByFullPath {
   '/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
   '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
   '/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
-  '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
+  '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRouteWithChildren
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients/': typeof AuthenticatedPatientsIndexRoute
   '/admin/ai/providers': typeof AuthenticatedAdminAiProvidersRoute
   '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
+  '/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
   '/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
@@ -216,11 +224,12 @@ export interface FileRoutesByTo {
   '/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
   '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
   '/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
-  '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
+  '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRouteWithChildren
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients': typeof AuthenticatedPatientsIndexRoute
   '/admin/ai/providers': typeof AuthenticatedAdminAiProvidersRoute
   '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
+  '/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
   '/admin/ai': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
@@ -244,11 +253,12 @@ export interface FileRoutesById {
   '/_authenticated/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
   '/_authenticated/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
   '/_authenticated/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
-  '/_authenticated/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
+  '/_authenticated/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRouteWithChildren
   '/_authenticated/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/_authenticated/patients/': typeof AuthenticatedPatientsIndexRoute
   '/_authenticated/admin/ai/providers': typeof AuthenticatedAdminAiProvidersRoute
   '/_authenticated/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
+  '/_authenticated/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
   '/_authenticated/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/_authenticated/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
@@ -277,6 +287,7 @@ export interface FileRouteTypes {
     | '/patients/'
     | '/admin/ai/providers'
     | '/admin/ai/rlhf'
+    | '/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
     | '/admin/ai/'
     | '/admin/ai/tasks/$slug'
@@ -302,6 +313,7 @@ export interface FileRouteTypes {
     | '/patients'
     | '/admin/ai/providers'
     | '/admin/ai/rlhf'
+    | '/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
     | '/admin/ai'
     | '/admin/ai/tasks/$slug'
@@ -329,6 +341,7 @@ export interface FileRouteTypes {
     | '/_authenticated/patients/'
     | '/_authenticated/admin/ai/providers'
     | '/_authenticated/admin/ai/rlhf'
+    | '/_authenticated/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
     | '/_authenticated/admin/ai/'
     | '/_authenticated/admin/ai/tasks/$slug'
@@ -497,6 +510,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicFhirSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/episodes/$episodeId/sortie': {
+      id: '/_authenticated/episodes/$episodeId/sortie'
+      path: '/sortie'
+      fullPath: '/episodes/$episodeId/sortie'
+      preLoaderRoute: typeof AuthenticatedEpisodesEpisodeIdSortieRouteImport
+      parentRoute: typeof AuthenticatedEpisodesEpisodeIdRoute
+    }
     '/_authenticated/admin/ai/rlhf': {
       id: '/_authenticated/admin/ai/rlhf'
       path: '/rlhf'
@@ -559,6 +579,21 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
+interface AuthenticatedEpisodesEpisodeIdRouteChildren {
+  AuthenticatedEpisodesEpisodeIdSortieRoute: typeof AuthenticatedEpisodesEpisodeIdSortieRoute
+}
+
+const AuthenticatedEpisodesEpisodeIdRouteChildren: AuthenticatedEpisodesEpisodeIdRouteChildren =
+  {
+    AuthenticatedEpisodesEpisodeIdSortieRoute:
+      AuthenticatedEpisodesEpisodeIdSortieRoute,
+  }
+
+const AuthenticatedEpisodesEpisodeIdRouteWithChildren =
+  AuthenticatedEpisodesEpisodeIdRoute._addFileChildren(
+    AuthenticatedEpisodesEpisodeIdRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAmeliorationsRoute: typeof AuthenticatedAmeliorationsRoute
@@ -568,7 +603,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEvaluationRoute: typeof AuthenticatedEvaluationRoute
   AuthenticatedConciliationMetriquesRoute: typeof AuthenticatedConciliationMetriquesRoute
   AuthenticatedConciliationSupervisionRoute: typeof AuthenticatedConciliationSupervisionRoute
-  AuthenticatedEpisodesEpisodeIdRoute: typeof AuthenticatedEpisodesEpisodeIdRoute
+  AuthenticatedEpisodesEpisodeIdRoute: typeof AuthenticatedEpisodesEpisodeIdRouteWithChildren
   AuthenticatedPatientsPatientIdRoute: typeof AuthenticatedPatientsPatientIdRoute
   AuthenticatedPatientsIndexRoute: typeof AuthenticatedPatientsIndexRoute
 }
@@ -584,7 +619,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedConciliationMetriquesRoute,
   AuthenticatedConciliationSupervisionRoute:
     AuthenticatedConciliationSupervisionRoute,
-  AuthenticatedEpisodesEpisodeIdRoute: AuthenticatedEpisodesEpisodeIdRoute,
+  AuthenticatedEpisodesEpisodeIdRoute:
+    AuthenticatedEpisodesEpisodeIdRouteWithChildren,
   AuthenticatedPatientsPatientIdRoute: AuthenticatedPatientsPatientIdRoute,
   AuthenticatedPatientsIndexRoute: AuthenticatedPatientsIndexRoute,
 }
