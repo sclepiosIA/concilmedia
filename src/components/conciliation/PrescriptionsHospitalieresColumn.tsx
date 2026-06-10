@@ -26,6 +26,8 @@ import {
   type HospPrescription,
 } from "@/lib/conciliation/prescriptionMatch";
 import { matchPrescriptionAI } from "@/lib/conciliation/matchPrescriptionAI.functions";
+import { scoreOmissionsSeverity } from "@/lib/conciliation/scoreOmissions.functions";
+import { ShieldAlert } from "lucide-react";
 
 type Prescription = {
   id: string;
