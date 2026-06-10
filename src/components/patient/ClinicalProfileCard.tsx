@@ -118,7 +118,10 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
       (await supabase.from("traitements_habituels").select("*").eq("patient_id", patientId).eq("actif", true)).data ?? [],
   });
 
-  const labels = comorbidites.map((c) => c.libelle);
+  const dedupedComorb = dedupeComorbidites(
+    comorbidites.map((c) => ({ libelle: c.libelle ?? "", code_cim10: c.code_cim10 ?? null })),
+  );
+  const labels = dedupedComorb.map((c) => c.libelle);
   const bmi = computeBmi(patient?.poids_kg ?? null, patient?.taille_cm ?? null);
   const baseComplexity = computeComplexity(labels);
   // Extension du score : âge, polymédication, obésité, IR
