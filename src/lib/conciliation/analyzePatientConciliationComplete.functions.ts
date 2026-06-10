@@ -370,8 +370,11 @@ Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas d
           ),
         },
       };
-    } else if (callOptionsWithDefaults.maxOutputTokens === undefined) {
-      callOptionsWithDefaults.maxOutputTokens = 650;
+    } else {
+      callOptionsWithDefaults.maxOutputTokens = Math.min(
+        (callOptionsWithDefaults.maxOutputTokens as number | undefined) ?? 650,
+        650,
+      );
     }
 
     let payload: AIAnalysisPayload;
