@@ -1,65 +1,120 @@
-## Contexte
-
-Actuellement, pour chaque constatation IA (divergences, interactions, contre-indications, adaptations, doublons, allergies, médicaments haut risque) le pharmacien peut **Accepter / Modifier / Refuser** et ajouter un commentaire + un texte libre `modification`. Mais **les champs structurés de l'IA (sévérité, médicaments concernés, mécanisme, risque, recommandation, alternative, référence) ne sont pas éditables**. Le pharmacien doit pouvoir corriger ces champs avant de valider.
-
 ## Objectif
 
-Rendre chaque constatation IA **modifiable en place** tant que la conciliation n'est pas validée (ou après un clic « Modifier la validation »). La version validée doit refléter les corrections du pharmacien.
+Transformer `/_authenticated/evaluation` en banc d'essai cohorte :
+1. Upload massif de fichiers patients (multi-patient, multi-doc) avec tag cohorte
+2. Tri IA automatique (patient, document, traitement habituel, bio, prescription hospi)
+3. Conciliation IA automatique sur chaque épisode créé
+4. Upload du PDF pharmacien (gold standard) par patient
+5. Analyse de corrélation IA vs pharmacien + stats cohorte
+6. Benchmark LLM vs ML sur 3 axes : triage patient complexe, détection DNI, sévérité
 
-## Approche
+## Flux utilisateur
 
-Étendre `ItemDecision` avec un objet `overrides` (clé/valeur, partiel) sauvegardé dans `conciliation_validations.item_decisions`. À l'affichage, on calcule la valeur effective = `override ?? IA`. Aucune migration DB nécessaire : `item_decisions` est déjà `jsonb`.
+```text
+[1] Saisir tag cohorte (ex. "lot-mars-cardio")
+    │
+[2] Drop N fichiers (ordo ville, lettres admission, ordo hospi, bio, CRH)
+    │   → BulkPatientImport existant (extract + commit) avec cohort_tag
+    │   → IA classe par patient + crée épisodes auto
+    │
+[3] Bouton "Lancer conciliation IA cohorte"
+    │   → boucle sur les épisodes créés
+    │   → analyzePatientConciliationComplete pour chacun
+    │
+[4] Pour chaque patient : drop du PDF pharmacien (gold standard)
+    │   → extractPharmacistGoldStandard (nouvelle serverFn)
+    │   → JSON normalisé : { divergences:[{med, type, severite}], triage_complexe:bool }
+    │
+[5] Bouton "Calculer corrélation cohorte"
+    │   → comparePharmacistVsIA (nouvelle serverFn)
+    │   → calcule TP/FP/FN par patient et global
+    │   → calcule aussi métriques ML (Layer2 triage, Layer4 severity)
+    │
+[6] Dashboard de résultats
+    │   ├── Métriques cohorte (precision/recall/F1 IA vs pharmacien)
+    │   ├── Stats par patient (table triable)
+    │   ├── Comparatif LLM vs ML (3 onglets)
+    │   └── Export CSV
+```
 
-### 1. Modèle de données (code uniquement, pas de migration)
+## Détail technique
 
-`src/lib/conciliation/validateConciliation.functions.ts`
-- Ajouter un type `ItemOverrides` partiel :
-  ```ts
-  type ItemOverrides = Partial<{
-    severite: string;
-    medicaments: string;        // libellé reconstitué
-    mecanisme: string;
-    risque: string;
-    recommandation: string;
-    alternative: string;
-    reference: string;
-  }>;
-  ```
-- Étendre `ItemDecision` avec `overrides?: ItemOverrides`.
-- Étendre le schéma Zod en conséquence (champs `.string().max(2000).optional()`).
+### Base de données (1 migration)
 
-### 2. UI éditable (`ClinicalAlertsPanel.tsx`)
+- `cohorts` (nouveau) : `id`, `tag`, `label`, `created_by`, `created_at`
+- `patients.cohort_id uuid null` (nouveau) — set à l'import
+- `pharmacist_gold_standards` (nouveau) :
+  - `id`, `patient_id`, `episode_id`, `cohort_id`
+  - `storage_path`, `file_name`, `extracted_json jsonb`
+  - `triage_complexe boolean`, `nb_divergences int`
+  - `uploaded_by`, `created_at`
+- `cohort_evaluations` (nouveau) : cache des runs avec
+  - `cohort_id`, `metrics_ia jsonb`, `metrics_ml jsonb`, `per_patient jsonb`, `computed_at`
+- GRANTs + RLS scoping par `created_by` / `cohort.created_by`
 
-- Dans `AlertItem`, ajouter un mode édition (toggle « Éditer la constatation IA ») actif uniquement quand `validation && !readOnly`.
-- En mode édition, remplacer les `<Detail>` figés par des `<Textarea>` / `<Input>` pour : sévérité (Select : mineure / modérée / majeure / contre_indication), médicaments concernés, mécanisme, risque, recommandation, alternative, référence.
-- À chaque édition, écrire dans `decision.overrides[champ]` via `validation.onChange`. Si un champ est ré-effacé pour revenir à la valeur IA → supprimer la clé de `overrides`.
-- L'affichage par défaut (mode lecture) utilise la valeur effective : `override ?? valeur IA`, avec un petit badge « ✎ modifié par pharmacien » sur les champs surchargés.
-- Toggle « Réinitialiser » : supprime tout `overrides` (garde le statut accepted/modified/rejected).
-- Indiquer que cliquer « Éditer » bascule automatiquement le statut sur `modified` si aucun statut n'est posé.
+### Server functions (nouvelles)
 
-### 3. État local (`ConciliationCompleteCard.tsx`)
+| Fichier | Fonctions |
+|---|---|
+| `src/lib/cohort/cohort.functions.ts` | `createCohort`, `listCohorts`, `getCohortPatients` |
+| `src/lib/cohort/runCohortConciliation.functions.ts` | Boucle `analyzePatientConciliationComplete` sur épisodes d'une cohorte, retourne progression |
+| `src/lib/cohort/goldStandard.functions.ts` | `uploadPharmacistGoldPDF` (storage `ordonnances`), `extractPharmacistGoldStandard` (LLM → JSON normalisé), `listGoldStandards` |
+| `src/lib/cohort/evaluateCohort.functions.ts` | `comparePharmacistVsIA` (TP/FP/FN par patient + global, par type de divergence, par sévérité) + `computeMLBaselines` (appelle `predictLayer2Sync` + heuristique détection + `predictLayer4Sync`) |
 
-- Pas de changement de logique : `decisions` contient déjà `ItemDecision[]`, qui transportera désormais aussi `overrides`.
-- Verrouillage : `isLocked = !!validation && !editingValidation` — déjà en place. Tant que `!isLocked`, tout est éditable. « Modifier la validation » réactive l'édition (bouton déjà présent).
-- Lors de `saveConciliationValidation`, les `overrides` sont persistés dans `item_decisions`.
+### Réutilisation existante
 
-### 4. Restitution dans le document pharmacien
+- `BulkPatientImportModal` : ajout d'une prop `cohortId` → propage dans `commitBulkImport`
+- `extractPatientDossier` / `commitBulkImport` : reçoivent `cohort_id` optionnel, le copient sur `patients.cohort_id`
+- `analyzePatientConciliationComplete` : appelé tel quel
+- `mlConcilmed.server.ts` : `predictLayer2Sync` + `predictLayer4Sync` réutilisés sans modification
 
-`src/lib/conciliation/pharmacistDoc.functions.ts` (PDF/synthèse) : lorsqu'il existe, utiliser `decision.overrides.<champ>` en priorité, sinon la valeur IA. Marquer typographiquement les champs corrigés par le pharmacien (préfixe « [Corrigé] » ou astérisque + note de bas de page).
+### UI — `src/routes/_authenticated/evaluation.tsx` (refonte)
 
-### 5. Tableau « Divergences ville ↔ hôpital » (section B)
+Page à onglets :
+- **Onglet "Import cohorte"** : input tag cohorte + zone drop + bouton "Importer". Table de progression par fichier.
+- **Onglet "Conciliation IA"** : liste épisodes de la cohorte, bouton "Lancer", barre progression, statut par patient.
+- **Onglet "Gold standard pharmacien"** : tableau patients × bouton upload PDF + badge "extrait" / "manquant".
+- **Onglet "Résultats"** :
+  - Cards : Precision / Recall / F1 IA vs Pharma
+  - Tableau par patient (DNI détectées IA, DNI pharma, accord %)
+  - Section "LLM vs ML" — 3 sous-cartes (Triage / Détection / Sévérité) avec métriques côte à côte
+  - Bouton "Export CSV"
 
-Ce tableau (lignes 297-341 du Card) restera en lecture seule sur valeurs IA — l'édition se fait depuis la section A « Résultats de conciliation médicamenteuse » (où les mêmes items apparaissent dans `ClinicalAlertsPanel`). Les valeurs effectives (overrides) sont aussi appliquées dans ce tableau pour cohérence visuelle.
+Composants nouveaux :
+- `src/components/cohort/CohortImportTab.tsx`
+- `src/components/cohort/CohortRunTab.tsx`
+- `src/components/cohort/GoldStandardTab.tsx`
+- `src/components/cohort/CohortResultsTab.tsx`
+- `src/components/cohort/LLMvsMLPanel.tsx`
 
-## Hors scope
+### Prompt extraction gold-standard
 
-- Ajouter / supprimer une constatation entière (uniquement édition des constatations IA existantes).
-- Modifier les sections « Actions prioritaires », « Surveillance », « Conclusion clinique » : restent du ressort de l'IA (re-lancer si besoin).
-- Changements de schéma DB (`item_decisions` est déjà `jsonb`).
+Schéma strict :
+```json
+{
+  "patient": { "nom":"...", "prenom":"...", "date_naissance":"YYYY-MM-DD" },
+  "triage_complexe": true,
+  "divergences": [
+    { "medicament":"...", "type":"omission|ajout|modification|substitution",
+      "severite":"mineure|moderee|majeure|critique", "commentaire":"..." }
+  ]
+}
+```
+
+### Algorithme corrélation (par patient puis agrégé)
+
+- Match med par DCI normalisée (lower + sans espace) + type
+- TP = match IA ∩ pharma | FP = IA only | FN = pharma only
+- Precision, Recall, F1 + accord pondéré par sévérité
+- Pour le triage : confusion matrix IA-triage vs pharma-triage vs ML-triage
+
+## Hors scope (à confirmer plus tard)
+
+- Pas de re-training ML automatique
+- Pas de notification/email
+- Garde la page synthétique existante en lecture seule (route `/evaluation-synth` si besoin) — non prioritaire
 
 ## Fichiers touchés
 
-- `src/lib/conciliation/validateConciliation.functions.ts` — type + schéma Zod
-- `src/components/conciliation/ClinicalAlertsPanel.tsx` — mode édition par item, valeur effective
-- `src/components/patient/ConciliationCompleteCard.tsx` — appliquer la valeur effective dans le tableau divergences
-- `src/lib/conciliation/pharmacistDoc.functions.ts` — prendre en compte les overrides dans le document pharmacien
+**Nouveaux** : 1 migration + 4 fichiers `.functions.ts` + 5 composants React + 1 route éventuelle
+**Modifiés** : `evaluation.tsx`, `BulkPatientImportModal.tsx`, `bulkImport.functions.ts` (param cohort_id)

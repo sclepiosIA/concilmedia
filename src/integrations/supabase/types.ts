@@ -319,6 +319,71 @@ export type Database = {
           },
         ]
       }
+      cohort_evaluations: {
+        Row: {
+          cohort_id: string
+          computed_at: string
+          computed_by: string
+          id: string
+          metrics_ia: Json | null
+          metrics_ml: Json | null
+          per_patient: Json | null
+        }
+        Insert: {
+          cohort_id: string
+          computed_at?: string
+          computed_by: string
+          id?: string
+          metrics_ia?: Json | null
+          metrics_ml?: Json | null
+          per_patient?: Json | null
+        }
+        Update: {
+          cohort_id?: string
+          computed_at?: string
+          computed_by?: string
+          id?: string
+          metrics_ia?: Json | null
+          metrics_ml?: Json | null
+          per_patient?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cohort_evaluations_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cohorts: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          label: string | null
+          tag: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          label?: string | null
+          tag: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          label?: string | null
+          tag?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       comorbidites: {
         Row: {
           code_cim10: string | null
@@ -751,6 +816,7 @@ export type Database = {
       }
       patients: {
         Row: {
+          cohort_id: string | null
           cohort_tag: string | null
           created_at: string
           created_by: string
@@ -767,6 +833,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cohort_id?: string | null
           cohort_tag?: string | null
           created_at?: string
           created_by: string
@@ -783,6 +850,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cohort_id?: string | null
           cohort_tag?: string | null
           created_at?: string
           created_by?: string
@@ -798,7 +866,15 @@ export type Database = {
           taille_cm?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "patients_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pharmacist_conciliation_documents: {
         Row: {
@@ -866,6 +942,76 @@ export type Database = {
           },
           {
             foreignKeyName: "pharmacist_conciliation_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacist_gold_standards: {
+        Row: {
+          cohort_id: string | null
+          created_at: string
+          episode_id: string | null
+          extracted_json: Json | null
+          file_name: string
+          id: string
+          mime_type: string | null
+          nb_divergences: number | null
+          patient_id: string
+          storage_path: string
+          triage_complexe: boolean | null
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          cohort_id?: string | null
+          created_at?: string
+          episode_id?: string | null
+          extracted_json?: Json | null
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          nb_divergences?: number | null
+          patient_id: string
+          storage_path: string
+          triage_complexe?: boolean | null
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          cohort_id?: string | null
+          created_at?: string
+          episode_id?: string | null
+          extracted_json?: Json | null
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          nb_divergences?: number | null
+          patient_id?: string
+          storage_path?: string
+          triage_complexe?: boolean | null
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacist_gold_standards_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacist_gold_standards_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacist_gold_standards_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"

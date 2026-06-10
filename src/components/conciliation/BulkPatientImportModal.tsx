@@ -45,7 +45,7 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, initialFiles, onCompleted }: { open: boolean; onOpenChange: (v: boolean) => void; targetPatientId?: string; initialFiles?: File[]; onCompleted?: () => void }) {
+export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, initialFiles, onCompleted, cohortId }: { open: boolean; onOpenChange: (v: boolean) => void; targetPatientId?: string; initialFiles?: File[]; onCompleted?: (summary?: { created_episode_ids: string[] }) => void; cohortId?: string | null }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const extract = useServerFn(extractPatientDossier);
@@ -141,7 +141,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
       };
       for (let start = 0; start < payload.length; start += COMMIT_BATCH_SIZE) {
         const chunk = payload.slice(start, start + COMMIT_BATCH_SIZE);
-        const r = await commit({ data: { items: chunk } });
+        const r = await commit({ data: { items: chunk, cohort_id: cohortId ?? null } });
         aggregate.created += r.created;
         aggregate.updated += r.updated;
         aggregate.failed.push(...r.failed);
@@ -165,7 +165,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
       }
       const epMsg = r.created_episode_ids.length > 0 ? ` • ${r.created_episode_ids.length} épisode(s) créé(s)` : "";
       toast.success(targetPatientId ? `Données ajoutées${epMsg}` : `${r.created} créé(s), ${r.updated} mis à jour${epMsg}`);
-      onCompleted?.();
+      onCompleted?.(r);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur import"),
   });
