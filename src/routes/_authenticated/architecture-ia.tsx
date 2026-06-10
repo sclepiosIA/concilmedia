@@ -339,6 +339,17 @@ function ArchitectureIAPage() {
         </p>
       </header>
 
+      <Tabs defaultValue="simple" className="w-full">
+        <TabsList>
+          <TabsTrigger value="simple">Vue simplifiée</TabsTrigger>
+          <TabsTrigger value="complete">Vue complète (technique)</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="simple" className="mt-6">
+          <SimplifiedView />
+        </TabsContent>
+
+        <TabsContent value="complete" className="mt-6 space-y-8">
       {/* Schéma global */}
       <Card>
         <CardHeader className="pb-3">
