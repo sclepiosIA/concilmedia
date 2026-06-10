@@ -48,6 +48,10 @@ function PatientsListPage() {
   const [syntheseFor, setSyntheseFor] = useState<string | null>(null);
   const [archiveFilter, setArchiveFilter] = useState<"active" | "archived" | "all">("active");
   const [bulkAction, setBulkAction] = useState<"archive" | "delete" | null>(null);
+  const [assignFilter, setAssignFilter] = useState<"all" | "mine" | "unassigned">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | WorkflowStatus>("all");
+  const [meId, setMeId] = useState<string | null>(null);
+  useMemo(() => { supabase.auth.getUser().then((r) => setMeId(r.data.user?.id ?? null)); }, []);
   const pendingFiles = [...preHospFiles, ...prescriptionFiles];
 
   const { data: patients = [] } = useQuery({
