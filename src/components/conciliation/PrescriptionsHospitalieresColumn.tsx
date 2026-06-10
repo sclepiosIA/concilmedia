@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { PrescriptionHospitaliereUploader } from "./PrescriptionHospitaliereUploader";
+import { parsePosologieText } from "@/lib/conciliation/parsePosologie";
 import { MatchStatusBadge, MatchLegend } from "./MatchStatusBadge";
 import {
   matchPrescription,
@@ -108,7 +109,11 @@ function resolvePrises(p: Prescription): [string | null, string | null, string |
   if (p.posologie_matin || p.posologie_midi || p.posologie_soir || p.posologie_coucher) {
     return [p.posologie_matin, p.posologie_midi, p.posologie_soir, p.posologie_coucher];
   }
-  return parsePosologie(p.posologie);
+  const dash = parsePosologie(p.posologie);
+  if (dash[0] || dash[1] || dash[2] || dash[3]) return dash;
+  // Fallback : parser intelligent (gère "3x/j", "/8h", "1 inj SC/j", ranges…)
+  const smart = parsePosologieText(p.posologie);
+  return [smart.matin ?? null, smart.midi ?? null, smart.soir ?? null, smart.coucher ?? null];
 }
 function dciKey(s: string | null | undefined): string {
   const raw = (s ?? "")
