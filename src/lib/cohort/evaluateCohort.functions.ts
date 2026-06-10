@@ -62,7 +62,8 @@ export const evaluateCohort = createServerFn({ method: "POST" })
     const goldByPatient = new Map<string, GoldRow>();
     for (const g of gold ?? []) goldByPatient.set((g as { patient_id: string }).patient_id, g);
 
-    const divsByPatient = new Map<string, typeof divsIA>();
+    type DivRow = NonNullable<typeof divsIA>[number];
+    const divsByPatient = new Map<string, DivRow[]>();
     for (const d of divsIA ?? []) {
       const pid = (d as { patient_id: string }).patient_id;
       if (!divsByPatient.has(pid)) divsByPatient.set(pid, []);
