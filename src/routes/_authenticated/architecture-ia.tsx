@@ -808,6 +808,8 @@ level = high ≥ 0.7 | mod ≥ 0.4 | low`}
           </div>
         </CardContent>
       </Card>
+
+      <PrioritizationDetailed />
         </TabsContent>
       </Tabs>
     </div>
