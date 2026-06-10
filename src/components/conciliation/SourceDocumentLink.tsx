@@ -6,7 +6,13 @@ import { toast } from "sonner";
 import { getSourceDocumentUrl } from "@/lib/conciliation/sourceDocuments.functions";
 import { cn } from "@/lib/utils";
 
-export function SourceDocumentLink({ documentId, label = "Voir source" }: { documentId: string | null | undefined; label?: string }) {
+export function SourceDocumentLink({
+  documentId,
+  label = "Voir source",
+}: {
+  documentId: string | null | undefined;
+  label?: string;
+}) {
   const fetchUrl = useServerFn(getSourceDocumentUrl);
   const [loading, setLoading] = useState(false);
 
@@ -41,7 +47,11 @@ export function SourceDocumentLink({ documentId, label = "Voir source" }: { docu
         if (!loading) void open();
       }}
     >
-      {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <FileText className="h-3 w-3 mr-1" />}
+      {loading ? (
+        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+      ) : (
+        <FileText className="h-3 w-3 mr-1" />
+      )}
       {label}
     </span>
   );
