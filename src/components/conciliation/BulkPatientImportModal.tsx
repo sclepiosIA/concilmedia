@@ -13,6 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Upload, Trash2, Sparkles, Loader2, Check, AlertTriangle, X, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { extractPatientDossier, commitBulkImport, type ExtractedDossier } from "@/lib/conciliation/bulkImport.functions";
+import { supabase } from "@/integrations/supabase/client";
+
+const normName = (s?: string | null) =>
+  (s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 
 const docTypeLabel: Record<string, string> = {
   ordonnance_ville: "Ordo ville",
@@ -54,6 +62,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
   const [phase, setPhase] = useState<"upload" | "extracting" | "review" | "done">("upload");
   const [progress, setProgress] = useState(0);
   const [summary, setSummary] = useState<{ created: number; updated: number; failed: { name: string; error: string }[]; created_episode_ids: string[] } | null>(null);
+  const [targetPatient, setTargetPatient] = useState<{ nom: string; prenom: string } | null>(null);
 
   useEffect(() => {
     if (open && initialFiles && initialFiles.length > 0) {
@@ -62,6 +71,23 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !targetPatientId) { setTargetPatient(null); return; }
+    let cancelled = false;
+    supabase.from("patients").select("nom,prenom").eq("id", targetPatientId).maybeSingle().then(({ data }) => {
+      if (!cancelled && data) setTargetPatient({ nom: data.nom ?? "", prenom: data.prenom ?? "" });
+    });
+    return () => { cancelled = true; };
+  }, [open, targetPatientId]);
+
+  const checkMismatch = (i: Item): boolean => {
+    if (!targetPatient || !i.dossier) return false;
+    const dN = normName(i.dossier.patient.nom);
+    const dP = normName(i.dossier.patient.prenom);
+    if (!dN && !dP) return false; // pas de nom extrait → ne bloque pas
+    return normName(targetPatient.nom) !== dN || normName(targetPatient.prenom) !== dP;
+  };
 
   const onFiles = (e: ChangeEvent<HTMLInputElement>) => {
     const fs = Array.from(e.target.files ?? []);
@@ -119,7 +145,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
 
   const importMut = useMutation({
     mutationFn: async () => {
-      const ready = items.filter((i) => i.status === "ready" && i.dossier);
+      const ready = items.filter((i) => i.status === "ready" && i.dossier && !checkMismatch(i));
       const payload = await Promise.all(ready.map(async (i) => {
         const b64 = await fileToBase64(i.file);
         const base = {
@@ -173,7 +199,8 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
   const reset = () => { setItems([]); setPhase("upload"); setProgress(0); setSummary(null); };
   const close = () => { reset(); onOpenChange(false); };
 
-  const readyCount = items.filter((i) => i.status === "ready").length;
+  const readyCount = items.filter((i) => i.status === "ready" && !checkMismatch(i)).length;
+  const mismatchCount = items.filter((i) => i.status === "ready" && checkMismatch(i)).length;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
@@ -233,8 +260,9 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
                 <AccordionItem key={i.id} value={i.id} className="border rounded-md px-3">
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center gap-2 flex-1 text-left flex-wrap">
-                      {i.status === "ready" && i.dossier?.existing_patient_id && <Badge variant="outline" className="border-yellow-500 text-yellow-700"><AlertTriangle className="h-3 w-3 mr-1" />Doublon</Badge>}
-                      {i.status === "ready" && !i.dossier?.existing_patient_id && <Badge variant="outline" className="border-green-500 text-green-700"><Check className="h-3 w-3 mr-1" />Prêt</Badge>}
+                      {i.status === "ready" && checkMismatch(i) && <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />Nom ≠ patient cible</Badge>}
+                      {i.status === "ready" && !checkMismatch(i) && i.dossier?.existing_patient_id && <Badge variant="outline" className="border-yellow-500 text-yellow-700"><AlertTriangle className="h-3 w-3 mr-1" />Doublon</Badge>}
+                      {i.status === "ready" && !checkMismatch(i) && !i.dossier?.existing_patient_id && <Badge variant="outline" className="border-green-500 text-green-700"><Check className="h-3 w-3 mr-1" />Prêt</Badge>}
                       {i.status === "error" && <Badge variant="destructive">Erreur</Badge>}
                       {i.dossier?.document_type && <Badge variant="secondary">{docTypeLabel[i.dossier.document_type] ?? i.dossier.document_type}</Badge>}
                       <span className="font-medium">
@@ -245,6 +273,15 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
                   </AccordionTrigger>
                   <AccordionContent>
                     {i.status === "error" && <div className="text-sm text-destructive p-2">{i.error}</div>}
+                    {checkMismatch(i) && targetPatient && (
+                      <div className="text-xs bg-destructive/10 text-destructive p-2 rounded mb-2 flex items-center justify-between gap-2">
+                        <span>
+                          ⚠ Ce document concerne <strong>{i.dossier?.patient.nom?.toUpperCase()} {i.dossier?.patient.prenom}</strong>,
+                          mais le patient cible est <strong>{targetPatient.nom.toUpperCase()} {targetPatient.prenom}</strong>. Il sera ignoré à l'import.
+                        </span>
+                        <Button size="sm" variant="ghost" onClick={() => removeItem(i.id)}>Retirer</Button>
+                      </div>
+                    )}
                     {i.dossier && <DossierEditor dossier={i.dossier} onChange={(p) => updateDossier(i.id, p)} />}
                   </AccordionContent>
                 </AccordionItem>
@@ -288,6 +325,11 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
           )}
           {phase === "review" && (
             <>
+              {mismatchCount > 0 && (
+                <div className="text-xs text-destructive mr-auto flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> {mismatchCount} document(s) ignoré(s) (nom différent)
+                </div>
+              )}
               <Button variant="outline" onClick={reset}>Recommencer</Button>
               <Button onClick={() => importMut.mutate()} disabled={readyCount === 0 || importMut.isPending}>
                 {importMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
