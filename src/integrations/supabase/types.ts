@@ -1205,6 +1205,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ai_provider_decrypt_key: {
+        Args: { _master_key: string; _provider_id: string }
+        Returns: string
+      }
+      ai_provider_set_key: {
+        Args: { _master_key: string; _plain_key: string; _provider_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

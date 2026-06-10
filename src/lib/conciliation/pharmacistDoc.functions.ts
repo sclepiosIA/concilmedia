@@ -141,10 +141,10 @@ export const comparePharmacistVsAI = createServerFn({ method: "POST" })
     for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
     const base64 = btoa(bin);
 
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
     const { generateText } = await import("ai");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
+    const { resolveAITask } = await import("@/lib/ai/runAITask.server");
+    const __aiTaskSlug = "pharmacist_doc";
+    const __aiDefaultModel = "google/gemini-3-flash-preview";
 
     const systemPrompt = `Tu es pharmacien clinicien expert en conciliation médicamenteuse.
 On te fournit :
@@ -162,12 +162,13 @@ Tâche : comparer les deux sources et produire STRICTEMENT un JSON valide avec c
   "conclusion": "1-2 phrases — recommandation finale"
 }
 Réponds UNIQUEMENT avec le JSON, sans markdown.`;
+    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     let result;
     try {
       result = await generateText({
         model,
-        system: systemPrompt,
+        system: __systemPrompt,
         messages: [
           {
             role: "user",

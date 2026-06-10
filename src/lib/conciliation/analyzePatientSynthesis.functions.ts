@@ -43,10 +43,10 @@ export const analyzePatientSynthesis = createServerFn({ method: "POST" })
       traitements_habituels: traitements.data ?? [],
     };
 
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
     const { generateText } = await import("ai");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
+    const { resolveAITask } = await import("@/lib/ai/runAITask.server");
+    const __aiTaskSlug = "analyze_patient_synthesis";
+    const __aiDefaultModel = "google/gemini-3-flash-preview";
 
     const systemPrompt = `Tu es un pharmacien clinicien hospitalier. Analyse les traitements habituels du patient (sans prescription hospitalière) et produis STRICTEMENT un JSON :
 {
@@ -70,10 +70,11 @@ Règles cliniques :
 - Cite la valeur biologique précise dans "raison" et "risque".
 - Chaque alerte DOIT contenir severite, mecanisme, risque clinique, recommandation pratique, alternative thérapeutique si pertinente, un "confiance" entier 0-100, ET reference de bonne pratique (ANSM, HAS, Vidal, RCP, STOPP/START, GPR, ISMP, SPILF).
 Réponds UNIQUEMENT avec le JSON.`;
+    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     let result;
     try {
-      result = await generateText({ model, system: systemPrompt, prompt: `Dossier patient :\n${JSON.stringify(dossier, null, 2)}` });
+      result = await generateText({ model, system: __systemPrompt, prompt: `Dossier patient :\n${JSON.stringify(dossier, null, 2)}` });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes("429")) throw new Error("Limite IA atteinte, réessayez.");

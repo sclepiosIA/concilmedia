@@ -55,10 +55,10 @@ export const extractOrdonnance = createServerFn({ method: "POST" })
       // silent — extraction works without storage
     }
 
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
     const { generateText } = await import("ai");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
+    const { resolveAITask } = await import("@/lib/ai/runAITask.server");
+    const __aiTaskSlug = "extract_ordonnance";
+    const __aiDefaultModel = "google/gemini-3-flash-preview";
 
     const systemPrompt = `Tu es un assistant pharmaceutique expert en lecture d'ordonnances françaises.
 Analyse l'image / le PDF fourni et extrais les médicaments prescrits.
@@ -91,10 +91,11 @@ Règles :
 - Ignore les annotations administratives, en-têtes d'ordonnancier, signatures.
 - N'inclus que les médicaments réellement prescrits.
 Réponds UNIQUEMENT avec le JSON.`;
+    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     const result = await generateText({
       model,
-      system: systemPrompt,
+      system: __systemPrompt,
       messages: [
         {
           role: "user",

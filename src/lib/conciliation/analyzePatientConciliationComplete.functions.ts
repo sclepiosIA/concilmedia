@@ -72,10 +72,10 @@ export const analyzePatientConciliationComplete = createServerFn({ method: "POST
       prescriptions_hospitalieres: prescriptions.data ?? [],
     };
 
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
     const { generateText } = await import("ai");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
+    const { resolveAITask } = await import("@/lib/ai/runAITask.server");
+    const __aiTaskSlug = "analyze_patient_complete";
+    const __aiDefaultModel = "google/gemini-3-flash-preview";
 
     const systemPrompt = `Tu es un pharmacien clinicien hospitalier expert en CONCILIATION MÉDICAMENTEUSE. Ta mission : comparer ligne à ligne traitements habituels (ville/domicile) ↔ prescriptions hospitalières en cours, dans le contexte clinique (comorbidités, biologie, allergies, antécédents), et produire une aide à la décision opérationnelle pour le pharmacien hospitalier.
 
@@ -108,12 +108,13 @@ RÈGLES CLINIQUES STRICTES :
 9. "actions_prioritaires" : déduire les 3-8 interventions pharmaceutiques les plus utiles (appel prescripteur, modification ordonnance, éducation patient), triées par urgence.
 
 Réponds UNIQUEMENT avec le JSON, sans markdown.`;
+    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     let result;
     try {
       result = await generateText({
         model,
-        system: systemPrompt,
+        system: __systemPrompt,
         prompt: `Dossier patient complet :\n${JSON.stringify(dossier, null, 2)}`,
       });
     } catch (e: unknown) {
