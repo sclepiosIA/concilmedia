@@ -27,6 +27,28 @@ import {
 } from "lucide-react";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import type { ItemDecision, ItemOverrides } from "@/lib/conciliation/validateConciliation.functions";
+import { classifyDci } from "@/lib/conciliation/atcInteractions";
+import type { DeterministicAlert } from "@/lib/conciliation/deterministicAlerts";
+
+type Provenance = "regle" | "ia_confirmee" | "ia";
+
+const PROVENANCE_BADGE: Record<Provenance, { label: string; cls: string; title: string }> = {
+  regle: {
+    label: "Règle vérifiée",
+    cls: "bg-emerald-600 text-white hover:bg-emerald-600 border-emerald-600",
+    title: "Alerte produite par le moteur déterministe (référentiel ATC / STOPP-START).",
+  },
+  ia_confirmee: {
+    label: "Confirmé par règle",
+    cls: "bg-emerald-800 text-white hover:bg-emerald-800 border-emerald-800",
+    title: "Alerte IA qui correspond à une alerte du moteur déterministe.",
+  },
+  ia: {
+    label: "Hypothèse IA",
+    cls: "bg-amber-100 text-amber-900 hover:bg-amber-100 border-amber-300",
+    title: "Alerte produite par le LLM, non confirmée par une règle déterministe.",
+  },
+};
 
 export type AlertCategory = ItemDecision["category"];
 
@@ -111,6 +133,8 @@ interface AlertItemProps {
   reference?: string;
   confiance?: number;
   icon?: typeof AlertTriangle;
+  /** Origine de l'alerte : règle déterministe, IA confirmée par règle, ou hypothèse IA. */
+  provenance?: Provenance;
   validation?: {
     decision: ItemDecision | undefined;
     onChange: (d: ItemDecision | null) => void;
@@ -133,6 +157,7 @@ function AlertItem({
   reference,
   confiance,
   icon: Icon = AlertTriangle,
+  provenance,
   validation,
 }: AlertItemProps) {
   const [open, setOpen] = useState(false);
