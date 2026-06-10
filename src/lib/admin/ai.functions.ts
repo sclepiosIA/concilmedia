@@ -145,7 +145,6 @@ export const getTask = createServerFn({ method: "GET" })
       .eq("slug", data.slug)
       .single();
     if (error) throw new Error(error.message);
-    // Read extra_config separately (column added in later migration, may be absent in generated types)
     const { data: extraRow } = await supabaseAdmin
       .from("ai_tasks")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -154,8 +153,19 @@ export const getTask = createServerFn({ method: "GET" })
       .single();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const extra = ((extraRow as any)?.extra_config ?? {}) as Record<string, unknown>;
+    // Prompt effectif : DB si non vide, sinon le prompt par défaut codé en dur
+    // (utilisé comme fallback runtime par les tâches). Permet à l'éditeur
+    // d'afficher TOUJOURS le prompt courant, même si la colonne DB est vide.
+    const { DEFAULT_SYSTEM_PROMPTS } = await import("./defaultPrompts.server");
+    const dbPrompt = (task.system_prompt ?? "").trim();
+    const hasDbPrompt = dbPrompt.length > 0;
+    const effectivePrompt = hasDbPrompt
+      ? task.system_prompt
+      : (DEFAULT_SYSTEM_PROMPTS[data.slug] ?? "");
     return {
       ...task,
+      system_prompt: effectivePrompt,
+      has_db_prompt: hasDbPrompt,
       reasoning_effort: (extra.reasoning_effort as "low" | "medium" | "high" | null) ?? null,
     };
   });
