@@ -69,7 +69,7 @@ export const exportConciliationFhir = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: v, error: vErr } = await context.supabase
       .from("conciliation_validations")
-      .select("id, validated_at, pharmacien_nom, patient_id, analysis_id")
+      .select("id, validated_at, pharmacien_nom, patient_id")
       .eq("id", data.validationId)
       .maybeSingle();
     if (vErr) throw new Error(vErr.message);
@@ -84,9 +84,10 @@ export const exportConciliationFhir = createServerFn({ method: "POST" })
     const pseudo = pat?.external_pseudo ?? v.patient_id;
 
     const { data: meds, error: mErr } = await context.supabase
-      .from("conciliation_medicaments")
+      .from("traitements_habituels")
       .select("dci, dosage, dosage_unite, posologie_texte")
-      .eq("analysis_id", v.analysis_id);
+      .eq("patient_id", v.patient_id)
+      .eq("actif", true);
     if (mErr) throw new Error(mErr.message);
 
     const bundle = buildBundle({

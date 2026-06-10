@@ -103,21 +103,8 @@ export const Route = createFileRoute("/api/public/fhir/$")({
         const { fhirBundleToCsvRows } = await import("@/lib/dataIngest/fhirToConcilMed.server");
         const adapted = fhirBundleToCsvRows(bundle as { entry?: { resource?: { resourceType?: string } }[] });
 
-        // Métrique
-        await supabaseAdmin.from("conciliation_events").insert({
-          organization_id: orgId,
-          step: "open_patient", // pas de step dédié dans l'enum v1 ; metadata identifie l'origine
-          kind: "action",
-          metadata: {
-            source: "fhir_ingest_endpoint",
-            entries: bundle.entry?.length ?? 0,
-            patients: adapted.patients.length,
-            traitements: adapted.traitements.length,
-            allergies: adapted.allergies.length,
-            antecedents: adapted.antecedents.length,
-            biologie: adapted.biologie.length,
-          },
-        });
+        // Note : pas d'événement conciliation_events ici (user_id NOT NULL, ingest sans contexte
+        // utilisateur). Le journal d'ingestion sera couvert via data_imports en v3.
 
         return new Response(JSON.stringify({
           resourceType: "OperationOutcome",
