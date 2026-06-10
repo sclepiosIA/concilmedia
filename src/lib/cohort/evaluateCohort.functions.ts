@@ -3,7 +3,20 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { predictLayer2Sync, predictLayer4Sync } from "@/lib/ai/mlConcilmed.server";
 
-const Input = z.object({ cohortId: z.string().uuid() });
+const Input = z.object({
+  cohortId: z.string().uuid(),
+  runTag: z.string().min(1).max(120).optional(),
+  modelLabel: z.string().min(1).max(120).optional(),
+});
+
+type AIDivergence = {
+  medication_domicile?: { dci?: string | null } | null;
+  dci?: string | null;
+  medicament?: string | null;
+  type?: string | null;
+  type_divergence?: string | null;
+  severite?: string | null;
+};
 
 const SEVERITY_RANK = { mineure: 1, moderee: 2, majeure: 3, critique: 4 } as const;
 
@@ -50,10 +63,21 @@ export const evaluateCohort = createServerFn({ method: "POST" })
       throw new Error("Aucun patient dans cette cohorte. Importez des fichiers d'abord.");
     }
 
-    const [{ data: gold }, { data: episodes }, { data: divsIA }, { data: comorb }, { data: bio }] = await Promise.all([
+
+    // Lecture des divergences IA depuis le payload stocké dans conciliation_ai_analyses,
+    // filtré sur le run_tag + model_label si fournis. On garde la plus récente analyse par patient.
+    let aiQuery = supabase
+      .from("conciliation_ai_analyses")
+      .select("patient_id, payload, run_tag, model_label, created_at, model")
+      .in("patient_id", patientIds)
+      .order("created_at", { ascending: false });
+    if (data.runTag) aiQuery = aiQuery.eq("run_tag", data.runTag);
+    if (data.modelLabel) aiQuery = aiQuery.eq("model_label", data.modelLabel);
+    const { data: aiAnalyses } = await aiQuery;
+
+    const [{ data: gold }, { data: episodes }, { data: comorb }, { data: bio }] = await Promise.all([
       supabase.from("pharmacist_gold_standards").select("*").eq("cohort_id", data.cohortId),
       supabase.from("episodes").select("id, patient_id, motif, service, date_entree").in("patient_id", patientIds),
-      supabase.from("conciliation_medicaments").select("*").in("patient_id", patientIds).neq("type_divergence", "aucune"),
       supabase.from("comorbidites").select("patient_id, libelle, statut").in("patient_id", patientIds),
       supabase.from("biologie_resultats").select("patient_id, parametre, valeur, date_prelevement").in("patient_id", patientIds),
     ]);
@@ -62,12 +86,14 @@ export const evaluateCohort = createServerFn({ method: "POST" })
     const goldByPatient = new Map<string, GoldRow>();
     for (const g of gold ?? []) goldByPatient.set((g as { patient_id: string }).patient_id, g);
 
-    type DivRow = NonNullable<typeof divsIA>[number];
-    const divsByPatient = new Map<string, DivRow[]>();
-    for (const d of divsIA ?? []) {
-      const pid = (d as { patient_id: string }).patient_id;
-      if (!divsByPatient.has(pid)) divsByPatient.set(pid, []);
-      divsByPatient.get(pid)!.push(d);
+    // Plus récente analyse IA par patient (déjà triée desc)
+    const divsByPatient = new Map<string, AIDivergence[]>();
+    for (const a of aiAnalyses ?? []) {
+      const pid = (a as { patient_id: string }).patient_id;
+      if (divsByPatient.has(pid)) continue;
+      const pl = (a as { payload: unknown }).payload as { divergences_conciliation?: AIDivergence[] } | null;
+      const arr = Array.isArray(pl?.divergences_conciliation) ? pl!.divergences_conciliation! : [];
+      divsByPatient.set(pid, arr);
     }
 
     const comorbByPatient = new Map<string, number>();
@@ -128,9 +154,12 @@ export const evaluateCohort = createServerFn({ method: "POST" })
       let tp = 0, fp = 0;
       const matchedGold = new Set<number>();
       for (const d of iaDivs) {
-        const dom = ((d as { medication_domicile: { dci?: string } | null }).medication_domicile ?? {}) as { dci?: string };
-        const iaName = norm(dom.dci);
-        const iaType = (d as { type_divergence: string }).type_divergence;
+        // Payload IA: peut contenir `medication_domicile.dci` (analyse complète),
+        // ou `medicament`/`dci` à plat selon le prompt. On essaye tout.
+        const iaName = norm(
+          d.medication_domicile?.dci ?? d.dci ?? d.medicament ?? null,
+        );
+        const iaType = (d.type_divergence ?? d.type ?? "autre").toString();
         const idx = goldDivs.findIndex((gd, i) => {
           if (matchedGold.has(i)) return false;
           const gn = norm(gd.medicament);
@@ -139,9 +168,8 @@ export const evaluateCohort = createServerFn({ method: "POST" })
         });
         if (idx >= 0) {
           tp++; matchedGold.add(idx); bumpType(iaType, "tp");
-          // Severity comparison if both have severity
           const goldSev = goldDivs[idx].severite;
-          const iaSev = (d as { severite?: string | null }).severite;
+          const iaSev = d.severite ?? null;
           if (goldSev && iaSev) {
             sevPairs++;
             if (norm(goldSev) === norm(iaSev)) sevLLMcorrect++;
@@ -228,7 +256,7 @@ export const evaluateCohort = createServerFn({ method: "POST" })
       severity_ml_accuracy: sevPairs === 0 ? null : sevMLcorrect / sevPairs,
     };
 
-    // Persist
+    // Persist (upsert sur (cohort, run_tag, model_label))
     const { error: insErr } = await supabase
       .from("cohort_evaluations")
       .insert({
@@ -237,10 +265,12 @@ export const evaluateCohort = createServerFn({ method: "POST" })
         metrics_ml: metricsML as never,
         per_patient: perPatient as never,
         computed_by: userId,
+        run_tag: data.runTag ?? null,
+        model_label: data.modelLabel ?? null,
       } as never);
     if (insErr) console.warn("evaluateCohort persist failed:", insErr.message);
 
-    return { metricsIA, metricsML, perPatient };
+    return { metricsIA, metricsML, perPatient, runTag: data.runTag ?? null, modelLabel: data.modelLabel ?? null };
   });
 
 export type EvaluateCohortResult = Awaited<ReturnType<typeof evaluateCohort>>;

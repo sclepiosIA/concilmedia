@@ -114,9 +114,23 @@ function buildModel(
     case "azure_openai": {
       if (!apiKey) throw new Error("Clé Azure OpenAI manquante");
       const apiVersion = (extra.api_version as string | undefined) || "2024-10-21";
+      const variant = (extra.variant as string | undefined) || undefined;
 
-      // Azure AI Foundry (services.ai.azure.com) — use OpenAI-compatible endpoint
-      // shape: <baseUrl>/openai/deployments/<deployment>/chat/completions?api-version=...
+      // Variante: Azure Foundry — /openai/v1/responses (Responses API).
+      if (variant === "azure_foundry_responses") {
+        const trimmed = (baseUrl as string).replace(/\/+$/, "");
+        // OpenAI Responses API via Azure Foundry. Path: /openai/v1/responses
+        // On utilise createOpenAI puis .responses(modelId).
+        const p = createOpenAI({
+          apiKey,
+          baseURL: `${trimmed}/openai/v1`,
+          headers: { "api-key": apiKey },
+        });
+        // .responses() = Responses API (sinon chat.completions par défaut)
+        return p.responses(modelId);
+      }
+
+      // Azure AI Foundry (services.ai.azure.com) — OpenAI-compatible endpoint legacy
       if (isAzureFoundryUrl(baseUrl)) {
         const trimmed = (baseUrl as string).replace(/\/+$/, "");
         const p = createOpenAICompatible({
@@ -126,7 +140,6 @@ function buildModel(
             "api-key": apiKey,
             "Authorization": `Bearer ${apiKey}`,
           },
-          // Note: /openai/v1 does NOT accept ?api-version (causes 400). Only legacy /openai needs it.
         });
         return p(modelId);
       }
@@ -137,7 +150,6 @@ function buildModel(
         apiKey,
         resourceName,
         apiVersion,
-        // Only pass baseURL if no resourceName, to avoid double-config.
         baseURL: !resourceName && baseUrl ? baseUrl : undefined,
       });
       return p(modelId);
@@ -149,6 +161,19 @@ function buildModel(
     }
     case "anthropic": {
       if (!apiKey) throw new Error("Clé Anthropic manquante");
+      const variant = (extra.variant as string | undefined) || undefined;
+
+      // Variante: Azure Foundry — /anthropic/v1/messages
+      if (variant === "azure_foundry_anthropic") {
+        const trimmed = (baseUrl as string).replace(/\/+$/, "");
+        const p = createAnthropic({
+          apiKey,
+          baseURL: trimmed, // SDK appendra /v1/messages
+          headers: { "api-key": apiKey },
+        });
+        return p(modelId);
+      }
+
       const p = createAnthropic({ apiKey, baseURL: baseUrl || undefined });
       return p(modelId);
     }
@@ -296,3 +321,82 @@ export async function runAITask(
 }
 
 export { decryptProviderKey, decryptApiKey };
+
+/**
+ * Résout une tâche IA en forçant un modèle/provider spécifique (depuis
+ * `ai_providers.name` ou la passerelle Lovable). Sert au banc d'essai
+ * multi-modèles : on bypass la config DB de la tâche pour réutiliser le même
+ * system prompt mais piloter le modèle.
+ */
+export async function resolveAITaskWithOverride(
+  fallback: AITaskFallback,
+  override: { providerName: string; modelId: string },
+): Promise<ResolvedTask> {
+  const systemPrompt = fallback.systemPrompt;
+
+  // Cas "Lovable" → utiliser la passerelle Lovable directement
+  if (override.providerName === "__lovable__") {
+    const apiKey = process.env.LOVABLE_API_KEY ?? null;
+    if (!apiKey) throw new Error("LOVABLE_API_KEY manquante");
+    const model = buildModel("lovable", override.modelId, apiKey, null, {});
+    const callOptions = buildCallOptions({
+      modelId: override.modelId,
+      providerKind: "lovable",
+    });
+    return {
+      systemPrompt,
+      model,
+      modelId: override.modelId,
+      providerKind: "lovable",
+      callOptions,
+    };
+  }
+
+  // Sinon: lookup du provider par name
+  const { data: provider, error } = await supabaseAdmin
+    .from("ai_providers")
+    .select("id, kind, base_url, extra_config, is_active")
+    .eq("name", override.providerName)
+    .maybeSingle();
+  if (error) throw new Error(`Provider lookup failed: ${error.message}`);
+  if (!provider) throw new Error(`Provider introuvable: ${override.providerName}`);
+  if (!provider.is_active) throw new Error(`Provider inactif: ${override.providerName}`);
+
+  const providerKind = provider.kind as ProviderKind;
+  let apiKey: string | null = await decryptProviderKey(provider.id as string);
+  if (!apiKey && providerKind === "azure_openai") {
+    apiKey = process.env.AZURE_OPENAI_API_KEY ?? null;
+  }
+  if (!apiKey && providerKind === "anthropic") {
+    // Azure Foundry — Anthropic réutilise la clé Azure
+    const extra = (provider.extra_config as Record<string, unknown> | null) ?? {};
+    if (extra.variant === "azure_foundry_anthropic") {
+      apiKey = process.env.AZURE_OPENAI_API_KEY ?? null;
+    }
+  }
+  if (!apiKey && providerKind === "lovable") {
+    apiKey = process.env.LOVABLE_API_KEY ?? null;
+  }
+
+  const model = buildModel(
+    providerKind,
+    override.modelId,
+    apiKey,
+    (provider.base_url as string | null) ?? null,
+    (provider.extra_config as Record<string, unknown> | null) ?? {},
+  );
+
+  const callOptions = buildCallOptions({
+    modelId: override.modelId,
+    providerKind,
+  });
+
+  return {
+    systemPrompt,
+    model,
+    modelId: override.modelId,
+    providerKind,
+    callOptions,
+  };
+}
+

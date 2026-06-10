@@ -3,7 +3,17 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 
-const Input = z.object({ patientId: z.string().uuid() });
+const Input = z.object({
+  patientId: z.string().uuid(),
+  modelOverride: z
+    .object({
+      providerName: z.string().min(1),
+      modelId: z.string().min(1),
+    })
+    .optional(),
+  runTag: z.string().min(1).max(120).optional(),
+  modelLabel: z.string().min(1).max(120).optional(),
+});
 
 export const analyzePatientConciliationComplete = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -108,7 +118,12 @@ RÈGLES CLINIQUES STRICTES :
 9. "actions_prioritaires" : déduire les 3-8 interventions pharmaceutiques les plus utiles (appel prescripteur, modification ordonnance, éducation patient), triées par urgence.
 
 Réponds UNIQUEMENT avec le JSON, sans markdown.`;
-    const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
+    const { model, systemPrompt: __systemPrompt, callOptions, modelId: __modelIdUsed } = data.modelOverride
+      ? await (await import("@/lib/ai/runAITask.server")).resolveAITaskWithOverride(
+          { systemPrompt, model: __aiDefaultModel },
+          data.modelOverride,
+        )
+      : await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     let result;
     try {
@@ -138,10 +153,12 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
       patient_id: data.patientId,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       payload: payload as any,
-      model: "google/gemini-3-flash-preview",
+      model: __modelIdUsed,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       analysis_type: "conciliation_complete" as any,
-    });
+      run_tag: data.runTag ?? null,
+      model_label: data.modelLabel ?? null,
+    } as never);
 
     return payload;
   });

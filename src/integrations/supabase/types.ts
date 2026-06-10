@@ -327,7 +327,9 @@ export type Database = {
           id: string
           metrics_ia: Json | null
           metrics_ml: Json | null
+          model_label: string | null
           per_patient: Json | null
+          run_tag: string | null
         }
         Insert: {
           cohort_id: string
@@ -336,7 +338,9 @@ export type Database = {
           id?: string
           metrics_ia?: Json | null
           metrics_ml?: Json | null
+          model_label?: string | null
           per_patient?: Json | null
+          run_tag?: string | null
         }
         Update: {
           cohort_id?: string
@@ -345,7 +349,9 @@ export type Database = {
           id?: string
           metrics_ia?: Json | null
           metrics_ml?: Json | null
+          model_label?: string | null
           per_patient?: Json | null
+          run_tag?: string | null
         }
         Relationships: [
           {
@@ -436,8 +442,10 @@ export type Database = {
           episode_id: string | null
           id: string
           model: string
+          model_label: string | null
           patient_id: string
           payload: Json
+          run_tag: string | null
           source: string
         }
         Insert: {
@@ -446,8 +454,10 @@ export type Database = {
           episode_id?: string | null
           id?: string
           model: string
+          model_label?: string | null
           patient_id: string
           payload: Json
+          run_tag?: string | null
           source?: string
         }
         Update: {
@@ -456,8 +466,10 @@ export type Database = {
           episode_id?: string | null
           id?: string
           model?: string
+          model_label?: string | null
           patient_id?: string
           payload?: Json
+          run_tag?: string | null
           source?: string
         }
         Relationships: [
