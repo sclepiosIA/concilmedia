@@ -168,7 +168,10 @@ export function computePatientTriage(input: PatientTriageInput): TriageResult {
       hasValidation,
       hasActiveEpisode,
       pendingSinceHours,
+      riskComputed: worstRisk != null,
+      analysisRun,
     },
+
   };
 }
 
