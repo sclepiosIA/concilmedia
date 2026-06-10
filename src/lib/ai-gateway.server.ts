@@ -31,29 +31,8 @@ export function createLovableAiGatewayProvider(lovableApiKey: string, initialRun
       if (runId && !headers.has(LOVABLE_AIG_RUN_ID_HEADER)) {
         headers.set(LOVABLE_AIG_RUN_ID_HEADER, runId);
       }
-      // Default reasoning effort: low (applies to /chat/completions JSON bodies).
-      // Per-call override possible by setting reasoning_effort explicitly.
-      let body = init?.body;
-      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-      const ct = headers.get("content-type") ?? "";
-      if (
-        body &&
-        typeof body === "string" &&
-        ct.includes("application/json") &&
-        url.includes("/chat/completions")
-      ) {
-        try {
-          const parsed = JSON.parse(body) as Record<string, unknown>;
-          if (parsed && typeof parsed === "object" && parsed.reasoning_effort === undefined) {
-            parsed.reasoning_effort = "low";
-            body = JSON.stringify(parsed);
-          }
-        } catch {
-          // leave body unchanged
-        }
-      }
       try {
-        const response = await fetch(input, { ...init, headers, body });
+        const response = await fetch(input, { ...init, headers });
         publishRunId(response.headers.get(LOVABLE_AIG_RUN_ID_HEADER) ?? undefined);
         return response;
       } catch (err) {
