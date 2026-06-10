@@ -35,6 +35,7 @@ export const Route = createFileRoute("/_authenticated/patients/")({
 
 function PatientsListPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
