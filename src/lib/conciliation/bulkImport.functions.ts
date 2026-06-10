@@ -105,10 +105,10 @@ export const extractPatientDossier = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY manquante");
 
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
     const { generateText } = await import("ai");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
+    const { resolveAITask } = await import("@/lib/ai/runAITask.server");
+    const __aiTaskSlug = "bulk_import";
+    const __aiDefaultModel = "google/gemini-3-flash-preview";
 
     const systemPrompt = `Tu es un assistant médical expert en lecture de dossiers patients.
 Analyse le document fourni (PDF / image) et CLASSIFIE-LE puis extrais TOUTES les informations cliniques.
@@ -139,10 +139,11 @@ Règles CRUCIALES de classification :
 - Biologie prioritaire : DFG, créatinine, kaliémie, natrémie, INR, TP, hémoglobine, plaquettes, leucocytes, ASAT, ALAT, glycémie, HbA1c, CRP.
 - Omets les champs inconnus, n'invente rien. Renvoie [] pour les sections vides.
 - Ne renvoie QUE le JSON.`;
+    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     const result = await generateText({
       model,
-      system: systemPrompt,
+      system: __systemPrompt,
       messages: [
         {
           role: "user",

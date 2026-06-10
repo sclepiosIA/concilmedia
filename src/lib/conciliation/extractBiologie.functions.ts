@@ -30,10 +30,10 @@ export const extractBiologie = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY manquante");
 
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
     const { generateText } = await import("ai");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
+    const { resolveAITask } = await import("@/lib/ai/runAITask.server");
+    const __aiTaskSlug = "extract_biologie";
+    const __aiDefaultModel = "google/gemini-3-flash-preview";
 
     const systemPrompt = `Tu es un assistant biomédical expert en lecture de comptes-rendus de biologie médicale français.
 Analyse le PDF / image et extrais tous les résultats biologiques.
@@ -56,10 +56,11 @@ Règles :
 - Ignore les commentaires, les valeurs de référence, les en-têtes.
 - N'inclus que les résultats biologiques mesurés.
 Réponds UNIQUEMENT avec le JSON.`;
+    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     const result = await generateText({
       model,
-      system: systemPrompt,
+      system: __systemPrompt,
       messages: [
         {
           role: "user",

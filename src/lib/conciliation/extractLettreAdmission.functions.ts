@@ -65,10 +65,10 @@ export const analyzeLettreAdmission = createServerFn({ method: "POST" })
       fileBase64 = btoa(bin);
     }
 
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
     const { generateText } = await import("ai");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
+    const { resolveAITask } = await import("@/lib/ai/runAITask.server");
+    const __aiTaskSlug = "extract_lettre_admission";
+    const __aiDefaultModel = "google/gemini-3-flash-preview";
 
     const systemPrompt = `Tu es un assistant médical. Analyse cette lettre d'admission hospitalière française et extrais les informations du profil patient.
 Réponds STRICTEMENT en JSON valide selon ce schéma (omets les champs absents) :
@@ -90,10 +90,11 @@ Règles :
 - Le poids doit être en kg, la taille en cm.
 - N'inclus que les vraies allergies médicamenteuses ou alimentaires (pas les intolérances vagues).
 - Réponds UNIQUEMENT avec le JSON, sans texte autour.`;
+    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     const result = await generateText({
       model,
-      system: systemPrompt,
+      system: __systemPrompt,
       messages: [
         {
           role: "user",
