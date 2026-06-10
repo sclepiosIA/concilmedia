@@ -31,7 +31,7 @@ export const scoreOmissionsSeverity = createServerFn({ method: "POST" })
     const { supabase } = context;
     const [{ data: patient }, { data: episode }, { count: nbMedsHosp }] = await Promise.all([
       supabase.from("patients").select("date_naissance").eq("id", data.patientId).maybeSingle(),
-      supabase.from("episodes").select("service,date_admission,date_sortie").eq("id", data.episodeId).maybeSingle(),
+      supabase.from("episodes").select("service,date_entree,date_sortie").eq("id", data.episodeId).maybeSingle(),
       supabase
         .from("prescriptions_hospitalieres")
         .select("id", { count: "exact", head: true })
@@ -43,12 +43,12 @@ export const scoreOmissionsSeverity = createServerFn({ method: "POST" })
       ? Math.floor((Date.now() - new Date(patient.date_naissance).getTime()) / (365.25 * 86400 * 1000))
       : null;
     const dureeSejour =
-      episode?.date_admission
+      episode?.date_entree
         ? Math.max(
             0,
             Math.floor(
               ((episode.date_sortie ? new Date(episode.date_sortie).getTime() : Date.now()) -
-                new Date(episode.date_admission).getTime()) /
+                new Date(episode.date_entree).getTime()) /
                 86400000,
             ),
           )
