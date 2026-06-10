@@ -71,8 +71,11 @@ export function OrdonnanceUploader({ patientId }: { patientId: string }) {
 
   const importMut = useMutation({
     mutationFn: async () => {
-      const selected = meds.filter((m) => m._include).map(({ _include, ...m }) => m);
-      void _include;
+      const selected = meds.filter((m) => m._include).map((m) => {
+        const { _include: _drop, ...rest } = m;
+        void _drop;
+        return rest;
+      });
       return importMeds({ data: { patientId, medications: selected as unknown as Record<string, unknown>[] } });
     },
     onSuccess: (r) => {
