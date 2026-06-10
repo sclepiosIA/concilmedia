@@ -275,6 +275,14 @@ function AlertItem({
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="font-semibold text-sm">{title}</span>
                 <Badge className={`text-[10px] ${sev.badge}`}>{sev.label}</Badge>
+                {provenance && (
+                  <Badge
+                    title={PROVENANCE_BADGE[provenance].title}
+                    className={`text-[10px] ${PROVENANCE_BADGE[provenance].cls}`}
+                  >
+                    {PROVENANCE_BADGE[provenance].label}
+                  </Badge>
+                )}
                 {conf !== null && (
                   <Badge variant="outline" className="text-[10px] bg-white">
                     Confiance IA {conf}%
