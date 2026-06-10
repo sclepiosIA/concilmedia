@@ -76,6 +76,13 @@ export const saveConciliationValidation = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw new Error(error.message);
+    // Archivage automatique du patient à la validation : il sort du flux actif
+    // sans qu'on modifie artificiellement son classement P.
+    const { error: archErr } = await supabase
+      .from("patients")
+      .update({ archived: true })
+      .eq("id", data.patientId);
+    if (archErr) console.warn("[validateConciliation] archive failed:", archErr.message);
     return result;
   });
 
