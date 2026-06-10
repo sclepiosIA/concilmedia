@@ -46,6 +46,7 @@ function TaskEditor() {
   const [temperature, setTemperature] = useState<string>("");
   const [maxTokens, setMaxTokens] = useState<string>("");
   const [executionMode, setExecutionMode] = useState<"llm" | "ml" | "both">("llm");
+  const [reasoningEffort, setReasoningEffort] = useState<"low" | "medium" | "high" | "">("");
   const [note, setNote] = useState<string>("");
   const [initialized, setInitialized] = useState(false);
 
@@ -60,8 +61,11 @@ function TaskEditor() {
     setMaxTokens(taskQ.data.max_tokens?.toString() ?? "");
     const m = (taskQ.data as { execution_mode?: string }).execution_mode;
     setExecutionMode(m === "ml" || m === "both" ? m : "llm");
+    setReasoningEffort((taskQ.data.reasoning_effort as "low" | "medium" | "high" | null) ?? "");
     setInitialized(true);
   }
+
+  const isGpt5 = /gpt-5/i.test(model);
 
   const save = useMutation({
     mutationFn: () =>
