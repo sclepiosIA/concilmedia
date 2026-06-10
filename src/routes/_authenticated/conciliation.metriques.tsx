@@ -62,6 +62,16 @@ function MetricsPage() {
     queryFn: () => getMetrics({ data: { from: range.from, to: range.to, organizationId: orgId || undefined } }),
   });
 
+  const listLogs = useServerFn(listFhirPushLogs);
+  const pushLogsQ = useQuery({
+    queryKey: ["fhir-push-logs", orgId],
+    queryFn: () => (orgId ? listLogs({ data: { organizationId: orgId } }) : { logs: [] as { ok: boolean; created_at: string; status_code: number | null; endpoint_url: string }[] }),
+    enabled: !!orgId,
+  });
+  const pushLogs = pushLogsQ.data?.logs ?? [];
+  const pushOk = pushLogs.filter((l) => l.ok).length;
+  const pushKo = pushLogs.length - pushOk;
+
   const m = q.data;
   const totalMedianMs = (m?.byStep ?? []).reduce((s, x) => s + x.p50, 0);
   const iaGain = m?.iaImpact && m.iaImpact.with_ia.median_ms && m.iaImpact.without_ia.median_ms
