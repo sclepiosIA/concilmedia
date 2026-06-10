@@ -33,8 +33,9 @@ export const matchPrescriptionAI = createServerFn({ method: "POST" })
 
     const { generateText, Output } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
-    const { model: aiModel, callOptions } = await resolveAITask("match_prescription", {
-      systemPrompt: "",
+    const fallbackSystemPrompt = `Tu es pharmacien clinicien hospitalier expert en conciliation médicamenteuse. Analyse la concordance entre une prescription hospitalière et le traitement habituel d'un patient à domicile, en tenant compte des allergies et comorbidités. Classe selon la sévérité clinique : vert (conforme), jaune (adaptation logique), orange (divergence non justifiée), rouge (erreur / CI / allergie / surdosage). Réponds en français, raison ≤200 caractères, recommandation seulement si statut ≠ vert.`;
+    const { model: aiModel, systemPrompt: __systemPrompt, callOptions } = await resolveAITask("match_prescription", {
+      systemPrompt: fallbackSystemPrompt,
       model: "google/gemini-2.5-flash",
     });
 
@@ -71,6 +72,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
       const res = await generateText({
         ...callOptions,
         model: aiModel,
+        system: __systemPrompt,
         prompt,
         experimental_output: Output.object({ schema: AISchema }),
       });
@@ -81,6 +83,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
         const res = await generateText({
           ...callOptions,
           model: aiModel,
+          system: __systemPrompt,
           prompt:
             prompt +
             `\n\nRéponds UNIQUEMENT avec un JSON valide de la forme :\n{"status":"vert|jaune|orange|rouge","reason":"...","recommandation":"..."}`,
