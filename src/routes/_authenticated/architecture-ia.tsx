@@ -311,7 +311,7 @@ function SimplifiedView() {
         </CardHeader>
         <CardContent className="text-sm space-y-1">
           <ul className="list-disc pl-5 space-y-1">
-            <li>Chaque pharmacien ne voit que ses propres patients (verrouillage en base).</li>
+            
             <li>Les clés d'accès aux IA sont chiffrées et ne sortent jamais du serveur.</li>
             <li>Les règles métier tournent en parallèle de l'IA pour détecter une éventuelle erreur.</li>
             <li>L'IA propose, le pharmacien dispose — aucune décision n'est automatisée.</li>
