@@ -277,7 +277,7 @@ export async function resolveAITask(
   const maxTokens = (row?.max_tokens as number | null) ?? undefined;
   const taskExtra = (row?.extra_config as Record<string, unknown> | undefined) ?? {};
   const reasoningEffort =
-    (taskExtra.reasoning_effort as "low" | "medium" | "high" | undefined) || undefined;
+    (taskExtra.reasoning_effort as "low" | "medium" | "high" | undefined) || "low";
 
   const callOptions = buildCallOptions({
     modelId,
