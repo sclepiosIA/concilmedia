@@ -315,7 +315,7 @@ function PatientDetailPage() {
           defaultOpen
           className="border-primary/30"
         >
-          <ConciliationCompleteCard patientId={patientId} autoStart={autoConciliate} />
+          <ConciliationCompleteCard patientId={patientId} autoStart />
         </CollapsibleSection>
       </div>
       
