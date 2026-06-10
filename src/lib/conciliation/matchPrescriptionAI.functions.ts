@@ -28,8 +28,8 @@ export const matchPrescriptionAI = createServerFn({ method: "POST" })
 
     if (!hosp) throw new Error("Prescription introuvable");
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY manquant");
+
+
 
     const { generateText, Output } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
