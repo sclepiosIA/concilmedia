@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
@@ -42,6 +43,7 @@ function TaskEditor() {
   const [providerId, setProviderId] = useState<string>("");
   const [temperature, setTemperature] = useState<string>("");
   const [maxTokens, setMaxTokens] = useState<string>("");
+  const [executionMode, setExecutionMode] = useState<"llm" | "ml" | "both">("llm");
   const [note, setNote] = useState<string>("");
   const [initialized, setInitialized] = useState(false);
 
@@ -54,6 +56,8 @@ function TaskEditor() {
     setProviderId(taskQ.data.provider_id ?? "");
     setTemperature(taskQ.data.temperature?.toString() ?? "");
     setMaxTokens(taskQ.data.max_tokens?.toString() ?? "");
+    const m = (taskQ.data as { execution_mode?: string }).execution_mode;
+    setExecutionMode(m === "ml" || m === "both" ? m : "llm");
     setInitialized(true);
   }
 
@@ -67,6 +71,7 @@ function TaskEditor() {
           system_prompt: systemPrompt,
           temperature: temperature ? Number(temperature) : null,
           max_tokens: maxTokens ? Number(maxTokens) : null,
+          execution_mode: executionMode,
           note: note || undefined,
         },
       }),
