@@ -608,6 +608,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
                   mecanisme={r.mecanisme}
                   reference={r.reference}
                   provenance="regle"
+                  validation={valFor("alertes_regles", k)}
                 />
               );
             }
@@ -620,9 +621,11 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
                 mecanisme={`Critère ${r.id} déclenché pour ${r.dci} (classe ${r.classe})`}
                 reference={r.reference}
                 provenance="regle"
+                validation={valFor("alertes_regles", k)}
               />
             );
           })}
+
         </Section>
       )}
 
