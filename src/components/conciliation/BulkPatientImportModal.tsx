@@ -260,7 +260,6 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
                 <AccordionItem key={i.id} value={i.id} className="border rounded-md px-3">
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center gap-2 flex-1 text-left flex-wrap">
-                    <div className="flex items-center gap-2 flex-1 text-left flex-wrap">
                       {i.status === "ready" && checkMismatch(i) && <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />Nom ≠ patient cible</Badge>}
                       {i.status === "ready" && !checkMismatch(i) && i.dossier?.existing_patient_id && <Badge variant="outline" className="border-yellow-500 text-yellow-700"><AlertTriangle className="h-3 w-3 mr-1" />Doublon</Badge>}
                       {i.status === "ready" && !checkMismatch(i) && !i.dossier?.existing_patient_id && <Badge variant="outline" className="border-green-500 text-green-700"><Check className="h-3 w-3 mr-1" />Prêt</Badge>}
