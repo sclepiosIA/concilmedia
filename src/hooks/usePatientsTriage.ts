@@ -160,10 +160,22 @@ export function usePatientsTriage(patientIds: string[]) {
       const result: Record<string, TriageResult> = {};
       for (const pid of patientIds) {
         const divInfo = divAgg.get(pid);
+        let worst: NiveauRisque | null = worstRiskByPatient.get(pid) ?? null;
+        if (!worst) {
+          const r = computeRiskScore({
+            age: ageByPatient.get(pid) ?? null,
+            via_urgences: false,
+            nb_comorbidites: nbComorbByPatient.get(pid) ?? 0,
+            has_insuffisance_renale: hasRenaleByPatient.get(pid) ?? false,
+            has_insuffisance_hepatique: hasHepatByPatient.get(pid) ?? false,
+            traitements_dci: dciByPatient.get(pid) ?? [],
+          });
+          worst = r.niveau;
+        }
         result[pid] = computePatientTriage({
           hasActiveEpisode: activeByPatient.get(pid) ?? false,
           hasValidation: validatedPatients.has(pid),
-          worstRisk: worstRiskByPatient.get(pid) ?? null,
+          worstRisk: worst,
           divergencesByGravity: divInfo?.byGravity ?? { mineur: 0, modere: 0, majeur: 0, critique: 0 },
           nbDivergencesNonIntentionnelles: divInfo?.nonIntentionnelles ?? 0,
           oldestPendingAnalysisAt: oldestAnalysisByPatient.get(pid) ?? null,
@@ -171,7 +183,6 @@ export function usePatientsTriage(patientIds: string[]) {
           nbTraitements: nbTraitementsByPatient.get(pid) ?? 0,
           hasInsuffisanceRenale: hasRenaleByPatient.get(pid) ?? false,
         });
-
       }
       return result;
     },
