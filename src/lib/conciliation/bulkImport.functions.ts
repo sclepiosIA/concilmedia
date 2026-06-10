@@ -102,6 +102,56 @@ const DossierSchema = z.object({
 
 type DossierData = z.infer<typeof DossierSchema>;
 
+type JsonRecord = Record<string, unknown>;
+
+const isRecord = (value: unknown): value is JsonRecord =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const nonEmptyString = (...values: unknown[]): string | null => {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return null;
+};
+
+const recordsArray = (value: unknown): JsonRecord[] => Array.isArray(value) ? value.filter(isRecord) : [];
+
+const sanitizeDossierInput = (value: unknown): unknown => {
+  if (!isRecord(value)) return value;
+  const documentType = typeof value.document_type === "string" ? value.document_type : "autre";
+  const sanitized: JsonRecord = {
+    ...value,
+    patient: isRecord(value.patient) ? value.patient : {},
+    antecedents: recordsArray(value.antecedents)
+      .map((a) => ({ ...a, description: nonEmptyString(a.description, a.libelle, a.nom) }))
+      .filter((a) => a.description),
+    comorbidites: recordsArray(value.comorbidites)
+      .map((c) => ({ ...c, libelle: nonEmptyString(c.libelle, c.description, c.pathologie) }))
+      .filter((c) => c.libelle),
+    allergies: recordsArray(value.allergies)
+      .map((a) => ({ ...a, substance: nonEmptyString(a.substance, a.allergene, a.medicament) }))
+      .filter((a) => a.substance),
+    biologie: recordsArray(value.biologie)
+      .map((b) => ({ ...b, parametre: nonEmptyString(b.parametre, b.nom, b.analyse) }))
+      .filter((b) => b.parametre),
+  };
+
+  if (documentType === "lettre_admission") {
+    return { ...sanitized, traitements: [], prescriptions_hospitalieres: [] };
+  }
+
+  return {
+    ...sanitized,
+    traitements: recordsArray(value.traitements)
+      .map((t) => ({ ...t, dci: nonEmptyString(t.dci, t.medicament, t.nom_commercial, t.nom, t.libelle) }))
+      .filter((t) => t.dci),
+    prescriptions_hospitalieres: recordsArray(value.prescriptions_hospitalieres)
+      .map((p) => ({ ...p, medicament: nonEmptyString(p.medicament, p.dci, p.nom_commercial, p.nom, p.libelle) }))
+      .filter((p) => p.medicament),
+  };
+};
+
 const normalizeKey = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
 
 const normalizeHospitalPrescriptionLines = <T extends DossierData>(dossier: T): T => {
