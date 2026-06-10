@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ export const Route = createFileRoute("/_authenticated/patients/")({
 
 function PatientsListPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -310,7 +311,9 @@ function PatientsListPage() {
         targetPatientId={bulkTargetId}
         initialFiles={bulkTargetId ? pendingFiles : undefined}
         onCompleted={() => {
-          if (bulkTargetId) setSyntheseFor(bulkTargetId);
+          if (bulkTargetId) {
+            navigate({ to: "/patients/$patientId", params: { patientId: bulkTargetId }, search: { autoConciliate: true } });
+          }
         }}
       />
 

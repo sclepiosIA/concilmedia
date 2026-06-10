@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // tabs removed
@@ -23,13 +25,26 @@ import { ConciliationCompleteCard } from "@/components/patient/ConciliationCompl
 import { FlaskConical, Hospital, Pill, Sparkles, Stethoscope } from "lucide-react";
 import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
 
+const patientSearchSchema = z.object({
+  autoConciliate: fallback(z.boolean(), false).default(false),
+});
+
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
+  validateSearch: zodValidator(patientSearchSchema),
   component: PatientDetailPage,
 });
 
 function PatientDetailPage() {
   const { patientId } = Route.useParams();
+  const { autoConciliate } = Route.useSearch();
+
+  useEffect(() => {
+    if (autoConciliate) {
+      navigate({ to: ".", search: {}, replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -300,7 +315,7 @@ function PatientDetailPage() {
           defaultOpen
           className="border-primary/30"
         >
-          <ConciliationCompleteCard patientId={patientId} />
+          <ConciliationCompleteCard patientId={patientId} autoStart={autoConciliate} />
         </CollapsibleSection>
       </div>
       
