@@ -3,7 +3,20 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { predictLayer2Sync, predictLayer4Sync } from "@/lib/ai/mlConcilmed.server";
 
-const Input = z.object({ cohortId: z.string().uuid() });
+const Input = z.object({
+  cohortId: z.string().uuid(),
+  runTag: z.string().min(1).max(120).optional(),
+  modelLabel: z.string().min(1).max(120).optional(),
+});
+
+type AIDivergence = {
+  medication_domicile?: { dci?: string | null } | null;
+  dci?: string | null;
+  medicament?: string | null;
+  type?: string | null;
+  type_divergence?: string | null;
+  severite?: string | null;
+};
 
 const SEVERITY_RANK = { mineure: 1, moderee: 2, majeure: 3, critique: 4 } as const;
 
