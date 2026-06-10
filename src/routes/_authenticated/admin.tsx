@@ -20,6 +20,9 @@ function AdminLayout() {
         <Link to="/admin/ai/rlhf" className="text-muted-foreground hover:underline">RLHF</Link>
         <span className="text-muted-foreground">·</span>
         <Link to="/admin/bdpm" className="text-muted-foreground hover:underline">BDPM</Link>
+        <span className="text-muted-foreground">·</span>
+        <Link to="/admin/rag" className="text-muted-foreground hover:underline">RAG</Link>
+
       </div>
 
 
