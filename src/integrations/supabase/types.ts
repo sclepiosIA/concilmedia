@@ -1182,6 +1182,60 @@ export type Database = {
           },
         ]
       }
+      fhir_push_logs: {
+        Row: {
+          created_at: string
+          endpoint_url: string
+          id: string
+          ok: boolean
+          organization_id: string
+          pushed_by: string | null
+          resource_counts: Json
+          response_excerpt: string | null
+          status_code: number | null
+          validation_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          endpoint_url: string
+          id?: string
+          ok?: boolean
+          organization_id: string
+          pushed_by?: string | null
+          resource_counts?: Json
+          response_excerpt?: string | null
+          status_code?: number | null
+          validation_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          endpoint_url?: string
+          id?: string
+          ok?: boolean
+          organization_id?: string
+          pushed_by?: string | null
+          resource_counts?: Json
+          response_excerpt?: string | null
+          status_code?: number | null
+          validation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fhir_push_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fhir_push_logs_validation_id_fkey"
+            columns: ["validation_id"]
+            isOneToOne: false
+            referencedRelation: "conciliation_validations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ground_truth_dnis: {
         Row: {
           created_at: string
@@ -1255,9 +1309,57 @@ export type Database = {
           },
         ]
       }
+      organization_sih_config: {
+        Row: {
+          auth_kind: string
+          auth_secret_encrypted: string | null
+          created_at: string
+          fhir_base_url: string | null
+          id: string
+          ins_oid: string | null
+          ipp_authority_oid: string | null
+          is_active: boolean
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          auth_kind?: string
+          auth_secret_encrypted?: string | null
+          created_at?: string
+          fhir_base_url?: string | null
+          id?: string
+          ins_oid?: string | null
+          ipp_authority_oid?: string | null
+          is_active?: boolean
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          auth_kind?: string
+          auth_secret_encrypted?: string | null
+          created_at?: string
+          fhir_base_url?: string | null
+          id?: string
+          ins_oid?: string | null
+          ipp_authority_oid?: string | null
+          is_active?: boolean
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_sih_config_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
+          fhir_ingest_secret_encrypted: string | null
           finess: string | null
           hds_provider: string | null
           id: string
@@ -1266,6 +1368,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          fhir_ingest_secret_encrypted?: string | null
           finess?: string | null
           hds_provider?: string | null
           id?: string
@@ -1274,6 +1377,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          fhir_ingest_secret_encrypted?: string | null
           finess?: string | null
           hds_provider?: string | null
           id?: string
@@ -1296,6 +1400,8 @@ export type Database = {
           external_ref: string | null
           id: string
           imported_via: string | null
+          ins_pseudo: string | null
+          ipp_authority_oid: string | null
           is_synthetic: boolean
           nir: string | null
           nom: string
@@ -1320,6 +1426,8 @@ export type Database = {
           external_ref?: string | null
           id?: string
           imported_via?: string | null
+          ins_pseudo?: string | null
+          ipp_authority_oid?: string | null
           is_synthetic?: boolean
           nir?: string | null
           nom: string
@@ -1344,6 +1452,8 @@ export type Database = {
           external_ref?: string | null
           id?: string
           imported_via?: string | null
+          ins_pseudo?: string | null
+          ipp_authority_oid?: string | null
           is_synthetic?: boolean
           nir?: string | null
           nom?: string
