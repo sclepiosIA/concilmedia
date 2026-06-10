@@ -13,6 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Upload, Trash2, Sparkles, Loader2, Check, AlertTriangle, X, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { extractPatientDossier, commitBulkImport, type ExtractedDossier } from "@/lib/conciliation/bulkImport.functions";
+import { supabase } from "@/integrations/supabase/client";
+
+const normName = (s?: string | null) =>
+  (s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 
 const docTypeLabel: Record<string, string> = {
   ordonnance_ville: "Ordo ville",
