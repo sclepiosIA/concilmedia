@@ -340,6 +340,195 @@ export type Database = {
           },
         ]
       }
+      bdpm_atc: {
+        Row: {
+          cis: number
+          code_atc: string
+          libelle_atc: string | null
+        }
+        Insert: {
+          cis: number
+          code_atc: string
+          libelle_atc?: string | null
+        }
+        Update: {
+          cis?: number
+          code_atc?: string
+          libelle_atc?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bdpm_atc_cis_fkey"
+            columns: ["cis"]
+            isOneToOne: true
+            referencedRelation: "bdpm_specialites"
+            referencedColumns: ["cis"]
+          },
+        ]
+      }
+      bdpm_compositions: {
+        Row: {
+          cis: number
+          code_substance: number | null
+          denomination_substance: string | null
+          designation_element_pharma: string | null
+          dosage_substance: string | null
+          id: number
+          nature_composant: string | null
+          reference_dosage: string | null
+        }
+        Insert: {
+          cis: number
+          code_substance?: number | null
+          denomination_substance?: string | null
+          designation_element_pharma?: string | null
+          dosage_substance?: string | null
+          id?: number
+          nature_composant?: string | null
+          reference_dosage?: string | null
+        }
+        Update: {
+          cis?: number
+          code_substance?: number | null
+          denomination_substance?: string | null
+          designation_element_pharma?: string | null
+          dosage_substance?: string | null
+          id?: number
+          nature_composant?: string | null
+          reference_dosage?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bdpm_compositions_cis_fkey"
+            columns: ["cis"]
+            isOneToOne: false
+            referencedRelation: "bdpm_specialites"
+            referencedColumns: ["cis"]
+          },
+        ]
+      }
+      bdpm_import_runs: {
+        Row: {
+          error: string | null
+          files_processed: Json | null
+          finished_at: string | null
+          id: string
+          rows_total: number | null
+          started_at: string
+          status: string
+          triggered_by: string | null
+        }
+        Insert: {
+          error?: string | null
+          files_processed?: Json | null
+          finished_at?: string | null
+          id?: string
+          rows_total?: number | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          error?: string | null
+          files_processed?: Json | null
+          finished_at?: string | null
+          id?: string
+          rows_total?: number | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
+      bdpm_presentations: {
+        Row: {
+          agrement_collectivites: boolean | null
+          cip13: number | null
+          cip7: number
+          cis: number
+          date_declaration_commerc: string | null
+          etat_commercialisation: string | null
+          libelle: string | null
+          prix_eur: number | null
+          statut_admin: string | null
+          taux_remboursement: string | null
+        }
+        Insert: {
+          agrement_collectivites?: boolean | null
+          cip13?: number | null
+          cip7: number
+          cis: number
+          date_declaration_commerc?: string | null
+          etat_commercialisation?: string | null
+          libelle?: string | null
+          prix_eur?: number | null
+          statut_admin?: string | null
+          taux_remboursement?: string | null
+        }
+        Update: {
+          agrement_collectivites?: boolean | null
+          cip13?: number | null
+          cip7?: number
+          cis?: number
+          date_declaration_commerc?: string | null
+          etat_commercialisation?: string | null
+          libelle?: string | null
+          prix_eur?: number | null
+          statut_admin?: string | null
+          taux_remboursement?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bdpm_presentations_cis_fkey"
+            columns: ["cis"]
+            isOneToOne: false
+            referencedRelation: "bdpm_specialites"
+            referencedColumns: ["cis"]
+          },
+        ]
+      }
+      bdpm_specialites: {
+        Row: {
+          cis: number
+          date_amm: string | null
+          denomination: string
+          etat_commercialisation: string | null
+          forme: string | null
+          statut_amm: string | null
+          surveillance_renforcee: boolean | null
+          titulaire: string | null
+          type_amm: string | null
+          updated_at: string
+          voies: string | null
+        }
+        Insert: {
+          cis: number
+          date_amm?: string | null
+          denomination: string
+          etat_commercialisation?: string | null
+          forme?: string | null
+          statut_amm?: string | null
+          surveillance_renforcee?: boolean | null
+          titulaire?: string | null
+          type_amm?: string | null
+          updated_at?: string
+          voies?: string | null
+        }
+        Update: {
+          cis?: number
+          date_amm?: string | null
+          denomination?: string
+          etat_commercialisation?: string | null
+          forme?: string | null
+          statut_amm?: string | null
+          surveillance_renforcee?: boolean | null
+          titulaire?: string | null
+          type_amm?: string | null
+          updated_at?: string
+          voies?: string | null
+        }
+        Relationships: []
+      }
       biologie_resultats: {
         Row: {
           created_at: string
@@ -1176,6 +1365,8 @@ export type Database = {
       prescriptions_hospitalieres: {
         Row: {
           actif: boolean
+          cis: number | null
+          code_atc: string | null
           created_at: string
           date_debut: string
           date_fin: string | null
@@ -1204,6 +1395,8 @@ export type Database = {
         }
         Insert: {
           actif?: boolean
+          cis?: number | null
+          code_atc?: string | null
           created_at?: string
           date_debut?: string
           date_fin?: string | null
@@ -1232,6 +1425,8 @@ export type Database = {
         }
         Update: {
           actif?: boolean
+          cis?: number | null
+          code_atc?: string | null
           created_at?: string
           date_debut?: string
           date_fin?: string | null
@@ -1365,6 +1560,8 @@ export type Database = {
       traitements_habituels: {
         Row: {
           actif: boolean
+          cis: number | null
+          code_atc: string | null
           created_at: string
           dci: string | null
           dosage: string | null
@@ -1386,6 +1583,8 @@ export type Database = {
         }
         Insert: {
           actif?: boolean
+          cis?: number | null
+          code_atc?: string | null
           created_at?: string
           dci?: string | null
           dosage?: string | null
@@ -1407,6 +1606,8 @@ export type Database = {
         }
         Update: {
           actif?: boolean
+          cis?: number | null
+          code_atc?: string | null
           created_at?: string
           dci?: string | null
           dosage?: string | null
@@ -1486,6 +1687,8 @@ export type Database = {
       }
       owns_episode: { Args: { _episode_id: string }; Returns: boolean }
       owns_patient: { Args: { _patient_id: string }; Returns: boolean }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role: "admin" | "user"
