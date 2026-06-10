@@ -115,7 +115,9 @@ const PISTES: Piste[] = [
       "Cron mensuel de rafraîchissement",
     ],
     prerequis: ["Stockage ~200 Mo", "Job cron de mise à jour"],
+    statut: "Livré v1",
   },
+
   {
     id: 3,
     titre: "RAG avec les thésaurus cliniques",
