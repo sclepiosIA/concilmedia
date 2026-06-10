@@ -335,7 +335,8 @@ export const commitBulkImport = createServerFn({ method: "POST" })
           })) as never);
         }
         // Pas de fusion : chaque ordonnance contribue toutes ses lignes (une par occurrence).
-        if (item.traitements.length) {
+        // NOTE : la lettre d'admission ne sert pas au bilan médicamenteux (motif + comorbidités seulement)
+        if (item.document_type !== "lettre_admission" && item.traitements.length) {
           const { fillMissingPosologieSlots } = await import("./parsePosologie");
           const traitsToInsert = item.traitements.map(fillMissingPosologieSlots);
           const { data: insertedTraits, error: tErr } = await supabase.from("traitements_habituels").insert(traitsToInsert.map((t) => ({
