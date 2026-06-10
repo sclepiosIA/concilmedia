@@ -20,6 +20,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedPatientsIndexRouteImport } from './routes/_authenticated/patients.index'
 import { Route as AuthenticatedPatientsPatientIdRouteImport } from './routes/_authenticated/patients.$patientId'
 import { Route as AuthenticatedEpisodesEpisodeIdRouteImport } from './routes/_authenticated/episodes.$episodeId'
+import { Route as AuthenticatedConciliationMetriquesRouteImport } from './routes/_authenticated/conciliation.metriques'
 import { Route as AuthenticatedAdminRagRouteImport } from './routes/_authenticated/admin.rag'
 import { Route as AuthenticatedAdminImportReelRouteImport } from './routes/_authenticated/admin.import-reel'
 import { Route as AuthenticatedAdminBdpmRouteImport } from './routes/_authenticated/admin.bdpm'
@@ -88,6 +89,12 @@ const AuthenticatedEpisodesEpisodeIdRoute =
     path: '/episodes/$episodeId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedConciliationMetriquesRoute =
+  AuthenticatedConciliationMetriquesRouteImport.update({
+    id: '/conciliation/metriques',
+    path: '/conciliation/metriques',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminRagRoute = AuthenticatedAdminRagRouteImport.update({
   id: '/rag',
   path: '/rag',
@@ -146,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/admin/rag': typeof AuthenticatedAdminRagRoute
+  '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients/': typeof AuthenticatedPatientsIndexRoute
@@ -165,6 +173,7 @@ export interface FileRoutesByTo {
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/admin/rag': typeof AuthenticatedAdminRagRoute
+  '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients': typeof AuthenticatedPatientsIndexRoute
@@ -187,6 +196,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/_authenticated/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/_authenticated/admin/rag': typeof AuthenticatedAdminRagRoute
+  '/_authenticated/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
   '/_authenticated/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/_authenticated/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/_authenticated/patients/': typeof AuthenticatedPatientsIndexRoute
@@ -209,6 +219,7 @@ export interface FileRouteTypes {
     | '/admin/bdpm'
     | '/admin/import-reel'
     | '/admin/rag'
+    | '/conciliation/metriques'
     | '/episodes/$episodeId'
     | '/patients/$patientId'
     | '/patients/'
@@ -228,6 +239,7 @@ export interface FileRouteTypes {
     | '/admin/bdpm'
     | '/admin/import-reel'
     | '/admin/rag'
+    | '/conciliation/metriques'
     | '/episodes/$episodeId'
     | '/patients/$patientId'
     | '/patients'
@@ -249,6 +261,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/bdpm'
     | '/_authenticated/admin/import-reel'
     | '/_authenticated/admin/rag'
+    | '/_authenticated/conciliation/metriques'
     | '/_authenticated/episodes/$episodeId'
     | '/_authenticated/patients/$patientId'
     | '/_authenticated/patients/'
@@ -341,6 +354,13 @@ declare module '@tanstack/react-router' {
       path: '/episodes/$episodeId'
       fullPath: '/episodes/$episodeId'
       preLoaderRoute: typeof AuthenticatedEpisodesEpisodeIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/conciliation/metriques': {
+      id: '/_authenticated/conciliation/metriques'
+      path: '/conciliation/metriques'
+      fullPath: '/conciliation/metriques'
+      preLoaderRoute: typeof AuthenticatedConciliationMetriquesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/rag': {
@@ -442,6 +462,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedArchitectureIaRoute: typeof AuthenticatedArchitectureIaRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEvaluationRoute: typeof AuthenticatedEvaluationRoute
+  AuthenticatedConciliationMetriquesRoute: typeof AuthenticatedConciliationMetriquesRoute
   AuthenticatedEpisodesEpisodeIdRoute: typeof AuthenticatedEpisodesEpisodeIdRoute
   AuthenticatedPatientsPatientIdRoute: typeof AuthenticatedPatientsPatientIdRoute
   AuthenticatedPatientsIndexRoute: typeof AuthenticatedPatientsIndexRoute
@@ -453,6 +474,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedArchitectureIaRoute: AuthenticatedArchitectureIaRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEvaluationRoute: AuthenticatedEvaluationRoute,
+  AuthenticatedConciliationMetriquesRoute:
+    AuthenticatedConciliationMetriquesRoute,
   AuthenticatedEpisodesEpisodeIdRoute: AuthenticatedEpisodesEpisodeIdRoute,
   AuthenticatedPatientsPatientIdRoute: AuthenticatedPatientsPatientIdRoute,
   AuthenticatedPatientsIndexRoute: AuthenticatedPatientsIndexRoute,

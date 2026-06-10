@@ -199,6 +199,7 @@ const PISTES: Piste[] = [
       "Étude avant/après sur cohorte volontaire",
     ],
     prerequis: ["Aucun blocage technique"],
+    statut: "Livré v1",
   },
   {
     id: 6,

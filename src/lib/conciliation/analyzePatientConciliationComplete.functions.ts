@@ -391,7 +391,8 @@ export const analyzePatientConciliationComplete = createServerFn({ method: "POST
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    const __tStart = Date.now();
 
     const { data: patient } = await supabase
       .from("patients")
@@ -613,6 +614,17 @@ Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas d
       run_tag: data.runTag ?? null,
       model_label: data.modelLabel ?? null,
     } as never);
+
+    // Métrique : événement analyse IA
+    try {
+      await supabase.from("conciliation_events").insert({
+        user_id: userId,
+        step: "analyse_ia", kind: "action",
+        patient_id: data.patientId,
+        duration_ms: Date.now() - __tStart,
+        metadata: { model: data.modelLabel ?? null, run_tag: data.runTag ?? null } as never,
+      });
+    } catch (e) { console.warn("[analyze_complete] event log failed:", e); }
 
     return payload;
   });

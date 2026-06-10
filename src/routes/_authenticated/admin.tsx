@@ -24,6 +24,8 @@ function AdminLayout() {
         <Link to="/admin/rag" className="text-muted-foreground hover:underline">RAG</Link>
         <span className="text-muted-foreground">·</span>
         <Link to="/admin/import-reel" className="text-muted-foreground hover:underline">Import réel</Link>
+        <span className="text-muted-foreground">·</span>
+        <Link to="/conciliation/metriques" className="text-muted-foreground hover:underline">Métriques</Link>
 
       </div>
 
