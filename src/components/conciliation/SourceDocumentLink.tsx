@@ -1,9 +1,10 @@
 import { useServerFn } from "@tanstack/react-start";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { FileText, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { getSourceDocumentUrl } from "@/lib/conciliation/sourceDocuments.functions";
+import { cn } from "@/lib/utils";
 
 export function SourceDocumentLink({ documentId, label = "Voir source" }: { documentId: string | null | undefined; label?: string }) {
   const fetchUrl = useServerFn(getSourceDocumentUrl);
@@ -24,9 +25,24 @@ export function SourceDocumentLink({ documentId, label = "Voir source" }: { docu
   };
 
   return (
-    <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={open} disabled={loading}>
+    <span
+      role="button"
+      tabIndex={0}
+      className={cn(buttonVariants({ size: "sm", variant: "ghost" }), "h-6 px-2 text-xs")}
+      aria-disabled={loading}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (!loading) void open();
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (!loading) void open();
+      }}
+    >
       {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <FileText className="h-3 w-3 mr-1" />}
       {label}
-    </Button>
+    </span>
   );
 }
