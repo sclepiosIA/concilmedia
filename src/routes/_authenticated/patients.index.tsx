@@ -221,7 +221,7 @@ function PatientsListPage() {
         </div>
         <div className="flex items-center gap-2">
         <Button variant="outline" onClick={() => setBulkOpen(true)}>
-          <Sparkles className="h-4 w-4 mr-1" /> Import PDF en masse
+          <Sparkles className="h-4 w-4 mr-1" /> Import PDF patient
         </Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
