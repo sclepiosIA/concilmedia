@@ -101,10 +101,10 @@ export function computePatientTriage(input: PatientTriageInput): TriageResult {
         ? `${divergencesByGravity.critique} divergence(s) critique(s) non résolue(s)`
         : "Score de risque critique, non validé";
     }
-  } else if (hasValidation) {
-    level = 5;
-    reason = "Conciliation validée par un pharmacien";
   }
+  // NB : la validation pharmacien n'écrase plus le niveau P — le patient est
+  // archivé automatiquement par saveConciliationValidation, donc il sort
+  // du flux actif tout en gardant son classement clinique réel.
 
   let pendingSinceHours: number | null = null;
   if (oldestPendingAnalysisAt != null) {
