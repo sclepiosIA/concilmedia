@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Users } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/admin/team")({
+export const Route = createFileRoute("/_authenticated/equipe")({
   head: () => ({ meta: [{ title: "Équipe — Admin" }] }),
   component: AdminTeamPage,
 });

@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedEvaluationRouteImport } from './routes/_authenticated/evaluation'
+import { Route as AuthenticatedEquipeRouteImport } from './routes/_authenticated/equipe'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedArchitectureIaRouteImport } from './routes/_authenticated/architecture-ia'
 import { Route as AuthenticatedAmeliorationsRouteImport } from './routes/_authenticated/ameliorations'
@@ -22,7 +23,6 @@ import { Route as AuthenticatedPatientsPatientIdRouteImport } from './routes/_au
 import { Route as AuthenticatedEpisodesEpisodeIdRouteImport } from './routes/_authenticated/episodes.$episodeId'
 import { Route as AuthenticatedConciliationSupervisionRouteImport } from './routes/_authenticated/conciliation.supervision'
 import { Route as AuthenticatedConciliationMetriquesRouteImport } from './routes/_authenticated/conciliation.metriques'
-import { Route as AuthenticatedAdminTeamRouteImport } from './routes/_authenticated/admin.team'
 import { Route as AuthenticatedAdminSihConfigRouteImport } from './routes/_authenticated/admin.sih-config'
 import { Route as AuthenticatedAdminRagRouteImport } from './routes/_authenticated/admin.rag'
 import { Route as AuthenticatedAdminImportReelRouteImport } from './routes/_authenticated/admin.import-reel'
@@ -52,6 +52,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedEvaluationRoute = AuthenticatedEvaluationRouteImport.update({
   id: '/evaluation',
   path: '/evaluation',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEquipeRoute = AuthenticatedEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -106,11 +111,6 @@ const AuthenticatedConciliationMetriquesRoute =
     path: '/conciliation/metriques',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminTeamRoute = AuthenticatedAdminTeamRouteImport.update({
-  id: '/team',
-  path: '/team',
-  getParentRoute: () => AuthenticatedAdminRoute,
-} as any)
 const AuthenticatedAdminSihConfigRoute =
   AuthenticatedAdminSihConfigRouteImport.update({
     id: '/sih-config',
@@ -181,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/ameliorations': typeof AuthenticatedAmeliorationsRoute
   '/architecture-ia': typeof AuthenticatedArchitectureIaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/equipe': typeof AuthenticatedEquipeRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
@@ -188,7 +189,6 @@ export interface FileRoutesByFullPath {
   '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/admin/rag': typeof AuthenticatedAdminRagRoute
   '/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
-  '/admin/team': typeof AuthenticatedAdminTeamRoute
   '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
   '/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
@@ -207,13 +207,13 @@ export interface FileRoutesByTo {
   '/ameliorations': typeof AuthenticatedAmeliorationsRoute
   '/architecture-ia': typeof AuthenticatedArchitectureIaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/equipe': typeof AuthenticatedEquipeRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
   '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/admin/rag': typeof AuthenticatedAdminRagRoute
   '/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
-  '/admin/team': typeof AuthenticatedAdminTeamRoute
   '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
   '/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
@@ -234,6 +234,7 @@ export interface FileRoutesById {
   '/_authenticated/ameliorations': typeof AuthenticatedAmeliorationsRoute
   '/_authenticated/architecture-ia': typeof AuthenticatedArchitectureIaRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/equipe': typeof AuthenticatedEquipeRoute
   '/_authenticated/evaluation': typeof AuthenticatedEvaluationRoute
   '/_authenticated/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/_authenticated/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
@@ -241,7 +242,6 @@ export interface FileRoutesById {
   '/_authenticated/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/_authenticated/admin/rag': typeof AuthenticatedAdminRagRoute
   '/_authenticated/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
-  '/_authenticated/admin/team': typeof AuthenticatedAdminTeamRoute
   '/_authenticated/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
   '/_authenticated/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
   '/_authenticated/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
@@ -262,6 +262,7 @@ export interface FileRouteTypes {
     | '/ameliorations'
     | '/architecture-ia'
     | '/dashboard'
+    | '/equipe'
     | '/evaluation'
     | '/admin/ai'
     | '/admin/bdpm'
@@ -269,7 +270,6 @@ export interface FileRouteTypes {
     | '/admin/import-reel'
     | '/admin/rag'
     | '/admin/sih-config'
-    | '/admin/team'
     | '/conciliation/metriques'
     | '/conciliation/supervision'
     | '/episodes/$episodeId'
@@ -288,13 +288,13 @@ export interface FileRouteTypes {
     | '/ameliorations'
     | '/architecture-ia'
     | '/dashboard'
+    | '/equipe'
     | '/evaluation'
     | '/admin/bdpm'
     | '/admin/import-fhir'
     | '/admin/import-reel'
     | '/admin/rag'
     | '/admin/sih-config'
-    | '/admin/team'
     | '/conciliation/metriques'
     | '/conciliation/supervision'
     | '/episodes/$episodeId'
@@ -314,6 +314,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ameliorations'
     | '/_authenticated/architecture-ia'
     | '/_authenticated/dashboard'
+    | '/_authenticated/equipe'
     | '/_authenticated/evaluation'
     | '/_authenticated/admin/ai'
     | '/_authenticated/admin/bdpm'
@@ -321,7 +322,6 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/import-reel'
     | '/_authenticated/admin/rag'
     | '/_authenticated/admin/sih-config'
-    | '/_authenticated/admin/team'
     | '/_authenticated/conciliation/metriques'
     | '/_authenticated/conciliation/supervision'
     | '/_authenticated/episodes/$episodeId'
@@ -369,6 +369,13 @@ declare module '@tanstack/react-router' {
       path: '/evaluation'
       fullPath: '/evaluation'
       preLoaderRoute: typeof AuthenticatedEvaluationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/equipe': {
+      id: '/_authenticated/equipe'
+      path: '/equipe'
+      fullPath: '/equipe'
+      preLoaderRoute: typeof AuthenticatedEquipeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -433,13 +440,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/conciliation/metriques'
       preLoaderRoute: typeof AuthenticatedConciliationMetriquesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin/team': {
-      id: '/_authenticated/admin/team'
-      path: '/team'
-      fullPath: '/admin/team'
-      preLoaderRoute: typeof AuthenticatedAdminTeamRouteImport
-      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/sih-config': {
       id: '/_authenticated/admin/sih-config'
@@ -545,7 +545,6 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminImportReelRoute: typeof AuthenticatedAdminImportReelRoute
   AuthenticatedAdminRagRoute: typeof AuthenticatedAdminRagRoute
   AuthenticatedAdminSihConfigRoute: typeof AuthenticatedAdminSihConfigRoute
-  AuthenticatedAdminTeamRoute: typeof AuthenticatedAdminTeamRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -555,7 +554,6 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminImportReelRoute: AuthenticatedAdminImportReelRoute,
   AuthenticatedAdminRagRoute: AuthenticatedAdminRagRoute,
   AuthenticatedAdminSihConfigRoute: AuthenticatedAdminSihConfigRoute,
-  AuthenticatedAdminTeamRoute: AuthenticatedAdminTeamRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
@@ -566,6 +564,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAmeliorationsRoute: typeof AuthenticatedAmeliorationsRoute
   AuthenticatedArchitectureIaRoute: typeof AuthenticatedArchitectureIaRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEquipeRoute: typeof AuthenticatedEquipeRoute
   AuthenticatedEvaluationRoute: typeof AuthenticatedEvaluationRoute
   AuthenticatedConciliationMetriquesRoute: typeof AuthenticatedConciliationMetriquesRoute
   AuthenticatedConciliationSupervisionRoute: typeof AuthenticatedConciliationSupervisionRoute
@@ -579,6 +578,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAmeliorationsRoute: AuthenticatedAmeliorationsRoute,
   AuthenticatedArchitectureIaRoute: AuthenticatedArchitectureIaRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEquipeRoute: AuthenticatedEquipeRoute,
   AuthenticatedEvaluationRoute: AuthenticatedEvaluationRoute,
   AuthenticatedConciliationMetriquesRoute:
     AuthenticatedConciliationMetriquesRoute,
