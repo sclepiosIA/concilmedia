@@ -18,7 +18,10 @@ function AdminLayout() {
         <Link to="/admin/ai/providers" className="text-muted-foreground hover:underline">Fournisseurs</Link>
         <span className="text-muted-foreground">·</span>
         <Link to="/admin/ai/rlhf" className="text-muted-foreground hover:underline">RLHF</Link>
+        <span className="text-muted-foreground">·</span>
+        <Link to="/admin/bdpm" className="text-muted-foreground hover:underline">BDPM</Link>
       </div>
+
 
       <Outlet />
     </div>
