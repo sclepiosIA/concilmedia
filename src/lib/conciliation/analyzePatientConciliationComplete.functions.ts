@@ -391,7 +391,8 @@ export const analyzePatientConciliationComplete = createServerFn({ method: "POST
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    const __tStart = Date.now();
 
     const { data: patient } = await supabase
       .from("patients")
