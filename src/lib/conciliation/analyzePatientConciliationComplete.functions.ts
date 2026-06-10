@@ -25,6 +25,8 @@ type AnalysisDossier = {
   prescriptions_hospitalieres: Array<Record<string, unknown>>;
 };
 
+type TimeoutError = Error & { name: "TimeoutError" };
+
 function asString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -47,6 +49,51 @@ function normalizeDrugName(value: string): string {
     .replace(/\d+[,.]?\d*/g, " ")
     .replace(/[^a-z]+/g, " ")
     .trim();
+}
+
+function compactText(value: unknown, maxLength = 180): string | null {
+  const text = asString(value).replace(/\s+/g, " ");
+  if (!text) return null;
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+}
+
+function compactRow(row: Record<string, unknown>, keys: string[]): Record<string, unknown> {
+  return Object.fromEntries(
+    keys
+      .map((key) => [key, compactText(row[key]) ?? row[key]] as const)
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== ""),
+  );
+}
+
+function buildCompactAiDossier(dossier: AnalysisDossier) {
+  return {
+    patient: dossier.patient,
+    allergies: dossier.allergies.slice(0, 8).map((r) => compactRow(r, ["substance", "reaction", "severite"])),
+    antecedents: dossier.antecedents.slice(0, 10).map((r) => compactRow(r, ["libelle", "date_diagnostic", "commentaire"])),
+    comorbidites: dossier.comorbidites.slice(0, 10).map((r) => compactRow(r, ["libelle", "severite"])),
+    biologie_recente: dossier.biologie_recente.slice(0, 18).map((r) => compactRow(r, ["parametre", "valeur", "unite", "valeur_texte", "date_prelevement"])),
+    traitements_habituels: dossier.traitements_habituels.slice(0, 24).map((r) => compactRow(r, ["dci", "nom_commercial", "dosage", "dosage_unite", "voie_administration", "posologie_matin", "posologie_midi", "posologie_soir", "posologie_coucher", "posologie_texte", "indication"])),
+    prescriptions_hospitalieres: dossier.prescriptions_hospitalieres.slice(0, 24).map((r) => compactRow(r, ["medicament", "nom_commercial", "dosage", "dosage_unite", "voie_administration", "posologie_matin", "posologie_midi", "posologie_soir", "posologie_coucher", "posologie", "indication"])),
+  };
+}
+
+async function withHardTimeout<T>(task: (signal: AbortSignal) => Promise<T>, timeoutMs: number): Promise<T> {
+  const controller = new AbortController();
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+      const error = new Error("timeout") as TimeoutError;
+      error.name = "TimeoutError";
+      reject(error);
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([task(controller.signal), timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 function doseSummary(row: Record<string, unknown>): string {
