@@ -89,7 +89,9 @@ const PISTES: Piste[] = [
       "Consentement et anonymisation conformes RGPD/HDS",
       "Volume minimum de cas validés (~1000) avant fine-tuning utile",
     ],
+    statut: "Livré v1",
   },
+
   {
     id: 2,
     titre: "Ajout de la BDPM (Base de Données Publique des Médicaments)",
