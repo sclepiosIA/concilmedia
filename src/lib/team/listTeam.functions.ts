@@ -70,7 +70,7 @@ export const updateMemberService = createServerFn({ method: "POST" })
       .maybeSingle();
     if (meErr) throw new Error(meErr.message);
     if (!me || me.role !== "admin") throw new Error("Accès refusé : admin d'organisation requis.");
-    const patch: Record<string, string | null> = { service: data.service };
+    const patch: { service: string | null; display_name?: string | null } = { service: data.service };
     if (data.displayName !== undefined) patch.display_name = data.displayName;
     const { error } = await supabase
       .from("organization_members")
