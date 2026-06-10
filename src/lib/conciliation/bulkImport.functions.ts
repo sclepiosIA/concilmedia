@@ -183,7 +183,7 @@ const CommitInput = z.object({
     file_base64: z.string().optional(),
     mime_type: z.string().optional(),
     file_size: z.number().optional(),
-  })).min(1).max(20),
+  })).min(1).max(1000),
   auto_create_episode: z.boolean().optional().default(true),
 });
 

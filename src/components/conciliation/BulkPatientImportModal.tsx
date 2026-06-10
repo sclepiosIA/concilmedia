@@ -22,8 +22,10 @@ const docTypeLabel: Record<string, string> = {
   autre: "Autre",
 };
 
-const MAX_FILES = 20;
+const MAX_FILES = 1000;
 const MAX_SIZE = 10 * 1024 * 1024;
+const EXTRACT_CONCURRENCY = 3; // appels IA parallèles pendant l'extraction
+const COMMIT_BATCH_SIZE = 25; // taille de lot pour l'enregistrement serveur
 
 type ItemStatus = "pending" | "extracting" | "ready" | "error";
 type Item = {
@@ -82,7 +84,9 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
     const total = items.length;
     let done = 0;
     const updated: Item[] = [...items];
-    for (let i = 0; i < updated.length; i++) {
+    setItems([...updated]);
+
+    const processOne = async (i: number) => {
       updated[i] = { ...updated[i], status: "extracting" };
       setItems([...updated]);
       try {
@@ -95,7 +99,17 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
       done++;
       setProgress(Math.round((done / total) * 100));
       setItems([...updated]);
-    }
+    };
+
+    // Pool de concurrence simple
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(EXTRACT_CONCURRENCY, total) }, async () => {
+      while (cursor < total) {
+        const idx = cursor++;
+        await processOne(idx);
+      }
+    });
+    await Promise.all(workers);
     setPhase("review");
   };
 
@@ -117,7 +131,24 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
         };
         return targetPatientId ? { ...base, existing_patient_id: targetPatientId } : base;
       }));
-      return commit({ data: { items: payload } });
+
+      // Envoi par lots pour éviter des requêtes > limites Worker
+      const aggregate = {
+        created: 0,
+        updated: 0,
+        failed: [] as { name: string; error: string }[],
+        created_episode_ids: [] as string[],
+      };
+      for (let start = 0; start < payload.length; start += COMMIT_BATCH_SIZE) {
+        const chunk = payload.slice(start, start + COMMIT_BATCH_SIZE);
+        const r = await commit({ data: { items: chunk } });
+        aggregate.created += r.created;
+        aggregate.updated += r.updated;
+        aggregate.failed.push(...r.failed);
+        aggregate.created_episode_ids.push(...r.created_episode_ids);
+        setProgress(Math.round(((start + chunk.length) / payload.length) * 100));
+      }
+      return aggregate;
     },
     onSuccess: (r) => {
       setSummary(r);
@@ -161,7 +192,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
                 <div className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-accent">
                   <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
                   <div className="font-medium">Cliquez pour sélectionner vos PDF</div>
-                  <div className="text-xs text-muted-foreground mt-1">Max {MAX_FILES} fichiers, 10 Mo chacun</div>
+                  <div className="text-xs text-muted-foreground mt-1">Jusqu'à {MAX_FILES} fichiers, 10 Mo chacun · extraction par lots de {EXTRACT_CONCURRENCY} en parallèle</div>
                 </div>
               </label>
               {items.length > 0 && (
