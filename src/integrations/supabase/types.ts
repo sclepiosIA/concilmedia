@@ -1477,6 +1477,107 @@ export type Database = {
           },
         ]
       }
+      rag_chunks: {
+        Row: {
+          content: string
+          created_at: string
+          document_id: string
+          embedding: string
+          id: string
+          metadata: Json
+          ord: number
+          tokens: number | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          document_id: string
+          embedding: string
+          id?: string
+          metadata?: Json
+          ord?: number
+          tokens?: number | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          document_id?: string
+          embedding?: string
+          id?: string
+          metadata?: Json
+          ord?: number
+          tokens?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rag_chunks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "rag_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rag_documents: {
+        Row: {
+          id: string
+          ingested_at: string
+          licence: string | null
+          source: string
+          titre: string
+          url: string | null
+          version: string | null
+        }
+        Insert: {
+          id?: string
+          ingested_at?: string
+          licence?: string | null
+          source: string
+          titre: string
+          url?: string | null
+          version?: string | null
+        }
+        Update: {
+          id?: string
+          ingested_at?: string
+          licence?: string | null
+          source?: string
+          titre?: string
+          url?: string | null
+          version?: string | null
+        }
+        Relationships: []
+      }
+      rag_query_logs: {
+        Row: {
+          created_at: string
+          episode_id: string | null
+          hits: Json
+          id: string
+          query: string
+          top_k: number
+          used_in_analysis: boolean
+        }
+        Insert: {
+          created_at?: string
+          episode_id?: string | null
+          hits?: Json
+          id?: string
+          query: string
+          top_k: number
+          used_in_analysis?: boolean
+        }
+        Update: {
+          created_at?: string
+          episode_id?: string | null
+          hits?: Json
+          id?: string
+          query?: string
+          top_k?: number
+          used_in_analysis?: boolean
+        }
+        Relationships: []
+      }
       risk_scores: {
         Row: {
           ai_adjustment: string | null
@@ -1684,6 +1785,24 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      match_rag_chunks: {
+        Args: {
+          match_count?: number
+          query_embedding: string
+          similarity_threshold?: number
+          source_filter?: string[]
+        }
+        Returns: {
+          content: string
+          document_id: string
+          id: string
+          metadata: Json
+          similarity: number
+          source: string
+          titre: string
+          version: string
+        }[]
       }
       owns_episode: { Args: { _episode_id: string }; Returns: boolean }
       owns_patient: { Args: { _patient_id: string }; Returns: boolean }
