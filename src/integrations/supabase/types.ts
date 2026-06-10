@@ -895,6 +895,54 @@ export type Database = {
           },
         ]
       }
+      conciliation_transfers: {
+        Row: {
+          created_at: string
+          created_by: string
+          from_user_id: string | null
+          id: string
+          motif: string | null
+          organization_id: string | null
+          patient_id: string
+          to_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          from_user_id?: string | null
+          id?: string
+          motif?: string | null
+          organization_id?: string | null
+          patient_id: string
+          to_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          from_user_id?: string | null
+          id?: string
+          motif?: string | null
+          organization_id?: string | null
+          patient_id?: string
+          to_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conciliation_transfers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conciliation_transfers_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conciliation_validations: {
         Row: {
           analysis_id: string
@@ -1280,23 +1328,29 @@ export type Database = {
       organization_members: {
         Row: {
           created_at: string
+          display_name: string | null
           id: string
           organization_id: string
           role: string
+          service: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
+          display_name?: string | null
           id?: string
           organization_id: string
           role: string
+          service?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
+          display_name?: string | null
           id?: string
           organization_id?: string
           role?: string
+          service?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1389,6 +1443,7 @@ export type Database = {
       patients: {
         Row: {
           archived: boolean
+          assigned_to: string | null
           cohort_id: string | null
           cohort_tag: string | null
           created_at: string
@@ -1409,12 +1464,15 @@ export type Database = {
           organization_id: string | null
           poids_kg: number | null
           prenom: string
+          service: string | null
           sexe: string | null
           taille_cm: number | null
           updated_at: string
+          workflow_status: string
         }
         Insert: {
           archived?: boolean
+          assigned_to?: string | null
           cohort_id?: string | null
           cohort_tag?: string | null
           created_at?: string
@@ -1435,12 +1493,15 @@ export type Database = {
           organization_id?: string | null
           poids_kg?: number | null
           prenom: string
+          service?: string | null
           sexe?: string | null
           taille_cm?: number | null
           updated_at?: string
+          workflow_status?: string
         }
         Update: {
           archived?: boolean
+          assigned_to?: string | null
           cohort_id?: string | null
           cohort_tag?: string | null
           created_at?: string
@@ -1461,9 +1522,11 @@ export type Database = {
           organization_id?: string | null
           poids_kg?: number | null
           prenom?: string
+          service?: string | null
           sexe?: string | null
           taille_cm?: number | null
           updated_at?: string
+          workflow_status?: string
         }
         Relationships: [
           {
