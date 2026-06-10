@@ -199,8 +199,9 @@ export function buildCallOptions(opts: {
   temperature?: number;
   maxTokens?: number;
   reasoningEffort?: "low" | "medium" | "high";
+  verbosity?: "low" | "medium" | "high";
 }): Record<string, unknown> {
-  const { modelId, providerKind, temperature, maxTokens, reasoningEffort } = opts;
+  const { modelId, providerKind, temperature, maxTokens, reasoningEffort, verbosity = "low" } = opts;
   const isGpt5 = isGpt5Family(modelId, providerKind);
   const out: Record<string, unknown> = {};
 
@@ -209,32 +210,30 @@ export function buildCallOptions(opts: {
     out.temperature = temperature;
   }
 
+  const providerKey =
+    providerKind === "lovable"
+      ? "lovable"
+      : "openai";
+
+  const gpt5Inner: Record<string, unknown> = {};
+  if (isGpt5 && reasoningEffort) gpt5Inner.reasoningEffort = reasoningEffort;
+  if (isGpt5 && verbosity) gpt5Inner.verbosity = verbosity;
+
   // Max tokens: AI SDK v5 normalise `maxOutputTokens` pour TOUS les providers
   // (openai, azure, google, anthropic, openai-compatible incl. gateway Lovable).
   // Pour GPT-5 direct (OpenAI ou Azure), il faut max_completion_tokens via providerOptions;
   // sinon on garde maxOutputTokens.
   if (typeof maxTokens === "number") {
     if (isGpt5 && (providerKind === "openai" || providerKind === "azure_openai")) {
-      // @ai-sdk/azure et @ai-sdk/openai partagent la même clé providerOptions: "openai".
-      const inner: Record<string, unknown> = { maxCompletionTokens: maxTokens };
-      if (reasoningEffort) inner.reasoningEffort = reasoningEffort;
-      out.providerOptions = { openai: inner };
+      out.providerOptions = { openai: { maxCompletionTokens: maxTokens, ...gpt5Inner } };
     } else {
       out.maxOutputTokens = maxTokens;
-      if (isGpt5 && reasoningEffort) {
-        // Lovable gateway / openai-compatible: passe reasoning_effort via la clé du provider.
-        const key = providerKind === "lovable" ? "lovable" : "openai";
-        out.providerOptions = { [key]: { reasoningEffort } };
+      if (isGpt5 && Object.keys(gpt5Inner).length > 0) {
+        out.providerOptions = { [providerKey]: gpt5Inner };
       }
     }
-  } else if (isGpt5 && reasoningEffort) {
-    const key =
-      providerKind === "lovable"
-        ? "lovable"
-        : providerKind === "openai_compatible"
-          ? "openai"
-          : "openai";
-    out.providerOptions = { [key]: { reasoningEffort } };
+  } else if (isGpt5 && Object.keys(gpt5Inner).length > 0) {
+    out.providerOptions = { [providerKey]: gpt5Inner };
   }
 
   return out;
