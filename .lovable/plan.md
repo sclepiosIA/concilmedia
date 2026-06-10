@@ -1,61 +1,49 @@
-## Objectif
+## Problème
 
-Aujourd'hui, dans la conciliation, beaucoup de couples ville ↔ hôpital sont classés en `omission` ou `ajout_non_justifie` alors qu'il s'agit en réalité de **switchs thérapeutiques de prise en charge hospitalière** (changement de voie, relais, équivalence de classe). Exemples vus sur la capture :
+Sur la liste patients, M. Moreau (97 ans, 11 traitements, IRC, 6 comorbidités) apparaît en **P4 — "Conciliation à relire (risque faible)"**.
 
-- Rivaroxaban PO (ville) → HNF IV / HBPM (hôpital) = switch anticoagulant oral → parentéral
-- Metformine PO (ville) → Insuline rapide SC (hôpital) = switch ADO → insuline en aigu
-- IEC/ARA2 PO suspendus → équivalent IV ou suspension transitoire
-- Bêtabloquant PO → forme IV (esmolol, etc.)
+En base, son épisode n'a :
+- aucune ligne dans `risk_scores` (le score de priorisation n'a jamais été calculé),
+- aucune divergence dans `conciliation_medicaments` (l'analyse IA n'a pas tourné),
+- aucune validation pharmacien.
 
-Le type `"switch"` existe déjà dans le schéma JSON et dans l'UI, mais :
-1. le **fallback déterministe** (`buildFastConciliationPayload`) ne le produit jamais — il classe tout en omission/ajout.
-2. le **prompt IA** mentionne le switch en une ligne mais ne donne pas les règles d'appariement par classe → l'IA continue de couper en omission + ajout.
-3. la conciliation locale (`useMedicationReconciliation`) ne connaît que `omission | ajout | modification_dose | modification_freq | duplication` côté base — pas de type `switch`.
+Le label "faible" vient donc uniquement du **texte par défaut** dans `src/lib/conciliation/triageScale.ts` (l. 85-87) :
 
-## Plan
+```ts
+level = 4;
+reason = "Conciliation à relire (risque faible)";
+```
 
-### 1. Renforcer le prompt IA (`src/lib/admin/defaultPrompts.server.ts`)
+C'est trompeur : on n'a pas mesuré le risque, on a juste fixé un placeholder.
 
-Dans `analyze_patient_complete`, ajouter une règle dédiée « switch hospitalier » avec une table d'équivalences cliniques que l'IA doit appliquer **avant** de conclure à une omission ou un ajout :
+## Correctifs proposés
 
-- Anticoagulants : AOD (rivaroxaban, apixaban, dabigatran, edoxaban) / AVK ↔ HNF IV / HBPM SC / fondaparinux
-- Antidiabétiques : metformine + ADO + insulines lentes ↔ insuline rapide SC protocole / insuline IVSE
-- Antihypertenseurs PO ↔ nicardipine IV, urapidil IV, labétalol IV
-- Bêtabloquants PO ↔ esmolol / labétalol IV
-- Corticoïdes PO ↔ méthylprednisolone IV
-- Antalgiques PO ↔ paracétamol IV, morphine IV/PCA
-- IPP PO ↔ IPP IV
-- Toute molécule PO ↔ même DCI en IV/SC = switch de voie (`modification_posologie` n'est pas adapté)
+### 1. `src/lib/conciliation/triageScale.ts`
+- Quand `hasActiveEpisode === true` mais qu'**aucune analyse n'a tourné** (`worstRisk === null` ET total divergences === 0 ET `oldestPendingAnalysisAt === null`), ne plus dire "risque faible". Remplacer par : `"Conciliation à initier — risque non évalué"`.
+- Ajouter, en plus, une **garde de sécurité gériatrique** appliquée *avant* le calcul : si `age ≥ 75` ET (`nb_traitements ≥ 5` OU IRC connue), forcer le niveau minimum à **P3** avec la raison `"Patient âgé polymédiqué — priorisation à calculer"`. Cela évite qu'un Moreau passe en P4 "faible" simplement parce que le moteur de score n'a pas encore tourné.
+- Pour faire ce calcul, `computePatientTriage` doit recevoir 3 nouveaux champs optionnels : `age`, `nbTraitements`, `hasInsuffisanceRenale`.
 
-Règle ajoutée : « Si un médicament habituel de classe X est absent à l'hôpital MAIS qu'un médicament hospitalier de la même classe thérapeutique ou couvrant la même indication est présent, créer UNE seule ligne `type:"switch"` (medicament_ville rempli ET medicament_hopital rempli), pas une omission + un ajout. »
+### 2. `src/hooks/usePatientsTriage.ts`
+- Récupérer en plus, en parallèle :
+  - `patients.date_naissance` → calcul de l'âge,
+  - `count` sur `traitements_habituels` (actif=true) par patient,
+  - `comorbidites` actives par patient → détecter IRC via le même regex que `prioritize.functions.ts` (`/renal|rein|ckd|insuffisance r[ée]nale|dfg/i`).
+- Passer ces 3 champs à `computePatientTriage`.
 
-### 2. Détection dans le fallback rapide (`analyzePatientConciliationComplete.functions.ts`)
+### 3. `src/components/conciliation/TriageBadge.tsx`
+- Dans le tooltip, quand `worstRisk === null`, afficher explicitement `Score de risque : non calculé` (au lieu de masquer la ligne) pour lever toute ambiguïté.
 
-Ajouter une petite table de classes ATC / mots-clés (anticoagulant, antidiabétique, antihypertenseur, bêtabloquant, IPP, corticoïde, antalgique) et, dans `buildFastConciliationPayload` :
+### 4. Déclenchement automatique du score (optionnel mais recommandé)
+- Dans `src/routes/_authenticated/episodes.$episodeId.tsx`, si l'épisode n'a aucun `risk_score`, appeler `computePrioritization` au montage (déjà importé ailleurs). Comme ça, dès qu'on ouvre Moreau, le score se calcule et le triage devient réel.
 
-1. Avant de produire les omissions/ajouts, apparier ville ↔ hôpital par classe.
-2. Si un traitement ville sans match DCI a un équivalent de classe à l'hôpital (et que celui-ci n'a pas non plus de match DCI ville), émettre une ligne `type:"switch"` avec :
-   - `medicament_ville` et `medicament_hopital` renseignés
-   - `severite:"moderee"` (ou `majeure` pour anticoagulants/insulines)
-   - `recommandation` = « Tracer le switch X→Y, prévoir le relais à la sortie »
-3. Retirer ces deux molécules des listes d'omissions et d'ajouts pour éviter le double comptage.
+## Vérification
 
-### 3. UI (`ConciliationCompleteCard.tsx`, `ClinicalAlertsPanel.tsx`)
-
-- Le label `"Switch"` est déjà présent ; ajouter une couleur distincte (badge bleu/violet) pour le différencier visuellement de l'omission (jaune/orange) et de l'ajout (gris).
-- Dans la légende et le compteur en haut de section, ajouter un compteur « Switch » à côté de Omissions / Ajouts.
-
-### 4. (Hors périmètre, pour information)
-
-La table `conciliation_medicaments` (`type_divergence`) utilisée par le hook `useMedicationReconciliation` n'a pas de valeur `switch`. Comme le composant affecté par la demande utilisateur est `ConciliationCompleteCard` (analyse IA, payload JSON), **aucune migration de schéma n'est nécessaire** pour ce changement. Si tu souhaites aussi propager le type `switch` dans la conciliation déterministe locale (colonne ville/hôpital), je le ferai dans un second temps avec une migration dédiée.
+1. Ouvrir `/patients` : Moreau doit passer en **P3** avec tooltip "Patient âgé polymédiqué — priorisation à calculer", plus de mention "faible".
+2. Ouvrir la fiche Moreau → `computePrioritization` se déclenche → la ligne se met à jour avec le vrai niveau (probablement *élevé* / *critique* vu l'âge + IRC + polymédication).
+3. Pour un patient jeune sans antécédents et sans analyse : on doit voir "Conciliation à initier — risque non évalué" en P4 (comportement attendu).
 
 ## Fichiers modifiés
-
-- `src/lib/admin/defaultPrompts.server.ts` — règle switch + table d'équivalences
-- `src/lib/conciliation/analyzePatientConciliationComplete.functions.ts` — appariement par classe dans le fallback
-- `src/components/patient/ConciliationCompleteCard.tsx` — badge couleur + compteur switch
-- `src/components/conciliation/ClinicalAlertsPanel.tsx` — badge couleur switch
-
-## Validation
-
-Relancer l'analyse IA sur le dossier Garcia Michel : les lignes Rivaroxaban / Metformine / etc. doivent apparaître comme `Switch` (ville=Rivaroxaban, hôpital=HNF IV) au lieu de deux lignes omission + ajout.
+- `src/lib/conciliation/triageScale.ts`
+- `src/hooks/usePatientsTriage.ts`
+- `src/components/conciliation/TriageBadge.tsx`
+- `src/routes/_authenticated/episodes.$episodeId.tsx`
