@@ -78,6 +78,7 @@ export function usePatientsTriage(patientIds: string[]) {
       const comorbs = comorbRes.data ?? [];
 
       const RENAL_RE = /renal|rein|ckd|insuffisance r[ée]nale|dfg/i;
+      const HEPAT_RE = /h[ée]pat|cirrhos|foie/i;
       const ageByPatient = new Map<string, number | null>();
       for (const p of patientsData) {
         const age = p.date_naissance
@@ -86,12 +87,24 @@ export function usePatientsTriage(patientIds: string[]) {
         ageByPatient.set(p.id, age);
       }
       const nbTraitementsByPatient = new Map<string, number>();
+      const dciByPatient = new Map<string, string[]>();
       for (const t of traitements) {
         nbTraitementsByPatient.set(t.patient_id, (nbTraitementsByPatient.get(t.patient_id) ?? 0) + 1);
+        const dci = (t.dci || t.nom_commercial || "").trim();
+        if (dci) {
+          const arr = dciByPatient.get(t.patient_id) ?? [];
+          arr.push(dci);
+          dciByPatient.set(t.patient_id, arr);
+        }
       }
       const hasRenaleByPatient = new Map<string, boolean>();
+      const hasHepatByPatient = new Map<string, boolean>();
+      const nbComorbByPatient = new Map<string, number>();
       for (const c of comorbs) {
-        if (RENAL_RE.test(c.libelle ?? "")) hasRenaleByPatient.set(c.patient_id, true);
+        nbComorbByPatient.set(c.patient_id, (nbComorbByPatient.get(c.patient_id) ?? 0) + 1);
+        const lib = c.libelle ?? "";
+        if (RENAL_RE.test(lib)) hasRenaleByPatient.set(c.patient_id, true);
+        if (HEPAT_RE.test(lib)) hasHepatByPatient.set(c.patient_id, true);
       }
 
 
