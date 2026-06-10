@@ -1,5 +1,4 @@
 // Piste #9 v1 — Conciliation de sortie
-// Server functions for discharge medication comparison + letter generation.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -12,8 +11,6 @@ export interface DischargeMedRow {
   dosage?: string | null;
   posologie?: string | null;
   voie_administration?: string | null;
-  date_debut?: string | null;
-  date_fin?: string | null;
   indication?: string | null;
 }
 
@@ -21,7 +18,6 @@ export interface DischargeComparison {
   habituel: DischargeMedRow[];
   entree: DischargeMedRow[];
   sortie: DischargeMedRow[];
-  // Cross-status per medication (normalized name)
   changes: Array<{
     medicament: string;
     en_habituel: boolean;
@@ -30,12 +26,58 @@ export interface DischargeComparison {
     statut: "poursuivi" | "introduit" | "arrete" | "repris" | "modifie" | "inchange";
     detail?: string;
   }>;
-  patient: { id: string; nom: string; prenom: string; date_naissance: string | null; sexe: string | null } | null;
-  episode: { id: string; date_entree: string; date_sortie: string | null; service: string | null; motif: string | null };
+  patient: {
+    id: string;
+    nom: string;
+    prenom: string;
+    date_naissance: string | null;
+    sexe: string | null;
+    organization_id: string | null;
+  } | null;
+  episode: {
+    id: string;
+    date_entree: string;
+    date_sortie: string | null;
+    service: string | null;
+    motif: string | null;
+  };
 }
 
 function norm(s: string | null | undefined): string {
   return (s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+function buildPosologie(row: {
+  posologie_texte?: string | null;
+  posologie_matin?: string | null;
+  posologie_midi?: string | null;
+  posologie_soir?: string | null;
+  posologie_coucher?: string | null;
+}): string | null {
+  if (row.posologie_texte) return row.posologie_texte;
+  const parts: string[] = [];
+  if (row.posologie_matin) parts.push(`matin: ${row.posologie_matin}`);
+  if (row.posologie_midi) parts.push(`midi: ${row.posologie_midi}`);
+  if (row.posologie_soir) parts.push(`soir: ${row.posologie_soir}`);
+  if (row.posologie_coucher) parts.push(`coucher: ${row.posologie_coucher}`);
+  return parts.length ? parts.join(", ") : null;
+}
+
+interface EpisodeJoin {
+  id: string;
+  patient_id: string;
+  date_entree: string;
+  date_sortie: string | null;
+  service: string | null;
+  motif: string | null;
+  patients: {
+    id: string;
+    nom: string;
+    prenom: string;
+    date_naissance: string | null;
+    sexe: string | null;
+    organization_id: string | null;
+  } | null;
 }
 
 export const compareDischargeMedications = createServerFn({ method: "POST" })
@@ -44,51 +86,68 @@ export const compareDischargeMedications = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<DischargeComparison> => {
     const { supabase } = context;
 
-    const { data: ep, error: epErr } = await supabase
+    const { data: epRaw, error: epErr } = await supabase
       .from("episodes")
-      .select("id, patient_id, date_entree, date_sortie, service, motif, patients(id, nom, prenom, date_naissance, sexe)")
+      .select(
+        "id, patient_id, date_entree, date_sortie, service, motif, patients(id, nom, prenom, date_naissance, sexe, organization_id)",
+      )
       .eq("id", data.episodeId)
       .maybeSingle();
     if (epErr) throw new Error(epErr.message);
-    if (!ep) throw new Error("Épisode introuvable");
+    if (!epRaw) throw new Error("Épisode introuvable");
+    const ep = epRaw as unknown as EpisodeJoin;
 
-    const patient = (ep.patients as DischargeComparison["patient"]) ?? null;
-
-    const { data: habituels = [] } = await supabase
+    const { data: habituelsRaw } = await supabase
       .from("traitements_habituels")
-      .select("id, medicament, nom_commercial, dosage, posologie, voie_administration, date_debut, date_fin, indication")
+      .select(
+        "id, dci, nom_commercial, dosage, voie_administration, indication, posologie_texte, posologie_matin, posologie_midi, posologie_soir, posologie_coucher",
+      )
       .eq("patient_id", ep.patient_id)
       .eq("actif", true);
 
-    const { data: prescs = [] } = await supabase
+    const { data: prescsRaw } = await supabase
       .from("prescriptions_hospitalieres")
-      .select("id, medicament, nom_commercial, dosage, posologie, voie_administration, date_debut, date_fin, indication, actif")
+      .select(
+        "id, medicament, nom_commercial, dosage, posologie, voie_administration, indication, actif, date_debut, date_fin",
+      )
       .eq("episode_id", ep.id);
 
-    // entrée = prescription débutée à/avant date_entree+1j (initial)
-    // sortie = prescription active sans date_fin OU date_fin >= date_sortie (ou aujourd'hui si sortie inconnue)
+    const habRows: DischargeMedRow[] = (habituelsRaw ?? []).map((h) => ({
+      source: "habituel" as const,
+      id: h.id,
+      medicament: h.dci ?? h.nom_commercial ?? "",
+      nom_commercial: h.nom_commercial,
+      dosage: h.dosage,
+      posologie: buildPosologie(h),
+      voie_administration: h.voie_administration,
+      indication: h.indication,
+    }));
+
     const dateEntree = new Date(ep.date_entree);
     const dateSortie = ep.date_sortie ? new Date(ep.date_sortie) : new Date();
     const entreeRows: DischargeMedRow[] = [];
     const sortieRows: DischargeMedRow[] = [];
-    for (const p of prescs ?? []) {
+    for (const p of prescsRaw ?? []) {
+      const row: DischargeMedRow = {
+        source: "entree",
+        id: p.id,
+        medicament: p.medicament,
+        nom_commercial: p.nom_commercial,
+        dosage: p.dosage,
+        posologie: p.posologie,
+        voie_administration: p.voie_administration,
+        indication: p.indication,
+      };
       const start = p.date_debut ? new Date(p.date_debut) : dateEntree;
       const end = p.date_fin ? new Date(p.date_fin) : null;
-      const row: DischargeMedRow = { source: "entree", ...p };
-      // Entrée : la prescription existait dans les 48h après admission
       if (start.getTime() - dateEntree.getTime() <= 48 * 3600 * 1000) {
         entreeRows.push({ ...row, source: "entree" });
       }
-      // Sortie : encore active à date_sortie
-      const stillActive = p.actif && (!end || end.getTime() >= dateSortie.getTime());
-      if (stillActive) {
+      if (p.actif && (!end || end.getTime() >= dateSortie.getTime())) {
         sortieRows.push({ ...row, source: "sortie" });
       }
     }
 
-    const habRows: DischargeMedRow[] = (habituels ?? []).map((h) => ({ source: "habituel", ...h }));
-
-    // Build map by normalized medicament name
     const keys = new Set<string>([
       ...habRows.map((r) => norm(r.medicament)),
       ...entreeRows.map((r) => norm(r.medicament)),
@@ -97,6 +156,7 @@ export const compareDischargeMedications = createServerFn({ method: "POST" })
 
     const changes: DischargeComparison["changes"] = [];
     for (const k of keys) {
+      if (!k) continue;
       const inHab = habRows.some((r) => norm(r.medicament) === k);
       const inEntr = entreeRows.some((r) => norm(r.medicament) === k);
       const inSort = sortieRows.some((r) => norm(r.medicament) === k);
@@ -106,14 +166,14 @@ export const compareDischargeMedications = createServerFn({ method: "POST" })
       if (!inHab && inSort) statut = "introduit";
       if (inHab && !inSort) statut = "arrete";
       if (inHab && !inEntr && inSort) statut = "repris";
-      // Détecte modification posologique
       const h = habRows.find((r) => norm(r.medicament) === k);
       const s = sortieRows.find((r) => norm(r.medicament) === k);
       if (h && s && (norm(h.posologie) !== norm(s.posologie) || norm(h.dosage) !== norm(s.dosage))) {
         statut = "modifie";
         detail = `Habituel: ${h.dosage ?? ""} ${h.posologie ?? ""} → Sortie: ${s.dosage ?? ""} ${s.posologie ?? ""}`;
       }
-      const label = (s?.medicament ?? h?.medicament ?? entreeRows.find((r) => norm(r.medicament) === k)?.medicament ?? k);
+      const label =
+        s?.medicament ?? h?.medicament ?? entreeRows.find((r) => norm(r.medicament) === k)?.medicament ?? k;
       changes.push({
         medicament: label,
         en_habituel: inHab,
@@ -134,18 +194,16 @@ export const compareDischargeMedications = createServerFn({ method: "POST" })
       entree: entreeRows,
       sortie: sortieRows,
       changes,
-      patient,
+      patient: ep.patients,
       episode: {
         id: ep.id,
-        date_entree: ep.date_entree as string,
-        date_sortie: (ep.date_sortie as string | null) ?? null,
-        service: (ep.service as string | null) ?? null,
-        motif: (ep.motif as string | null) ?? null,
+        date_entree: ep.date_entree,
+        date_sortie: ep.date_sortie,
+        service: ep.service,
+        motif: ep.motif,
       },
     };
   });
-
-// --- Letter generation -------------------------------------------------------
 
 const GenerateInput = z.object({
   episodeId: z.string().uuid(),
@@ -161,32 +219,55 @@ export const generateDischargeLetter = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Reuse comparison logic via direct call
-    const { data: ep, error: epErr } = await supabase
+    const { data: epRaw, error: epErr } = await supabase
       .from("episodes")
-      .select("id, patient_id, organization_id, date_entree, date_sortie, service, motif, patients(id, nom, prenom, date_naissance, sexe)")
+      .select(
+        "id, patient_id, date_entree, date_sortie, service, motif, patients(id, nom, prenom, date_naissance, sexe, organization_id)",
+      )
       .eq("id", data.episodeId)
       .maybeSingle();
     if (epErr) throw new Error(epErr.message);
-    if (!ep) throw new Error("Épisode introuvable");
+    if (!epRaw) throw new Error("Épisode introuvable");
+    const ep = epRaw as unknown as EpisodeJoin;
+    const orgId = ep.patients?.organization_id ?? null;
 
-    const { data: habituels = [] } = await supabase
+    const { data: habituels } = await supabase
       .from("traitements_habituels")
-      .select("medicament, dosage, posologie, voie_administration, indication")
+      .select(
+        "dci, nom_commercial, dosage, voie_administration, indication, posologie_texte, posologie_matin, posologie_midi, posologie_soir, posologie_coucher",
+      )
       .eq("patient_id", ep.patient_id)
       .eq("actif", true);
-    const { data: prescs = [] } = await supabase
+
+    const { data: prescs } = await supabase
       .from("prescriptions_hospitalieres")
       .select("medicament, dosage, posologie, voie_administration, indication, actif, date_fin")
       .eq("episode_id", ep.id);
 
     const dateSortie = ep.date_sortie ? new Date(ep.date_sortie) : new Date();
-    const sortie = (prescs ?? []).filter((p) => p.actif && (!p.date_fin || new Date(p.date_fin) >= dateSortie));
+    const sortie = (prescs ?? []).filter(
+      (p) => p.actif && (!p.date_fin || new Date(p.date_fin) >= dateSortie),
+    );
 
-    const p = ep.patients as { nom: string; prenom: string; date_naissance: string | null; sexe: string | null } | null;
+    const p = ep.patients;
     const age = p?.date_naissance
       ? Math.floor((Date.now() - new Date(p.date_naissance).getTime()) / 31557600000)
       : null;
+
+    const habituelLines = (habituels ?? [])
+      .map((h) => {
+        const name = h.dci ?? h.nom_commercial ?? "";
+        const poso = buildPosologie(h);
+        return `- ${name}${h.dosage ? ` ${h.dosage}` : ""}${poso ? `, ${poso}` : ""}${h.indication ? ` (${h.indication})` : ""}`;
+      })
+      .join("\n");
+
+    const sortieLines = sortie
+      .map(
+        (s) =>
+          `- ${s.medicament}${s.dosage ? ` ${s.dosage}` : ""}${s.posologie ? `, ${s.posologie}` : ""}${s.indication ? ` (${s.indication})` : ""}`,
+      )
+      .join("\n");
 
     const aiPrompt = `Tu rédiges une lettre de liaison médicamenteuse de sortie d'hospitalisation conforme aux recommandations HAS, à destination du médecin traitant et du pharmacien d'officine.
 
@@ -195,10 +276,10 @@ SÉJOUR : du ${ep.date_entree} au ${ep.date_sortie ?? "(en cours)"}, service ${e
 MOTIF : ${ep.motif ?? "non précisé"}
 
 TRAITEMENT HABITUEL (avant hospitalisation) :
-${(habituels ?? []).map((h) => `- ${h.medicament}${h.dosage ? ` ${h.dosage}` : ""}${h.posologie ? `, ${h.posologie}` : ""}${h.indication ? ` (${h.indication})` : ""}`).join("\n") || "(aucun)"}
+${habituelLines || "(aucun)"}
 
 ORDONNANCE DE SORTIE :
-${sortie.map((s) => `- ${s.medicament}${s.dosage ? ` ${s.dosage}` : ""}${s.posologie ? `, ${s.posologie}` : ""}${s.indication ? ` (${s.indication})` : ""}`).join("\n") || "(aucun)"}
+${sortieLines || "(aucun)"}
 
 Produis une lettre HTML structurée (utilise <h2>, <p>, <ul>) avec :
 1. Identification patient et séjour
@@ -223,21 +304,18 @@ Pas de markdown, uniquement HTML simple. Pas de <html>/<body>, juste le contenu.
     const letterHtml = result.text;
     const letterText = letterHtml.replace(/<[^>]+>/g, "").replace(/\n{3,}/g, "\n\n").trim();
 
-    // Comparison snapshot
-    const comparison_json = {
-      habituel: habituels,
-      sortie,
-      generated_at: new Date().toISOString(),
-      model: result.modelId,
-    };
-
     const { data: inserted, error: insErr } = await supabase
       .from("discharge_letters")
       .insert({
         episode_id: ep.id,
         patient_id: ep.patient_id,
-        organization_id: ep.organization_id,
-        comparison_json,
+        organization_id: orgId,
+        comparison_json: {
+          habituel: habituels ?? [],
+          sortie,
+          generated_at: new Date().toISOString(),
+          model: result.modelId,
+        },
         letter_html: letterHtml,
         letter_text: letterText,
         recipient_medecin_nom: data.recipientMedecinNom ?? null,
