@@ -45,6 +45,10 @@ function ProviderForm({ initial, onSaved, onClose }: { initial?: ProviderRow | n
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
   const [resourceName, setResourceName] = useState((initial?.extra_config?.resource_name as string) ?? "");
   const [apiVersion, setApiVersion] = useState((initial?.extra_config?.api_version as string) ?? "");
+  const initialDeployments = Array.isArray(initial?.extra_config?.deployments)
+    ? (initial?.extra_config?.deployments as string[]).join("\n")
+    : "";
+  const [deployments, setDeployments] = useState(initialDeployments);
 
   const save = useMutation({
     mutationFn: () =>
