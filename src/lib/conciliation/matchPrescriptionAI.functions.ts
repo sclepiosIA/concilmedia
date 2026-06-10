@@ -69,7 +69,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
     let lastError: unknown = null;
     try {
       const res = await generateText({
-        model: gateway("google/gemini-2.5-flash"),
+        model: aiModel,
         prompt,
         experimental_output: Output.object({ schema: AISchema }),
       });
@@ -78,7 +78,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
       lastError = e;
       try {
         const res = await generateText({
-          model: gateway("google/gemini-2.5-flash"),
+          model: aiModel,
           prompt:
             prompt +
             `\n\nRéponds UNIQUEMENT avec un JSON valide de la forme :\n{"status":"vert|jaune|orange|rouge","reason":"...","recommandation":"..."}`,
