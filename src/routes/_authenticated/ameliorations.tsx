@@ -174,6 +174,7 @@ const PISTES: Piste[] = [
       "DPO et comité d'éthique de l'établissement partenaire",
       "Convention de recherche / méthodologie de référence MR-004",
     ],
+    statut: "Livré v1",
   },
   {
     id: 5,
