@@ -69,6 +69,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
     let lastError: unknown = null;
     try {
       const res = await generateText({
+        ...callOptions,
         model: aiModel,
         prompt,
         experimental_output: Output.object({ schema: AISchema }),
