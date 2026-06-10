@@ -22,8 +22,10 @@ const docTypeLabel: Record<string, string> = {
   autre: "Autre",
 };
 
-const MAX_FILES = 20;
+const MAX_FILES = 1000;
 const MAX_SIZE = 10 * 1024 * 1024;
+const EXTRACT_CONCURRENCY = 3; // appels IA parallèles pendant l'extraction
+const COMMIT_BATCH_SIZE = 25; // taille de lot pour l'enregistrement serveur
 
 type ItemStatus = "pending" | "extracting" | "ready" | "error";
 type Item = {
