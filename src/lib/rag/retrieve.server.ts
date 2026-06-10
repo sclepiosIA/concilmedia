@@ -45,7 +45,7 @@ export async function retrieveContext(
     titre: String(r.titre),
     version: (r.version as string | null) ?? null,
     similarity: Number(r.similarity ?? 0),
-    metadata: (r.metadata as Record<string, unknown> | null) ?? {},
+    metadata: ((r.metadata as JsonValue | null) ?? {}) as JsonValue,
   }));
 
   // Log async, ne bloque pas la requête
