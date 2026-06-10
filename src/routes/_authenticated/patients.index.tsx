@@ -210,7 +210,14 @@ function PatientsListPage() {
               </PopoverContent>
             </Popover>
           </div>
-          <p className="text-sm text-muted-foreground">{patients.length} patient(s)</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-sm text-muted-foreground">{patients.length} patient(s)</p>
+            <ToggleGroup type="single" value={archiveFilter} onValueChange={(v) => v && setArchiveFilter(v as typeof archiveFilter)} size="sm">
+              <ToggleGroupItem value="active">Actifs</ToggleGroupItem>
+              <ToggleGroupItem value="archived">Archivés</ToggleGroupItem>
+              <ToggleGroupItem value="all">Tous</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </div>
         <div className="flex items-center gap-2">
         <Button variant="outline" onClick={() => setBulkOpen(true)}>
