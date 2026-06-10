@@ -43,7 +43,7 @@ export const logConciliationEvent = createServerFn({ method: "POST" })
       patient_id: data.patientId ?? null,
       organization_id,
       duration_ms: data.durationMs ?? null,
-      metadata: (data.metadata ?? {}) as Record<string, unknown>,
+      metadata: (data.metadata ?? {}) as never,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
