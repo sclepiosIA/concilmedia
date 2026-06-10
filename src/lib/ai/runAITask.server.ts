@@ -321,3 +321,82 @@ export async function runAITask(
 }
 
 export { decryptProviderKey, decryptApiKey };
+
+/**
+ * Résout une tâche IA en forçant un modèle/provider spécifique (depuis
+ * `ai_providers.name` ou la passerelle Lovable). Sert au banc d'essai
+ * multi-modèles : on bypass la config DB de la tâche pour réutiliser le même
+ * system prompt mais piloter le modèle.
+ */
+export async function resolveAITaskWithOverride(
+  fallback: AITaskFallback,
+  override: { providerName: string; modelId: string },
+): Promise<ResolvedTask> {
+  const systemPrompt = fallback.systemPrompt;
+
+  // Cas "Lovable" → utiliser la passerelle Lovable directement
+  if (override.providerName === "__lovable__") {
+    const apiKey = process.env.LOVABLE_API_KEY ?? null;
+    if (!apiKey) throw new Error("LOVABLE_API_KEY manquante");
+    const model = buildModel("lovable", override.modelId, apiKey, null, {});
+    const callOptions = buildCallOptions({
+      modelId: override.modelId,
+      providerKind: "lovable",
+    });
+    return {
+      systemPrompt,
+      model,
+      modelId: override.modelId,
+      providerKind: "lovable",
+      callOptions,
+    };
+  }
+
+  // Sinon: lookup du provider par name
+  const { data: provider, error } = await supabaseAdmin
+    .from("ai_providers")
+    .select("id, kind, base_url, extra_config, is_active")
+    .eq("name", override.providerName)
+    .maybeSingle();
+  if (error) throw new Error(`Provider lookup failed: ${error.message}`);
+  if (!provider) throw new Error(`Provider introuvable: ${override.providerName}`);
+  if (!provider.is_active) throw new Error(`Provider inactif: ${override.providerName}`);
+
+  const providerKind = provider.kind as ProviderKind;
+  let apiKey: string | null = await decryptProviderKey(provider.id as string);
+  if (!apiKey && providerKind === "azure_openai") {
+    apiKey = process.env.AZURE_OPENAI_API_KEY ?? null;
+  }
+  if (!apiKey && providerKind === "anthropic") {
+    // Azure Foundry — Anthropic réutilise la clé Azure
+    const extra = (provider.extra_config as Record<string, unknown> | null) ?? {};
+    if (extra.variant === "azure_foundry_anthropic") {
+      apiKey = process.env.AZURE_OPENAI_API_KEY ?? null;
+    }
+  }
+  if (!apiKey && providerKind === "lovable") {
+    apiKey = process.env.LOVABLE_API_KEY ?? null;
+  }
+
+  const model = buildModel(
+    providerKind,
+    override.modelId,
+    apiKey,
+    (provider.base_url as string | null) ?? null,
+    (provider.extra_config as Record<string, unknown> | null) ?? {},
+  );
+
+  const callOptions = buildCallOptions({
+    modelId: override.modelId,
+    providerKind,
+  });
+
+  return {
+    systemPrompt,
+    model,
+    modelId: override.modelId,
+    providerKind,
+    callOptions,
+  };
+}
+
