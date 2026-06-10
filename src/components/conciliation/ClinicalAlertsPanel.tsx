@@ -1,6 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useId, useState } from "react";
 import {
   Collapsible,
@@ -18,12 +20,13 @@ import {
   Pencil,
   Pill,
   Repeat,
+  RotateCcw,
   Sparkles,
   X,
   ArrowLeftRight,
 } from "lucide-react";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
-import type { ItemDecision } from "@/lib/conciliation/validateConciliation.functions";
+import type { ItemDecision, ItemOverrides } from "@/lib/conciliation/validateConciliation.functions";
 
 export type AlertCategory = ItemDecision["category"];
 
@@ -36,6 +39,9 @@ export interface ValidationControl {
 function decisionKey(category: AlertCategory, index: number) {
   return `${category}:${index}`;
 }
+
+type OverrideField = keyof ItemOverrides;
+
 
 
 type Severity = "mineure" | "moderee" | "majeure" | "contre_indication" | string;
