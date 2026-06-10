@@ -120,7 +120,10 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
   });
 
   const dedupedComorb = dedupeComorbidites(
-    comorbidites.map((c) => ({ libelle: c.libelle ?? "", code_cim10: c.code_cim10 ?? null })),
+    (comorbidites as Array<{ libelle: string | null; code_cim10: string | null }>).map((c) => ({
+      libelle: c.libelle ?? "",
+      code_cim10: c.code_cim10 ?? null,
+    })),
   );
   const labels = dedupedComorb.map((c) => c.libelle);
   const bmi = computeBmi(patient?.poids_kg ?? null, patient?.taille_cm ?? null);
