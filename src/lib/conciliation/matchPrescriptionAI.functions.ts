@@ -72,6 +72,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
       const res = await generateText({
         ...callOptions,
         model: aiModel,
+        system: __systemPrompt,
         prompt,
         experimental_output: Output.object({ schema: AISchema }),
       });
@@ -82,6 +83,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
         const res = await generateText({
           ...callOptions,
           model: aiModel,
+          system: __systemPrompt,
           prompt:
             prompt +
             `\n\nRéponds UNIQUEMENT avec un JSON valide de la forme :\n{"status":"vert|jaune|orange|rouge","reason":"...","recommandation":"..."}`,
