@@ -24,6 +24,7 @@ import { CollapsibleSection } from "@/components/patient/CollapsibleSection";
 import { ConciliationCompleteCard } from "@/components/patient/ConciliationCompleteCard";
 import { FlaskConical, Hospital, Pill, Sparkles, Stethoscope } from "lucide-react";
 import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
+import { useConciliationTimer } from "@/hooks/useConciliationTimer";
 
 const patientSearchSchema = z.object({
   autoConciliate: fallback(z.boolean(), false).default(false),
@@ -38,6 +39,8 @@ export const Route = createFileRoute("/_authenticated/patients/$patientId")({
 function PatientDetailPage() {
   const { patientId } = Route.useParams();
   const { autoConciliate } = Route.useSearch();
+  useConciliationTimer({ step: "open_patient", patientId });
+
 
   useEffect(() => {
     if (autoConciliate) {

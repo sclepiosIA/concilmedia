@@ -22,6 +22,7 @@ import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
 import { toast } from "sonner";
 import type { RiskResult } from "@/lib/conciliation/riskScore";
+import { useConciliationTimer } from "@/hooks/useConciliationTimer";
 
 export const Route = createFileRoute("/_authenticated/episodes/$episodeId")({
   head: () => ({ meta: [{ title: "Conciliation médicamenteuse" }] }),
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/_authenticated/episodes/$episodeId")({
 
 function EpisodeConciliationPage() {
   const { episodeId } = Route.useParams();
+  useConciliationTimer({ step: "open_episode", episodeId });
   const recon = useMedicationReconciliation(episodeId);
   const qc = useQueryClient();
   const computeRisk = useServerFn(computePrioritization);
