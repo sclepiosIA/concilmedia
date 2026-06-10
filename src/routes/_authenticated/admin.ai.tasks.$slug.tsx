@@ -142,6 +142,30 @@ function TaskEditor() {
           </div>
         </div>
         <div>
+          <Label>Mode d'exécution</Label>
+          <RadioGroup
+            value={executionMode}
+            onValueChange={(v) => setExecutionMode(v as "llm" | "ml" | "both")}
+            className="flex flex-wrap gap-4 mt-2"
+          >
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <RadioGroupItem value="llm" id={`mode-llm-${slug}`} />
+              <span>LLM uniquement</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <RadioGroupItem value="ml" id={`mode-ml-${slug}`} />
+              <span>ML uniquement (microservice)</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <RadioGroupItem value="both" id={`mode-both-${slug}`} />
+              <span>Les deux (côte à côte)</span>
+            </label>
+          </RadioGroup>
+          <p className="text-xs text-muted-foreground mt-1">
+            « ML » et « Les deux » nécessitent <code>ML_CONCILMED_BASE_URL</code> et <code>ML_CONCILMED_API_KEY</code>.
+          </p>
+        </div>
+        <div>
           <Label>Prompt système</Label>
           <Textarea
             value={systemPrompt}
