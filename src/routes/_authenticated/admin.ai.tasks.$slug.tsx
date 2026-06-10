@@ -34,6 +34,7 @@ function TaskEditor() {
   const listVersionsFn = useServerFn(listTaskVersions);
   const restoreFn = useServerFn(restoreTaskVersion);
   const testFn = useServerFn(testTask);
+  const getDefaultFn = useServerFn(getDefaultSystemPrompt);
 
   const taskQ = useQuery({ queryKey: ["admin-ai-task", slug], queryFn: () => getTaskFn({ data: { slug } }) });
   const providersQ = useQuery({ queryKey: ["admin-ai-providers"], queryFn: () => listProvidersFn() });
