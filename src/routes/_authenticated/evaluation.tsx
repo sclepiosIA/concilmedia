@@ -7,6 +7,7 @@ import { CohortImportTab } from "@/components/cohort/CohortImportTab";
 import { CohortRunTab } from "@/components/cohort/CohortRunTab";
 import { GoldStandardTab } from "@/components/cohort/GoldStandardTab";
 import { CohortResultsTab } from "@/components/cohort/CohortResultsTab";
+import { BeforeAfterEvaluation } from "@/components/conciliation/BeforeAfterEvaluation";
 
 export const Route = createFileRoute("/_authenticated/evaluation")({
   head: () => ({ meta: [{ title: "Évaluation précision — cohortes" }] }),
@@ -44,6 +45,7 @@ function EvaluationPage() {
           <TabsTrigger value="run" disabled={!cohortId}>2. Conciliation IA</TabsTrigger>
           <TabsTrigger value="gold" disabled={!cohortId}>3. Gold standard</TabsTrigger>
           <TabsTrigger value="results" disabled={!cohortId}>4. Résultats</TabsTrigger>
+          <TabsTrigger value="beforeafter">5. Avant / Après</TabsTrigger>
         </TabsList>
         <TabsContent value="import" className="mt-4">
           <CohortImportTab activeCohortId={cohortId} onCohortSelected={selectCohort} />
@@ -56,6 +58,9 @@ function EvaluationPage() {
         </TabsContent>
         <TabsContent value="results" className="mt-4">
           {cohortId && <CohortResultsTab cohortId={cohortId} />}
+        </TabsContent>
+        <TabsContent value="beforeafter" className="mt-4">
+          <BeforeAfterEvaluation />
         </TabsContent>
       </Tabs>
     </div>
