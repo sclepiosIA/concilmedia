@@ -118,7 +118,13 @@ function EpisodeConciliationPage() {
             )}
             {latestRisk && (
               <div className="mt-2">
-                <RiskScoreBadge score={latestRisk.score} niveau={latestRisk.niveau as RiskResult["niveau"]} />
+                <RiskScoreBadge
+                  score={latestRisk.score}
+                  niveau={latestRisk.niveau as RiskResult["niveau"]}
+                  breakdown={
+                    (latestRisk.variables as { breakdown?: import("@/lib/conciliation/riskScore").RiskBreakdown[] } | null)?.breakdown ?? null
+                  }
+                />
               </div>
             )}
           </div>
