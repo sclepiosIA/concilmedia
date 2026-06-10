@@ -336,7 +336,9 @@ export const commitBulkImport = createServerFn({ method: "POST" })
         }
         // Pas de fusion : chaque ordonnance contribue toutes ses lignes (une par occurrence).
         if (item.traitements.length) {
-          const { data: insertedTraits, error: tErr } = await supabase.from("traitements_habituels").insert(item.traitements.map((t) => ({
+          const { fillMissingPosologieSlots } = await import("./parsePosologie");
+          const traitsToInsert = item.traitements.map(fillMissingPosologieSlots);
+          const { data: insertedTraits, error: tErr } = await supabase.from("traitements_habituels").insert(traitsToInsert.map((t) => ({
             patient_id: patientId!, dci: t.dci, nom_commercial: t.nom_commercial ?? null, dosage: t.dosage ?? null,
             dosage_unite: t.dosage_unite ?? null, voie_administration: t.voie_administration ?? null,
             posologie_matin: t.posologie_matin ?? null, posologie_midi: t.posologie_midi ?? null,
