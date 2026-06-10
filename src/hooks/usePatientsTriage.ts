@@ -29,7 +29,7 @@ export function usePatientsTriage(patientIds: string[]) {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     queryFn: async (): Promise<Record<string, TriageResult>> => {
-      const [episodesRes, divsRes, validationsRes, analysesRes, risksRes] = await Promise.all([
+      const [episodesRes, divsRes, validationsRes, analysesRes, risksRes, patientsRes, traitementsRes, comorbRes] = await Promise.all([
         supabase
           .from("episodes")
           .select("id, patient_id, statut")
@@ -50,7 +50,22 @@ export function usePatientsTriage(patientIds: string[]) {
           .from("risk_scores")
           .select("episode_id, niveau, computed_at")
           .order("computed_at", { ascending: false }),
+        supabase
+          .from("patients")
+          .select("id, date_naissance")
+          .in("id", patientIds),
+        supabase
+          .from("traitements_habituels")
+          .select("patient_id")
+          .eq("actif", true)
+          .in("patient_id", patientIds),
+        supabase
+          .from("comorbidites")
+          .select("patient_id, libelle")
+          .eq("statut", "actif")
+          .in("patient_id", patientIds),
       ]);
+
 
       const episodes = episodesRes.data ?? [];
       const divs = divsRes.data ?? [];
