@@ -77,6 +77,42 @@ export function classifyDci(dci: string): AtcClassKey {
   return "autre";
 }
 
+// Mapping ATC (5 premiers caractères) → classe interne.
+// Source : OMS ATC + correspondance manuelle avec les classes utilisées par le moteur déterministe.
+const ATC_PREFIX_TO_CLASS: Array<[RegExp, AtcClassKey]> = [
+  [/^B01AA|^B01AE|^B01AF|^B01AB/, "anticoagulant"], // antithrombotiques (AVK, AOD, héparines)
+  [/^B01AC/, "antiagregant"],
+  [/^A10A/, "insuline"],
+  [/^A10B/, "antidiabetique"],
+  [/^C01B|^C01AA/, "antiarythmique"],
+  [/^C07/, "betabloquant"],
+  [/^C09/, "iec_ara2"],
+  [/^C03/, "diuretique"],
+  [/^C10AA|^C10BA/, "statine"],
+  [/^M01A/, "ains"],
+  [/^N02A/, "opioide"],
+  [/^N05BA|^N05CD|^N05CF/, "benzodiazepine"],
+  [/^N06A/, "antidepresseur"],
+  [/^N05A/, "antipsychotique"],
+  [/^N03A/, "antiepileptique"],
+  [/^A02BC/, "ipp"],
+  [/^R03/, "antiasthmatique"],
+  [/^H03A/, "levothyroxine"],
+  [/^N02BE/, "antalgique"],
+  [/^J01/, "antibiotique"],
+];
+
+// Utilisé par le moteur déterministe quand un code ATC BDPM est disponible.
+// Fallback automatique sur classifyDci si ATC absent ou non mappé.
+export function classifyByAtc(codeAtc: string | null | undefined, fallbackDci: string): AtcClassKey {
+  const code = (codeAtc ?? "").trim().toUpperCase();
+  if (code) {
+    for (const [re, cls] of ATC_PREFIX_TO_CLASS) if (re.test(code)) return cls;
+  }
+  return classifyDci(fallbackDci);
+}
+
+
 // Classes à haut risque iatrogène (poids dans le score de priorisation)
 export const HIGH_RISK_CLASSES: AtcClassKey[] = [
   "anticoagulant",

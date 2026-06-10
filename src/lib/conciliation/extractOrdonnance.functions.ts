@@ -145,7 +145,9 @@ export const importExtractedMedications = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { fillMissingPosologieSlots } = await import("./parsePosologie");
-    const rows = data.medications.map((raw) => {
+    const { normalizeDrugBdpm } = await import("./normalizeBdpm.server");
+    const rows = await Promise.all(
+      data.medications.map(async (raw) => {
       const m = fillMissingPosologieSlots({
         posologie_matin: raw.posologie_matin != null ? String(raw.posologie_matin) : null,
         posologie_midi: raw.posologie_midi != null ? String(raw.posologie_midi) : null,
@@ -158,9 +160,12 @@ export const importExtractedMedications = createServerFn({ method: "POST" })
         const n = parseFloat(String(v).replace(",", "."));
         return Number.isFinite(n) ? n : null;
       };
+      // Enrichissement BDPM : CIS + code ATC + DCI canonique
+      const query = String(raw.nom_commercial ?? raw.dci ?? "");
+      const norm = query ? await normalizeDrugBdpm(query) : null;
       return {
         patient_id: data.patientId,
-        dci: String(raw.dci ?? "Inconnu"),
+        dci: norm?.dci ?? String(raw.dci ?? "Inconnu"),
         nom_commercial: raw.nom_commercial ? String(raw.nom_commercial) : null,
         dosage: raw.dosage ? String(raw.dosage) : null,
         dosage_unite: raw.dosage_unite ? String(raw.dosage_unite) : null,
@@ -174,14 +179,18 @@ export const importExtractedMedications = createServerFn({ method: "POST" })
         duree: raw.duree ? String(raw.duree) : null,
         source: "ordonnance_ocr",
         actif: true,
+        cis: norm?.cis ?? null,
+        code_atc: norm?.code_atc ?? null,
       };
-    });
+    }),
+    );
     if (rows.length === 0) return { inserted: 0 };
     const { error } = await supabaseAdmin.from("traitements_habituels").insert(rows as never);
     if (error) throw new Error(error.message);
     void context.userId;
     return { inserted: rows.length };
   });
+
 
 const ImportHospitalInput = z.object({
   episodeId: z.string().uuid(),
@@ -195,7 +204,9 @@ export const importExtractedHospitalPrescriptions = createServerFn({ method: "PO
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { fillMissingPosologieSlots } = await import("./parsePosologie");
-    const rows = data.medications.map((raw) => {
+    const { normalizeDrugBdpm } = await import("./normalizeBdpm.server");
+    const rows = await Promise.all(
+      data.medications.map(async (raw) => {
       const slots = fillMissingPosologieSlots({
         posologie_matin: raw.posologie_matin != null ? String(raw.posologie_matin) : null,
         posologie_midi: raw.posologie_midi != null ? String(raw.posologie_midi) : null,
@@ -203,10 +214,12 @@ export const importExtractedHospitalPrescriptions = createServerFn({ method: "PO
         posologie_coucher: raw.posologie_coucher != null ? String(raw.posologie_coucher) : null,
         posologie_texte: raw.posologie_texte ? String(raw.posologie_texte) : null,
       });
+      const query = String(raw.nom_commercial ?? raw.dci ?? "");
+      const norm = query ? await normalizeDrugBdpm(query) : null;
       return {
         episode_id: data.episodeId,
         patient_id: data.patientId,
-        medicament: String(raw.dci ?? "Inconnu"),
+        medicament: norm?.dci ?? String(raw.dci ?? "Inconnu"),
         nom_commercial: raw.nom_commercial ? String(raw.nom_commercial) : null,
         dosage: raw.dosage ? String(raw.dosage) : null,
         dosage_unite: raw.dosage_unite ? String(raw.dosage_unite) : null,
@@ -220,10 +233,14 @@ export const importExtractedHospitalPrescriptions = createServerFn({ method: "PO
         indication: raw.indication ? String(raw.indication) : null,
         source: "ordonnance_ocr",
         actif: true,
+        cis: norm?.cis ?? null,
+        code_atc: norm?.code_atc ?? null,
       };
-    });
+    }),
+    );
     if (rows.length === 0) return { inserted: 0 };
     const { error } = await supabaseAdmin.from("prescriptions_hospitalieres").insert(rows as never);
     if (error) throw new Error(error.message);
     return { inserted: rows.length };
   });
+

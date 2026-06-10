@@ -3,7 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { importBdpm, getBdpmStatus } from "@/lib/bdpm/importBdpm.functions";
+import { backfillBdpmEnrichment } from "@/lib/bdpm/backfillBdpm.functions";
 import { searchBdpm, type BdpmSearchHit } from "@/lib/bdpm/searchBdpm.functions";
+
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,7 @@ function BdpmAdminPage() {
   const statusFn = useServerFn(getBdpmStatus);
   const importFn = useServerFn(importBdpm);
   const searchFn = useServerFn(searchBdpm);
+  const backfillFn = useServerFn(backfillBdpmEnrichment);
   const qc = useQueryClient();
 
   const { data: status, isLoading } = useQuery({
@@ -43,6 +46,17 @@ function BdpmAdminPage() {
     onError: (e) =>
       toast.error(e instanceof Error ? e.message : "Échec de l'import BDPM"),
   });
+
+  const backfillMut = useMutation({
+    mutationFn: backfillFn,
+    onSuccess: (res) =>
+      toast.success(
+        `Backfill terminé · traitements ${res.traitements.updated}/${res.traitements.scanned} · prescriptions ${res.prescriptions.updated}/${res.prescriptions.scanned}`,
+      ),
+    onError: (e) =>
+      toast.error(e instanceof Error ? e.message : "Échec du backfill"),
+  });
+
 
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<BdpmSearchHit[]>([]);
@@ -84,6 +98,14 @@ function BdpmAdminPage() {
             <RefreshCw className={`w-4 h-4 mr-2 ${importMut.isPending ? "animate-spin" : ""}`} />
             {importMut.isPending ? "Import en cours…" : "Synchroniser BDPM"}
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => backfillMut.mutate(undefined)}
+            disabled={backfillMut.isPending || (status?.specialites ?? 0) === 0}
+          >
+            {backfillMut.isPending ? "Backfill en cours…" : "Backfill CIS/ATC existant"}
+          </Button>
+
         </div>
         {status?.lastRun && (
           <div className="mt-4 text-xs text-muted-foreground border-t pt-3">

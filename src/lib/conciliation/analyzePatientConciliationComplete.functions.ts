@@ -360,16 +360,27 @@ async function attachDeterministicAlerts(
 ): Promise<AIAnalysisPayload> {
   try {
     const { computeDeterministicAlerts } = await import("./deterministicAlerts");
-    const traitementsDci = [
-      ...dossier.traitements_habituels.map((t) => drugLabel(t)),
-      ...dossier.prescriptions_hospitalieres.map((p) => drugLabel(p)),
-    ].filter(Boolean);
+    const all = [
+      ...dossier.traitements_habituels,
+      ...dossier.prescriptions_hospitalieres,
+    ];
+    const traitementsDci: string[] = [];
+    const traitementsAtc: (string | null)[] = [];
+    for (const t of all) {
+      const label = drugLabel(t);
+      if (!label) continue;
+      traitementsDci.push(label);
+      const code = (t as { code_atc?: string | null }).code_atc ?? null;
+      traitementsAtc.push(code);
+    }
     const det = computeDeterministicAlerts({
       age: (dossier.patient.age as number | undefined) ?? null,
       comorbidites: dossier.comorbidites.map((c) => asString(c.libelle)).filter(Boolean),
       traitements_dci: traitementsDci,
+      traitements_atc: traitementsAtc,
     });
     payload.alertes_regles = det.all;
+
   } catch (e) {
     console.warn("[conciliation_complete] deterministic alerts failed:", e);
   }

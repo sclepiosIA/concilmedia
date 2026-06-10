@@ -7,6 +7,7 @@
  */
 import {
   classifyDci,
+  classifyByAtc,
   CLASS_INTERACTIONS,
   ATC_LABELS,
   severityGravite,
@@ -42,6 +43,8 @@ export interface DeterministicAlertsInput {
   age: number | null;
   comorbidites: string[];
   traitements_dci: string[];
+  /** Optionnel : codes ATC BDPM alignés sur traitements_dci (même index). */
+  traitements_atc?: (string | null)[];
 }
 
 export interface DeterministicAlertsResult {
@@ -58,7 +61,12 @@ export function computeDeterministicAlerts(
     .map((d) => (d ?? "").trim())
     .filter((d) => d.length > 0);
 
-  const classified = traitements.map((dci) => ({ dci, classe: classifyDci(dci) }));
+  const atcs = input.traitements_atc ?? [];
+  const classified = traitements.map((dci, i) => ({
+    dci,
+    classe: atcs[i] ? classifyByAtc(atcs[i], dci) : classifyDci(dci),
+  }));
+
   const presentClasses = new Set<AtcClassKey>(classified.map((c) => c.classe));
   const coTraitements = Array.from(presentClasses);
 
