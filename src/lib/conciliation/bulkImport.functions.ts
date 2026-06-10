@@ -100,6 +100,40 @@ const DossierSchema = z.object({
   episode_context: EpisodeContextSchema,
 });
 
+type DossierData = z.infer<typeof DossierSchema>;
+
+const normalizeKey = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
+
+const normalizeHospitalPrescriptionLines = <T extends DossierData>(dossier: T): T => {
+  if (dossier.document_type !== "ordonnance_hospitaliere" || dossier.traitements.length === 0) return dossier;
+  const existing = dossier.prescriptions_hospitalieres.map((p) => normalizeKey(`${p.medicament} ${p.dosage ?? ""}`));
+  const missingFromHospitalPrescription = dossier.traitements
+    .filter((t) => {
+      const key = normalizeKey(`${t.dci} ${t.dosage ?? ""}${t.dosage_unite ?? ""}`);
+      return !existing.some((existingKey) => existingKey.includes(key) || key.includes(existingKey));
+    })
+    .map((t) => ({
+      medicament: [t.dci, t.dosage, t.dosage_unite].filter(Boolean).join(" "),
+      dosage: [t.dosage, t.dosage_unite].filter(Boolean).join(" ") || null,
+      posologie: t.posologie_texte ?? ([
+        t.posologie_matin ? `matin ${t.posologie_matin}` : null,
+        t.posologie_midi ? `midi ${t.posologie_midi}` : null,
+        t.posologie_soir ? `soir ${t.posologie_soir}` : null,
+        t.posologie_coucher ? `coucher ${t.posologie_coucher}` : null,
+      ].filter(Boolean).join(" ; ") || null),
+      voie_administration: t.voie_administration ?? null,
+      indication: t.indication?.includes("BMO") ? t.indication : ["BMO — traitement habituel maintenu", t.indication].filter(Boolean).join(" — "),
+      date_debut: dossier.episode_context?.date_admission ?? null,
+      date_fin: null,
+    }));
+
+  if (missingFromHospitalPrescription.length === 0) return dossier;
+  return {
+    ...dossier,
+    prescriptions_hospitalieres: [...dossier.prescriptions_hospitalieres, ...missingFromHospitalPrescription],
+  };
+};
+
 export type ExtractedDossier = z.infer<typeof DossierSchema> & {
   existing_patient_id?: string | null;
   source_file?: string;
@@ -135,12 +169,12 @@ Réponds STRICTEMENT en JSON valide (aucun texte avant/après, pas de markdown) 
 }
 Règles CRUCIALES de classification :
 - "lettre_admission" = lettre/courrier d'admission, lettre du médecin adressant le patient, demande d'hospitalisation, fiche d'admission aux urgences. PRIORITÉ ABSOLUE : remplis "episode_context.motif" (motif d'admission/d'hospitalisation) + "episode_context.service" + "episode_context.date_admission". Extrais AUSSI les antécédents, allergies et comorbidités mentionnés dans la lettre. NE extrais PAS les traitements de la lettre d'admission (ne remplis PAS "traitements" ni "prescriptions_hospitalieres" pour ce type de document).
-- "ordonnance_hospitaliere" = prescription rédigée PENDANT une hospitalisation (en-tête hôpital/service, date d'admission, ordonnance de séjour) → met les lignes dans "prescriptions_hospitalieres" ET remplis "episode_context".
+- "ordonnance_hospitaliere" = prescription rédigée PENDANT une hospitalisation (en-tête hôpital/service, date d'admission, ordonnance de séjour) → met ABSOLUMENT TOUTES les lignes de prescription visibles dans "prescriptions_hospitalieres" ET remplis "episode_context". Ne limite JAMAIS aux traitements aigus.
 - "ordonnance_ville" = ordonnance de médecin traitant / sortie / traitement habituel → met les lignes dans "traitements".
 - "compte_rendu" = CRH, lettre de consultation → extrais antécédents/comorbidités/allergies/traitements habituels mentionnés.
 - "bilan_bio" = laboratoire → remplis surtout "biologie".
-- Si le document liste à la fois traitement habituel ET nouvelles prescriptions hospi, sépare-les correctement.
-- ORDONNANCE HOSPITALIÈRE — règle BMO : si l'ordonnance hospitalière comporte une section "Traitements habituels maintenus", "[BMO]", "BMO", "Poursuite du traitement habituel", "Traitement personnel poursuivi" (ou équivalent), tu DOIS reprendre CHACUNE de ces lignes dans "prescriptions_hospitalieres" (en plus des traitements aigus). Ces médicaments font partie intégrante de la prescription hospitalière en cours. Ajoute "indication": "BMO — traitement habituel maintenu" pour les distinguer. Reprends aussi ces mêmes lignes dans "traitements" (traitement habituel du patient).
+- Si une ordonnance hospitalière liste à la fois traitements aigus, protocoles, perfusions, injectables, traitements PO, inhalés ET traitements habituels maintenus, TOUTES ces lignes vont dans "prescriptions_hospitalieres". Les traitements habituels maintenus vont EN PLUS dans "traitements".
+- ORDONNANCE HOSPITALIÈRE — règle BMO : toute ligne marquée "Traitements habituels maintenus", "[BMO]", "BMO", "Poursuite du traitement habituel", "Traitement personnel poursuivi" (ou équivalent) fait partie de la PM hospitalière. Tu DOIS reprendre CHACUNE de ces lignes dans "prescriptions_hospitalieres" avec sa voie/fréquence/posologie (en plus des traitements aigus). Ajoute "indication": "BMO — traitement habituel maintenu" pour les distinguer. Reprends aussi ces mêmes lignes dans "traitements" (traitement habituel du patient).
 - Pour les antécédents et allergies : extrais TOUS ceux mentionnés, même brièvement (sections "ATCD", "Allergies", "Intolérances", anamnèse). N'invente jamais.
 - Pour chaque prescription hospitalière, EXTRAIS la date du jour de prescription (jour J) dans "date_debut" (format YYYY-MM-DD). C'est la date imprimée en tête d'ordonnance hospitalière ou à côté de chaque ligne. Si une durée ou date d'arrêt est précisée, remplis "date_fin".
 - Pour TOUTE ordonnance de ville : extrais OBLIGATOIREMENT le bloc "prescriber" (nom complet du médecin prescripteur tel qu'écrit avec titre "Dr"/"Pr", spécialité littérale issue de l'en-tête/du tampon, date de l'ordonnance en YYYY-MM-DD). Si plusieurs ordonnances dans le même PDF, prends celle du document analysé. N'invente jamais : laisse null si non lisible.
@@ -188,7 +222,7 @@ Règles CRUCIALES de classification :
     } catch {
       throw new Error("Réponse IA non valide. Réessayez avec un document plus net.");
     }
-    const dossier = DossierSchema.parse(parsedJson);
+    const dossier = normalizeHospitalPrescriptionLines(DossierSchema.parse(parsedJson));
 
     // Détection de doublon
     let existingId: string | null = null;
@@ -219,6 +253,7 @@ export const commitBulkImport = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => CommitInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const items = data.items.map(normalizeHospitalPrescriptionLines);
     const summary = {
       created: 0,
       updated: 0,
@@ -227,10 +262,10 @@ export const commitBulkImport = createServerFn({ method: "POST" })
     };
 
     // Groupe les items par patient (existant ou nouveau) pour agréger les prescriptions hospi
-    type PendingHospi = { patientId: string; prescriptions: typeof data.items[number]["prescriptions_hospitalieres"]; context: { motif?: string | null; service?: string | null; date_admission?: string | null }; sourceDocumentId: string | null };
+    type PendingHospi = { patientId: string; prescriptions: typeof items[number]["prescriptions_hospitalieres"]; context: { motif?: string | null; service?: string | null; date_admission?: string | null }; sourceDocumentId: string | null };
     const hospiByPatient = new Map<string, PendingHospi>();
 
-    for (const item of data.items) {
+    for (const item of items) {
       const displayName = `${item.patient.nom ?? "?"} ${item.patient.prenom ?? ""}`.trim();
       try {
         let patientId = item.existing_patient_id ?? null;
