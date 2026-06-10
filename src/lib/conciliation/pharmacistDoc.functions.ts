@@ -133,6 +133,19 @@ export const comparePharmacistVsAI = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!analysis) throw new Error("Analyse IA introuvable.");
 
+    // Merge pharmacist overrides into the AI payload so the comparison reflects
+    // the validated/corrected version (not the raw IA output).
+    const { data: validationRow } = await supabase
+      .from("conciliation_validations")
+      .select("item_decisions")
+      .eq("analysis_id", data.analysisId)
+      .maybeSingle();
+    const mergedPayload = applyPharmacistOverrides(
+      analysis.payload as Record<string, unknown>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (validationRow?.item_decisions as any[] | null) ?? [],
+    );
+
     // Télécharger le PDF
     const { data: file, error: dlErr } = await supabase.storage.from(BUCKET).download(doc.storage_path);
     if (dlErr || !file) throw new Error("Impossible de lire le PDF.");
