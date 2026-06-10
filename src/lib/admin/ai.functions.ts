@@ -152,10 +152,11 @@ export const getTask = createServerFn({ method: "GET" })
       .select("extra_config" as any)
       .eq("slug", data.slug)
       .single();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const extra = ((extraRow as any)?.extra_config ?? {}) as Record<string, unknown>;
     return {
       ...task,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      extra_config: ((extraRow as any)?.extra_config ?? {}) as Record<string, unknown>,
+      reasoning_effort: (extra.reasoning_effort as "low" | "medium" | "high" | null) ?? null,
     };
   });
 
