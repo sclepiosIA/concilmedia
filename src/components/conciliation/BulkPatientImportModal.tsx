@@ -145,7 +145,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
 
   const importMut = useMutation({
     mutationFn: async () => {
-      const ready = items.filter((i) => i.status === "ready" && i.dossier);
+      const ready = items.filter((i) => i.status === "ready" && i.dossier && !checkMismatch(i));
       const payload = await Promise.all(ready.map(async (i) => {
         const b64 = await fileToBase64(i.file);
         const base = {
