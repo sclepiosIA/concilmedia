@@ -8,6 +8,7 @@ import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, F
 import { analyzeConciliation, type AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { toast } from "sonner";
 import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
+import { RiskScoreCompare } from "@/components/conciliation/RiskScoreCompare";
 
 export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
   const qc = useQueryClient();
@@ -53,6 +54,9 @@ export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
         <Button onClick={() => mut.mutate()} disabled={mut.isPending} className="w-full" size="sm">
           {mut.isPending ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Analyse…</> : <><Sparkles className="h-4 w-4 mr-1" /> Lancer l'analyse</>}
         </Button>
+
+        <RiskScoreCompare episodeId={episodeId} />
+
 
         {payload && (
           <>

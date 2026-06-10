@@ -132,7 +132,7 @@ export const getTask = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: task, error } = await supabaseAdmin
       .from("ai_tasks")
-      .select("id, slug, label, description, model, system_prompt, temperature, max_tokens, current_version, provider_id, provider:ai_providers(id, name, kind)")
+      .select("id, slug, label, description, model, system_prompt, temperature, max_tokens, current_version, provider_id, execution_mode, provider:ai_providers(id, name, kind)")
       .eq("slug", data.slug)
       .single();
     if (error) throw new Error(error.message);
@@ -146,6 +146,7 @@ const updateTaskSchema = z.object({
   system_prompt: z.string(),
   temperature: z.number().nullable().optional(),
   max_tokens: z.number().int().positive().nullable().optional(),
+  execution_mode: z.enum(["llm", "ml", "both"]).optional(),
   note: z.string().optional(),
 });
 
@@ -164,16 +165,20 @@ export const updateTask = createServerFn({ method: "POST" })
 
     const nextVersion = (current.current_version || 1) + 1;
 
+    const update: Record<string, unknown> = {
+      provider_id: data.provider_id,
+      model: data.model,
+      system_prompt: data.system_prompt,
+      temperature: data.temperature ?? null,
+      max_tokens: data.max_tokens ?? null,
+      current_version: nextVersion,
+    };
+    if (data.execution_mode) update.execution_mode = data.execution_mode;
+
     const { error: upErr } = await supabaseAdmin
       .from("ai_tasks")
-      .update({
-        provider_id: data.provider_id,
-        model: data.model,
-        system_prompt: data.system_prompt,
-        temperature: data.temperature ?? null,
-        max_tokens: data.max_tokens ?? null,
-        current_version: nextVersion,
-      })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update(update as any)
       .eq("id", current.id);
     if (upErr) throw new Error(upErr.message);
 
