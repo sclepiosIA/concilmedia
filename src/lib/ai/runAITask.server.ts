@@ -114,9 +114,23 @@ function buildModel(
     case "azure_openai": {
       if (!apiKey) throw new Error("Clé Azure OpenAI manquante");
       const apiVersion = (extra.api_version as string | undefined) || "2024-10-21";
+      const variant = (extra.variant as string | undefined) || undefined;
 
-      // Azure AI Foundry (services.ai.azure.com) — use OpenAI-compatible endpoint
-      // shape: <baseUrl>/openai/deployments/<deployment>/chat/completions?api-version=...
+      // Variante: Azure Foundry — /openai/v1/responses (Responses API).
+      if (variant === "azure_foundry_responses") {
+        const trimmed = (baseUrl as string).replace(/\/+$/, "");
+        // OpenAI Responses API via Azure Foundry. Path: /openai/v1/responses
+        // On utilise createOpenAI puis .responses(modelId).
+        const p = createOpenAI({
+          apiKey,
+          baseURL: `${trimmed}/openai/v1`,
+          headers: { "api-key": apiKey },
+        });
+        // .responses() = Responses API (sinon chat.completions par défaut)
+        return p.responses(modelId);
+      }
+
+      // Azure AI Foundry (services.ai.azure.com) — OpenAI-compatible endpoint legacy
       if (isAzureFoundryUrl(baseUrl)) {
         const trimmed = (baseUrl as string).replace(/\/+$/, "");
         const p = createOpenAICompatible({
@@ -126,7 +140,6 @@ function buildModel(
             "api-key": apiKey,
             "Authorization": `Bearer ${apiKey}`,
           },
-          // Note: /openai/v1 does NOT accept ?api-version (causes 400). Only legacy /openai needs it.
         });
         return p(modelId);
       }
@@ -137,7 +150,6 @@ function buildModel(
         apiKey,
         resourceName,
         apiVersion,
-        // Only pass baseURL if no resourceName, to avoid double-config.
         baseURL: !resourceName && baseUrl ? baseUrl : undefined,
       });
       return p(modelId);
@@ -149,6 +161,19 @@ function buildModel(
     }
     case "anthropic": {
       if (!apiKey) throw new Error("Clé Anthropic manquante");
+      const variant = (extra.variant as string | undefined) || undefined;
+
+      // Variante: Azure Foundry — /anthropic/v1/messages
+      if (variant === "azure_foundry_anthropic") {
+        const trimmed = (baseUrl as string).replace(/\/+$/, "");
+        const p = createAnthropic({
+          apiKey,
+          baseURL: trimmed, // SDK appendra /v1/messages
+          headers: { "api-key": apiKey },
+        });
+        return p(modelId);
+      }
+
       const p = createAnthropic({ apiKey, baseURL: baseUrl || undefined });
       return p(modelId);
     }
