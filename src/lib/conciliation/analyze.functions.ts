@@ -166,7 +166,8 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
           const retry = await generateText({
             ...callOptions,
             model,
-            system: __systemPrompt + "\n\nIMPORTANT: Réponds uniquement par un objet JSON valide, sans aucun texte avant ou après.",
+            system: __finalSystemPrompt + "\n\nIMPORTANT: Réponds uniquement par un objet JSON valide, sans aucun texte avant ou après.",
+
             prompt: `Dossier patient :\n${JSON.stringify(dossier, null, 2)}`,
           });
           payload = parseLlmJson<AIAnalysisPayload>(retry.text);
