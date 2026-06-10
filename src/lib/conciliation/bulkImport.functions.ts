@@ -381,18 +381,21 @@ export const commitBulkImport = createServerFn({ method: "POST" })
         let existingTraitements = new Set<string>();
         let existingBio = new Set<string>();
         if (item.existing_patient_id) {
-          const [ea, ec, eal, et, eb] = await Promise.all([
+          const [ea, ec, eal, eb] = await Promise.all([
             supabase.from("antecedents").select("type, description").eq("patient_id", patientId!),
             supabase.from("comorbidites").select("libelle").eq("patient_id", patientId!),
             supabase.from("allergies").select("substance").eq("patient_id", patientId!),
-            supabase.from("traitements_habituels").select("dci").eq("patient_id", patientId!).eq("actif", true),
             supabase.from("biologie_resultats").select("parametre, date_prelevement").eq("patient_id", patientId!),
           ]);
           existingAntecedents = new Set((ea.data ?? []).map((r) => `${r.type}|${(r.description ?? "").toLowerCase().trim()}`));
           existingComorb = new Set((ec.data ?? []).map((r) => (r.libelle ?? "").toLowerCase().trim()));
           existingAllergies = new Set((eal.data ?? []).map((r) => (r.substance ?? "").toLowerCase().trim()));
-          existingTraitements = new Set((et.data ?? []).map((r) => (r.dci ?? "").toLowerCase().trim()));
           existingBio = new Set((eb.data ?? []).map((r) => `${(r.parametre ?? "").toLowerCase()}|${r.date_prelevement ?? ""}`));
+        }
+        // Toujours interroger les traitements actifs pour dédupliquer même au sein d'un même batch (plusieurs PDF du même patient)
+        {
+          const et = await supabase.from("traitements_habituels").select("dci, dosage, dosage_unite").eq("patient_id", patientId!).eq("actif", true);
+          existingTraitements = new Set((et.data ?? []).map((r) => `${(r.dci ?? "").toLowerCase().trim()}|${(r.dosage ?? "").toString().toLowerCase().trim()}|${(r.dosage_unite ?? "").toLowerCase().trim()}`));
         }
 
         const newAntecedents = item.antecedents.filter((a) => !existingAntecedents.has(`${a.type}|${a.description.toLowerCase().trim()}`));
