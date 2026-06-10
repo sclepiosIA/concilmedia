@@ -34,7 +34,9 @@ export type DeterministicAlert =
       reference: string;
       classe: AtcClassKey;
       dci: string;
+      dci_concernes?: string[];
     };
+
 
 export interface DeterministicAlertsInput {
   age: number | null;
