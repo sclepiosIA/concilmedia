@@ -46,13 +46,14 @@ function EpisodeConciliationPage() {
   const { data: latestRisk } = useQuery({
     queryKey: ["risk_score", episodeId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("risk_scores")
         .select("*")
         .eq("episode_id", episodeId)
-        .order("created_at", { ascending: false })
+        .order("computed_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (error) throw error;
       return data;
     },
   });
