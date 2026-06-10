@@ -90,9 +90,10 @@ Règles :
 - Le poids doit être en kg, la taille en cm.
 - N'inclus que les vraies allergies médicamenteuses ou alimentaires (pas les intolérances vagues).
 - Réponds UNIQUEMENT avec le JSON, sans texte autour.`;
-    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
+    const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     const result = await generateText({
+      ...callOptions,
       model,
       system: __systemPrompt,
       messages: [
