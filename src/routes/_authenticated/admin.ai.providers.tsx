@@ -93,13 +93,35 @@ function ProviderForm({ initial, onSaved, onClose }: { initial?: ProviderRow | n
           </SelectContent>
         </Select>
       </div>
-      {(kind === "openai_compatible" || kind === "openai" || kind === "google" || kind === "anthropic" || kind === "azure_openai") && (
+      {(kind === "openai_compatible" || kind === "openai" || kind === "google" || kind === "anthropic") && (
         <div><Label>Base URL (optionnel)</Label><Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://…" /></div>
       )}
       {kind === "azure_openai" && (
         <>
-          <div><Label>Resource name</Label><Input value={resourceName} onChange={(e) => setResourceName(e.target.value)} placeholder="my-resource" /></div>
-          <div><Label>API version</Label><Input value={apiVersion} onChange={(e) => setApiVersion(e.target.value)} placeholder="2024-10-21" /></div>
+          <div>
+            <Label>Endpoint complet (optionnel)</Label>
+            <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://my-resource.openai.azure.com/openai/deployments" />
+            <p className="text-[11px] text-muted-foreground mt-1">Laisser vide pour utiliser le « Resource name » ci-dessous.</p>
+          </div>
+          <div>
+            <Label>Resource name</Label>
+            <Input value={resourceName} onChange={(e) => setResourceName(e.target.value)} placeholder="my-resource" />
+            <p className="text-[11px] text-muted-foreground mt-1">Construit l'endpoint https://&lt;resource&gt;.openai.azure.com</p>
+          </div>
+          <div>
+            <Label>API version</Label>
+            <Input value={apiVersion} onChange={(e) => setApiVersion(e.target.value)} placeholder="2024-10-21" />
+          </div>
+          <div>
+            <Label>Déploiements / modèles (un par ligne)</Label>
+            <textarea
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={deployments}
+              onChange={(e) => setDeployments(e.target.value)}
+              placeholder={"gpt-4o\ngpt-4o-mini\no3-mini"}
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">Nom du déploiement Azure = identifiant de modèle utilisé dans les tâches.</p>
+          </div>
         </>
       )}
       {kind !== "lovable" && (
