@@ -1,6 +1,8 @@
 // Recherche par similarité vectorielle dans le corpus RAG.
 import { embedOne, toPgVector } from "./embed.server";
 
+type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
+
 export interface RagHit {
   id: string;
   document_id: string;
@@ -9,12 +11,13 @@ export interface RagHit {
   titre: string;
   version: string | null;
   similarity: number;
-  metadata: Record<string, unknown>;
+  metadata: JsonValue;
 }
 
 export interface RagContext {
   hits: RagHit[];
 }
+
 
 export async function retrieveContext(
   query: string,
