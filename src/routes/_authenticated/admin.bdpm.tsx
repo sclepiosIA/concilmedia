@@ -3,7 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { importBdpm, getBdpmStatus } from "@/lib/bdpm/importBdpm.functions";
+import { backfillBdpmEnrichment } from "@/lib/bdpm/backfillBdpm.functions";
 import { searchBdpm, type BdpmSearchHit } from "@/lib/bdpm/searchBdpm.functions";
+
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
