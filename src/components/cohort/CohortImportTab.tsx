@@ -87,6 +87,8 @@ export function CohortImportTab({ activeCohortId, onCohortSelected }: { activeCo
         </div>
       </Card>
 
+      <CohortDatasetUploader cohortId={activeCohortId} />
+
       <CohortPatientsRosterUploader cohortId={activeCohortId} />
 
       <Card className="p-4 space-y-3">
