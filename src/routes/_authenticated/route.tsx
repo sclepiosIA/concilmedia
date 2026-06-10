@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, redirect, Link, useRouter } from "@tanstack/re
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, LogOut, LayoutDashboard, Settings, Layers, Sparkles } from "lucide-react";
+import { Users, LogOut, LayoutDashboard, Settings, Layers, Sparkles, GitBranch, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isAdmin } from "@/lib/admin/ai.functions";
 import logoAsset from "@/assets/concilmed-logo.png.asset.json";
