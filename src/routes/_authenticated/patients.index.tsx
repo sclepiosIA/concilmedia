@@ -25,6 +25,8 @@ import { TRIAGE_META, type TriageLevel } from "@/lib/conciliation/triageScale";
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { fr } from "date-fns/locale";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { WorkflowStatusBadge } from "@/components/team/WorkflowStatusBadge";
+import type { WorkflowStatus } from "@/lib/team/assignPatient.functions";
 
 
 
