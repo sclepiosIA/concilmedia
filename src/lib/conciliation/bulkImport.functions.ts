@@ -438,7 +438,11 @@ export const commitBulkImport = createServerFn({ method: "POST" })
           const dedupKey = (dci: string, dosage?: string | null, unite?: string | null) =>
             normalizeKey(`${dci} ${dosage ?? ""} ${unite ?? ""}`);
           // Dedup contre l'existant en base ET contre ce qui a déjà été inséré dans ce batch
-          const seenKeys = new Set<string>(Array.from(existingTraitements).map((d) => normalizeKey(d)));
+          const seenKeys = new Set<string>();
+          for (const d of existingTraitements) {
+            seenKeys.add(normalizeKey(d));
+            seenKeys.add(normalizeKey(d.split("|")[0] ?? ""));
+          }
           const traitsToInsert: typeof item.traitements = [];
           for (const raw of item.traitements.map(fillMissingPosologieSlots)) {
             const k = dedupKey(raw.dci, raw.dosage, raw.dosage_unite);
