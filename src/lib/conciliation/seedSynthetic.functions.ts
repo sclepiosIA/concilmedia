@@ -280,15 +280,15 @@ export const seedSyntheticCohort = createServerFn({ method: "POST" })
 
       // Traitements habituels (BMO)
       for (const t of profil.bmo) {
-        await supabase.from("traitements_habituels").insert({
+        const { error: eTh } = await supabase.from("traitements_habituels").insert({
           patient_id: pat.id,
           dci: t.dci, dosage: t.dosage, dosage_unite: t.dosage_unite,
           voie_administration: t.voie,
           posologie_matin: t.matin ?? null, posologie_midi: t.midi ?? null,
           posologie_soir: t.soir ?? null, posologie_coucher: t.coucher ?? null,
-          source: "synthetique", actif: true,
+          source: "ordonnance", actif: true,
         } as never);
-        created.traitements++;
+        if (!eTh) created.traitements++;
       }
 
       // Épisode
