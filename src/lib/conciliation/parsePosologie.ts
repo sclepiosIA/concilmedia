@@ -49,14 +49,44 @@ export function parsePosologieText(text: string | null | undefined): PosologieSl
   }
 
   if (!out.matin && !out.midi && !out.soir && !out.coucher) {
-    // "3 fois par jour" / "3x/j" → matin/midi/soir = 1
-    if (/\b3\s*(?:x|fois)\s*\/?\s*j(?:our)?\b/.test(s)) {
-      out.matin = "1"; out.midi = "1"; out.soir = "1";
-    } else if (/\b2\s*(?:x|fois)\s*\/?\s*j(?:our)?\b/.test(s)) {
-      out.matin = "1"; out.soir = "1";
-    } else if (/\b1\s*(?:x|fois|inj(?:ection)?|cp|comprime|gelule|dose|ampoule|sachet)\b[^\n]{0,30}?\/?\s*j(?:our)?\b/.test(s) && !/semaine|mois|hebdo/.test(s)) {
-      // "1 inj SC/j" / "1 cp/j" sans créneau précis → matin par défaut
-      out.matin = "1";
+    const hasWeekMonth = /semaine|mois|hebdo|/.test(s) === false ? false : /(semaine|mois|hebdo)/.test(s);
+
+    // Determine frequency per day
+    let perDay: number | null = null;
+
+    // "Nx/j", "N fois/j", "N fois par jour" — support ranges "1-3x/j" → take lower bound
+    const freqMatch = s.match(/\b(\d+)(?:\s*[-à]\s*(\d+))?\s*(?:x|fois)\s*(?:\/|par)\s*j(?:our)?\b/);
+    if (freqMatch) {
+      perDay = parseInt(freqMatch[1], 10); // lower bound to stay safe
+    }
+
+    // Interval "/Nh" or "toutes les N heures" → 24/N
+    if (perDay === null) {
+      const intervalMatch = s.match(/(?:\/|toutes?\s+les?\s+)(\d+)\s*h(?:eures?)?\b/);
+      if (intervalMatch) {
+        const h = parseInt(intervalMatch[1], 10);
+        if (h > 0 && h <= 24) perDay = Math.max(1, Math.round(24 / h));
+      }
+    }
+
+    // Single dose per day: "1 cp/j", "1 inj SC/j", "1x/j"
+    if (perDay === null) {
+      if (/\b1\s*(?:x|fois|inj(?:ection)?|cp|comprime|gelule|dose|ampoule|sachet)\b[^\n]{0,30}?\/?\s*j(?:our)?\b/.test(s) && !hasWeekMonth) {
+        perDay = 1;
+      }
+    }
+
+    if (perDay !== null && !hasWeekMonth) {
+      switch (perDay) {
+        case 1: out.matin = "1"; break;
+        case 2: out.matin = "1"; out.soir = "1"; break;
+        case 3: out.matin = "1"; out.midi = "1"; out.soir = "1"; break;
+        case 4: out.matin = "1"; out.midi = "1"; out.soir = "1"; out.coucher = "1"; break;
+        default:
+          if (perDay >= 5) {
+            out.matin = "1"; out.midi = "1"; out.soir = "1"; out.coucher = "1";
+          }
+      }
     }
   }
   return out;
