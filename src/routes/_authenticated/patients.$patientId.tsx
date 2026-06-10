@@ -38,6 +38,13 @@ export const Route = createFileRoute("/_authenticated/patients/$patientId")({
 function PatientDetailPage() {
   const { patientId } = Route.useParams();
   const { autoConciliate } = Route.useSearch();
+
+  useEffect(() => {
+    if (autoConciliate) {
+      navigate({ to: ".", search: {}, replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [bulkOpen, setBulkOpen] = useState(false);
