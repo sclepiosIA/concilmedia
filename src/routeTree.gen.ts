@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedEvaluationRouteImport } from './routes/_authenticated/evaluation'
+import { Route as AuthenticatedEquipeRouteImport } from './routes/_authenticated/equipe'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedArchitectureIaRouteImport } from './routes/_authenticated/architecture-ia'
 import { Route as AuthenticatedAmeliorationsRouteImport } from './routes/_authenticated/ameliorations'
@@ -20,6 +21,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedPatientsIndexRouteImport } from './routes/_authenticated/patients.index'
 import { Route as AuthenticatedPatientsPatientIdRouteImport } from './routes/_authenticated/patients.$patientId'
 import { Route as AuthenticatedEpisodesEpisodeIdRouteImport } from './routes/_authenticated/episodes.$episodeId'
+import { Route as AuthenticatedConciliationSupervisionRouteImport } from './routes/_authenticated/conciliation.supervision'
 import { Route as AuthenticatedConciliationMetriquesRouteImport } from './routes/_authenticated/conciliation.metriques'
 import { Route as AuthenticatedAdminSihConfigRouteImport } from './routes/_authenticated/admin.sih-config'
 import { Route as AuthenticatedAdminRagRouteImport } from './routes/_authenticated/admin.rag'
@@ -50,6 +52,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedEvaluationRoute = AuthenticatedEvaluationRouteImport.update({
   id: '/evaluation',
   path: '/evaluation',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEquipeRoute = AuthenticatedEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -90,6 +97,12 @@ const AuthenticatedEpisodesEpisodeIdRoute =
   AuthenticatedEpisodesEpisodeIdRouteImport.update({
     id: '/episodes/$episodeId',
     path: '/episodes/$episodeId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConciliationSupervisionRoute =
+  AuthenticatedConciliationSupervisionRouteImport.update({
+    id: '/conciliation/supervision',
+    path: '/conciliation/supervision',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedConciliationMetriquesRoute =
@@ -168,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/ameliorations': typeof AuthenticatedAmeliorationsRoute
   '/architecture-ia': typeof AuthenticatedArchitectureIaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/equipe': typeof AuthenticatedEquipeRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
@@ -176,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/admin/rag': typeof AuthenticatedAdminRagRoute
   '/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
   '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
+  '/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients/': typeof AuthenticatedPatientsIndexRoute
@@ -192,6 +207,7 @@ export interface FileRoutesByTo {
   '/ameliorations': typeof AuthenticatedAmeliorationsRoute
   '/architecture-ia': typeof AuthenticatedArchitectureIaRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/equipe': typeof AuthenticatedEquipeRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
@@ -199,6 +215,7 @@ export interface FileRoutesByTo {
   '/admin/rag': typeof AuthenticatedAdminRagRoute
   '/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
   '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
+  '/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients': typeof AuthenticatedPatientsIndexRoute
@@ -217,6 +234,7 @@ export interface FileRoutesById {
   '/_authenticated/ameliorations': typeof AuthenticatedAmeliorationsRoute
   '/_authenticated/architecture-ia': typeof AuthenticatedArchitectureIaRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/equipe': typeof AuthenticatedEquipeRoute
   '/_authenticated/evaluation': typeof AuthenticatedEvaluationRoute
   '/_authenticated/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/_authenticated/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
@@ -225,6 +243,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/rag': typeof AuthenticatedAdminRagRoute
   '/_authenticated/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
   '/_authenticated/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
+  '/_authenticated/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
   '/_authenticated/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/_authenticated/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/_authenticated/patients/': typeof AuthenticatedPatientsIndexRoute
@@ -243,6 +262,7 @@ export interface FileRouteTypes {
     | '/ameliorations'
     | '/architecture-ia'
     | '/dashboard'
+    | '/equipe'
     | '/evaluation'
     | '/admin/ai'
     | '/admin/bdpm'
@@ -251,6 +271,7 @@ export interface FileRouteTypes {
     | '/admin/rag'
     | '/admin/sih-config'
     | '/conciliation/metriques'
+    | '/conciliation/supervision'
     | '/episodes/$episodeId'
     | '/patients/$patientId'
     | '/patients/'
@@ -267,6 +288,7 @@ export interface FileRouteTypes {
     | '/ameliorations'
     | '/architecture-ia'
     | '/dashboard'
+    | '/equipe'
     | '/evaluation'
     | '/admin/bdpm'
     | '/admin/import-fhir'
@@ -274,6 +296,7 @@ export interface FileRouteTypes {
     | '/admin/rag'
     | '/admin/sih-config'
     | '/conciliation/metriques'
+    | '/conciliation/supervision'
     | '/episodes/$episodeId'
     | '/patients/$patientId'
     | '/patients'
@@ -291,6 +314,7 @@ export interface FileRouteTypes {
     | '/_authenticated/ameliorations'
     | '/_authenticated/architecture-ia'
     | '/_authenticated/dashboard'
+    | '/_authenticated/equipe'
     | '/_authenticated/evaluation'
     | '/_authenticated/admin/ai'
     | '/_authenticated/admin/bdpm'
@@ -299,6 +323,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/rag'
     | '/_authenticated/admin/sih-config'
     | '/_authenticated/conciliation/metriques'
+    | '/_authenticated/conciliation/supervision'
     | '/_authenticated/episodes/$episodeId'
     | '/_authenticated/patients/$patientId'
     | '/_authenticated/patients/'
@@ -344,6 +369,13 @@ declare module '@tanstack/react-router' {
       path: '/evaluation'
       fullPath: '/evaluation'
       preLoaderRoute: typeof AuthenticatedEvaluationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/equipe': {
+      id: '/_authenticated/equipe'
+      path: '/equipe'
+      fullPath: '/equipe'
+      preLoaderRoute: typeof AuthenticatedEquipeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -393,6 +425,13 @@ declare module '@tanstack/react-router' {
       path: '/episodes/$episodeId'
       fullPath: '/episodes/$episodeId'
       preLoaderRoute: typeof AuthenticatedEpisodesEpisodeIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/conciliation/supervision': {
+      id: '/_authenticated/conciliation/supervision'
+      path: '/conciliation/supervision'
+      fullPath: '/conciliation/supervision'
+      preLoaderRoute: typeof AuthenticatedConciliationSupervisionRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/conciliation/metriques': {
@@ -525,8 +564,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAmeliorationsRoute: typeof AuthenticatedAmeliorationsRoute
   AuthenticatedArchitectureIaRoute: typeof AuthenticatedArchitectureIaRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEquipeRoute: typeof AuthenticatedEquipeRoute
   AuthenticatedEvaluationRoute: typeof AuthenticatedEvaluationRoute
   AuthenticatedConciliationMetriquesRoute: typeof AuthenticatedConciliationMetriquesRoute
+  AuthenticatedConciliationSupervisionRoute: typeof AuthenticatedConciliationSupervisionRoute
   AuthenticatedEpisodesEpisodeIdRoute: typeof AuthenticatedEpisodesEpisodeIdRoute
   AuthenticatedPatientsPatientIdRoute: typeof AuthenticatedPatientsPatientIdRoute
   AuthenticatedPatientsIndexRoute: typeof AuthenticatedPatientsIndexRoute
@@ -537,9 +578,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAmeliorationsRoute: AuthenticatedAmeliorationsRoute,
   AuthenticatedArchitectureIaRoute: AuthenticatedArchitectureIaRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEquipeRoute: AuthenticatedEquipeRoute,
   AuthenticatedEvaluationRoute: AuthenticatedEvaluationRoute,
   AuthenticatedConciliationMetriquesRoute:
     AuthenticatedConciliationMetriquesRoute,
+  AuthenticatedConciliationSupervisionRoute:
+    AuthenticatedConciliationSupervisionRoute,
   AuthenticatedEpisodesEpisodeIdRoute: AuthenticatedEpisodesEpisodeIdRoute,
   AuthenticatedPatientsPatientIdRoute: AuthenticatedPatientsPatientIdRoute,
   AuthenticatedPatientsIndexRoute: AuthenticatedPatientsIndexRoute,

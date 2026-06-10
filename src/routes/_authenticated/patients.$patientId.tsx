@@ -22,6 +22,7 @@ import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { MedicationProfileCard } from "@/components/patient/MedicationProfileCard";
 import { CollapsibleSection } from "@/components/patient/CollapsibleSection";
 import { ConciliationCompleteCard } from "@/components/patient/ConciliationCompleteCard";
+import { AssignmentPanel } from "@/components/team/AssignmentPanel";
 import { FlaskConical, Hospital, Pill, Sparkles, Stethoscope } from "lucide-react";
 import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
 import { useConciliationTimer } from "@/hooks/useConciliationTimer";
@@ -271,6 +272,8 @@ function PatientDetailPage() {
       <SynthesePatientDialog patientId={patientId} open={syntheseOpen} onOpenChange={setSyntheseOpen} />
 
       <div className="space-y-3">
+        <AssignmentPanel patientId={patientId} />
+
         <CollapsibleSection
           title="Profil clinique"
           icon={<Stethoscope className="h-4 w-4 text-primary" />}

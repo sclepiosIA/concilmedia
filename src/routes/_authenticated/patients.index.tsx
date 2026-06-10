@@ -25,6 +25,8 @@ import { TRIAGE_META, type TriageLevel } from "@/lib/conciliation/triageScale";
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { fr } from "date-fns/locale";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { WorkflowStatusBadge } from "@/components/team/WorkflowStatusBadge";
+import type { WorkflowStatus } from "@/lib/team/assignPatient.functions";
 
 
 
@@ -46,6 +48,10 @@ function PatientsListPage() {
   const [syntheseFor, setSyntheseFor] = useState<string | null>(null);
   const [archiveFilter, setArchiveFilter] = useState<"active" | "archived" | "all">("active");
   const [bulkAction, setBulkAction] = useState<"archive" | "delete" | null>(null);
+  const [assignFilter, setAssignFilter] = useState<"all" | "mine" | "unassigned">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | WorkflowStatus>("all");
+  const [meId, setMeId] = useState<string | null>(null);
+  useMemo(() => { supabase.auth.getUser().then((r) => setMeId(r.data.user?.id ?? null)); }, []);
   const pendingFiles = [...preHospFiles, ...prescriptionFiles];
 
   const { data: patients = [] } = useQuery({
@@ -75,6 +81,15 @@ function PatientsListPage() {
           p.nir?.includes(search),
       )
       .filter((p) => {
+        if (assignFilter === "mine") return meId !== null && p.assigned_to === meId;
+        if (assignFilter === "unassigned") return !p.assigned_to;
+        return true;
+      })
+      .filter((p) => {
+        if (statusFilter === "all") return true;
+        return (p.workflow_status ?? "a_faire") === statusFilter;
+      })
+      .filter((p) => {
         const lvl = triageMap[p.id]?.level ?? 5;
         if (filterMode === "todo") return lvl <= 3;
         if (filterMode === "done") return lvl === 5;
@@ -85,14 +100,12 @@ function PatientsListPage() {
         const la = triageMap[a.id]?.level ?? 5;
         const lb = triageMap[b.id]?.level ?? 5;
         if (la !== lb) return la - lb;
-        // À priorité égale : plus de médicaments habituels d'abord (complexité)
         const ma = quickInfoMap[a.id]?.traitements.length ?? 0;
         const mb = quickInfoMap[b.id]?.traitements.length ?? 0;
         if (ma !== mb) return mb - ma;
-        // Puis par ancienneté d'arrivée du dossier (le plus ancien d'abord)
         return (a.created_at ?? "").localeCompare(b.created_at ?? "");
       });
-  }, [patients, search, filterMode, triageMap, quickInfoMap]);
+  }, [patients, search, filterMode, triageMap, quickInfoMap, assignFilter, statusFilter, meId]);
 
 
 
@@ -359,6 +372,29 @@ function PatientsListPage() {
           <Input placeholder="Rechercher un patient..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
 
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Affectation :</span>
+          <ToggleGroup type="single" value={assignFilter} onValueChange={(v) => v && setAssignFilter(v as typeof assignFilter)} size="sm">
+            <ToggleGroupItem value="all">Tous</ToggleGroupItem>
+            <ToggleGroupItem value="mine" disabled={!meId}>Mes dossiers</ToggleGroupItem>
+            <ToggleGroupItem value="unassigned">Non assignés</ToggleGroupItem>
+          </ToggleGroup>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide ml-3">Statut :</span>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+            <SelectTrigger className="h-8 w-[200px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous</SelectItem>
+              <SelectItem value="a_faire">À faire</SelectItem>
+              <SelectItem value="en_cours">En cours</SelectItem>
+              <SelectItem value="en_attente_validation">En attente validation</SelectItem>
+              <SelectItem value="valide">Validé</SelectItem>
+              <SelectItem value="clos">Clos</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+
+
         {filtered.length > 0 && (
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs text-muted-foreground">{filtered.length} résultat(s)</span>
@@ -421,6 +457,7 @@ function PatientsListPage() {
                     </div>
                   </div>
                 </Link>
+                <WorkflowStatusBadge status={p.workflow_status as WorkflowStatus | undefined} />
                 <PatientRowQuickInfo info={quickInfoMap[p.id]} />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
