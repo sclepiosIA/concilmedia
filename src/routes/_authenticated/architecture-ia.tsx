@@ -432,8 +432,8 @@ function PrioritizationDetailed() {
   + 0.015·max(0, age-50)
   + 0.05 ·nb_meds_hospitalier
   + 0.3  si durée séjour > 10 j
-severity = σ(z)
-level    = high ≥ 0.7 · moderate ≥ 0.4 · low sinon`}</pre>
+severity = σ(z) ∈ [0, 1]
+is_severe = 1 si severity ≥ 0.5, sinon 0   (seuil binaire unique)`}</pre>
         </div>
 
         <div>
