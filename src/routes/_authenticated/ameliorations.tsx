@@ -275,6 +275,7 @@ const PISTES: Piste[] = [
       "Vue superviseur (dossiers en cours, en attente, validés)",
     ],
     prerequis: ["Modèle de permissions revu"],
+    statut: "Livré v1",
   },
   {
     id: 9,
