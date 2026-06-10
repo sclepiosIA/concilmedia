@@ -34,7 +34,9 @@ export type DeterministicAlert =
       reference: string;
       classe: AtcClassKey;
       dci: string;
+      dci_concernes?: string[];
     };
+
 
 export interface DeterministicAlertsInput {
   age: number | null;
@@ -78,8 +80,9 @@ export function computeDeterministicAlerts(
     });
   }
 
-  // 2. Critères STOPP/START par DCI
-  const stopp: Extract<DeterministicAlert, { type: "stopp" }>[] = [];
+  // 2. Critères STOPP/START par DCI — dédupliqués par règle (id) pour éviter
+  // qu'une même règle (ex. STOPP-E1 sur 2 IPPs) apparaisse plusieurs fois.
+  const stoppByRule = new Map<string, Extract<DeterministicAlert, { type: "stopp" }>>();
   for (const { dci, classe } of classified) {
     const rules = evaluateStoppForDci(
       dci,
@@ -89,18 +92,27 @@ export function computeDeterministicAlerts(
       coTraitements,
     );
     for (const rule of rules) {
-      stopp.push({
-        source: "regle",
-        type: "stopp",
-        id: rule.id,
-        severite: rule.gravite,
-        libelle: rule.label,
-        reference: "STOPP/START v2",
-        classe,
-        dci,
-      });
+      const existing = stoppByRule.get(rule.id);
+      if (existing) {
+        const list = new Set(existing.dci_concernes ?? [existing.dci]);
+        list.add(dci);
+        existing.dci_concernes = Array.from(list);
+      } else {
+        stoppByRule.set(rule.id, {
+          source: "regle",
+          type: "stopp",
+          id: rule.id,
+          severite: rule.gravite,
+          libelle: rule.label,
+          reference: "STOPP/START v2",
+          classe,
+          dci,
+          dci_concernes: [dci],
+        });
+      }
     }
   }
+  const stopp = Array.from(stoppByRule.values());
 
   return {
     interactions,
@@ -109,3 +121,4 @@ export function computeDeterministicAlerts(
     classes_detectees: Array.from(presentClasses),
   };
 }
+
