@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MermaidDiagram } from "@/components/architecture/MermaidDiagram";
 import { LayerCard } from "@/components/architecture/LayerCard";
 import { AVAILABLE_MODELS, LOVABLE_PROVIDER_KEY } from "@/lib/ai/availableModels";
@@ -208,9 +209,122 @@ const TASKS = [
   { slug: "prioritize", file: "prioritize.functions.ts", role: "Tri des actions cliniques" },
 ];
 
+const SIMPLE_CHART = `
+flowchart TB
+  classDef src fill:#f1f5f9,stroke:#64748b,color:#0f172a
+  classDef step fill:#dbeafe,stroke:#2563eb,color:#0f172a
+  classDef ai fill:#fef3c7,stroke:#d97706,color:#451a03
+  classDef out fill:#dcfce7,stroke:#16a34a,color:#052e16
+
+  P[Dossier du patient<br/>traitements ville + hôpital<br/>biologie · antécédents]:::src
+  R[1- Règles métier<br/>vérifie les omissions<br/>et interactions connues]:::step
+  M[2- Petit modèle statistique<br/>évalue la gravité<br/>et priorise les patients]:::step
+  L[3- Intelligence artificielle<br/>GPT-5 · Claude · Gemini<br/>via Lovable et Azure]:::ai
+  U[Pharmacien<br/>reçoit alertes priorisées<br/>+ recommandations]:::out
+
+  P --> R --> U
+  P --> M --> U
+  P --> L --> U
+`;
+
+function SimplifiedView() {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Comment ça marche, en une image</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <MermaidDiagram chart={SIMPLE_CHART} />
+          </div>
+          <p className="text-sm text-muted-foreground mt-4">
+            ConcilMed combine <strong>trois cerveaux complémentaires</strong> pour aider le
+            pharmacien à comparer les traitements du patient à domicile et ceux prescrits à
+            l'hôpital. Chacun a un rôle différent et se vérifie mutuellement.
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        <Card className="border-2 border-sky-300 bg-sky-50/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Layers className="h-4 w-4 text-sky-700" /> 1. Les règles métier
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm space-y-2">
+            <p><strong>Ce que ça fait :</strong> compare automatiquement la liste des médicaments du domicile à ceux de l'hôpital, et détecte les oublis ou les interactions dangereuses connues.</p>
+            <p><strong>Pourquoi c'est utile :</strong> 100 % vérifiable, reproductible, jamais d'hallucination. C'est le garde-fou.</p>
+            <p className="text-xs text-muted-foreground">Exemple : la vitamine D du domicile est-elle bien reprise à l'hôpital sous l'un de ses noms (cholécalciférol, ZymaD…) ?</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-emerald-300 bg-emerald-50/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Cpu className="h-4 w-4 text-emerald-700" /> 2. Le petit modèle statistique
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm space-y-2">
+            <p><strong>Ce que ça fait :</strong> calcule un score de 0 à 1 pour estimer la gravité d'un oubli et la priorité d'un patient.</p>
+            <p><strong>Pourquoi c'est utile :</strong> très rapide, fonctionne sans connexion à un service externe, et trie la file d'attente du pharmacien.</p>
+            <p className="text-xs text-muted-foreground">Exemple : un oubli d'anticoagulant chez une personne âgée fragile remonte tout en haut de la liste.</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-amber-300 bg-amber-50/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Cloud className="h-4 w-4 text-amber-700" /> 3. L'intelligence artificielle
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm space-y-2">
+            <p><strong>Ce que ça fait :</strong> les grands modèles (GPT-5, Claude Opus, Gemini) lisent les ordonnances, comprennent le contexte clinique et rédigent des recommandations.</p>
+            <p><strong>Pourquoi c'est utile :</strong> gère le langage naturel, les abréviations, les ordonnances scannées, et synthétise le dossier.</p>
+            <p className="text-xs text-muted-foreground">Fournis par <strong>Lovable AI Gateway</strong> et <strong>Microsoft Azure</strong> (OpenAI + Foundry).</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Stethoscope className="h-4 w-4 text-violet-700" /> Que voit le pharmacien au final ?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm space-y-2">
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Une <strong>file de patients triée par priorité</strong> (du plus à risque au moins à risque).</li>
+            <li>Pour chaque patient, une <strong>comparaison médicament par médicament</strong> entre ville et hôpital (vert / jaune / orange / rouge).</li>
+            <li>Des <strong>alertes cliniques</strong> (interactions, oublis graves, posologies inhabituelles) avec leur source.</li>
+            <li>Une <strong>synthèse rédigée</strong> par l'IA, relue et validée avant tout usage clinique.</li>
+          </ul>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-muted/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-emerald-700" /> Sécurité, en clair
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm space-y-1">
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Chaque pharmacien ne voit que ses propres patients (verrouillage en base).</li>
+            <li>Les clés d'accès aux IA sont chiffrées et ne sortent jamais du serveur.</li>
+            <li>Les règles métier tournent en parallèle de l'IA pour détecter une éventuelle erreur.</li>
+            <li>L'IA propose, le pharmacien dispose — aucune décision n'est automatisée.</li>
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function ArchitectureIAPage() {
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-8 space-y-6 max-w-6xl">
       {/* Header */}
       <header className="space-y-2">
         <div className="flex items-center gap-3 flex-wrap">
@@ -226,6 +340,17 @@ function ArchitectureIAPage() {
         </p>
       </header>
 
+      <Tabs defaultValue="simple" className="w-full">
+        <TabsList>
+          <TabsTrigger value="simple">Vue simplifiée</TabsTrigger>
+          <TabsTrigger value="complete">Vue complète (technique)</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="simple" className="mt-6">
+          <SimplifiedView />
+        </TabsContent>
+
+        <TabsContent value="complete" className="mt-6 space-y-8">
       {/* Schéma global */}
       <Card>
         <CardHeader className="pb-3">
@@ -512,6 +637,8 @@ level = high ≥ 0.7 | mod ≥ 0.4 | low`}
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
