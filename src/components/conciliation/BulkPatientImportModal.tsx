@@ -131,7 +131,24 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
         };
         return targetPatientId ? { ...base, existing_patient_id: targetPatientId } : base;
       }));
-      return commit({ data: { items: payload } });
+
+      // Envoi par lots pour éviter des requêtes > limites Worker
+      const aggregate = {
+        created: 0,
+        updated: 0,
+        failed: [] as { name: string; error: string }[],
+        created_episode_ids: [] as string[],
+      };
+      for (let start = 0; start < payload.length; start += COMMIT_BATCH_SIZE) {
+        const chunk = payload.slice(start, start + COMMIT_BATCH_SIZE);
+        const r = await commit({ data: { items: chunk } });
+        aggregate.created += r.created;
+        aggregate.updated += r.updated;
+        aggregate.failed.push(...r.failed);
+        aggregate.created_episode_ids.push(...r.created_episode_ids);
+        setProgress(Math.round(((start + chunk.length) / payload.length) * 100));
+      }
+      return aggregate;
     },
     onSuccess: (r) => {
       setSummary(r);
