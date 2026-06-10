@@ -22,6 +22,14 @@ export interface ExtractedMedication {
   posologie_texte?: string;
   indication?: string;
   duree?: string;
+  // v1 OCR avancé
+  agreement?: "both" | "single";
+  match_status?: "exact" | "fuzzy" | "inconnu";
+  bdpm_confidence?: number;
+  bdpm_cis?: number | null;
+  bdpm_code_atc?: string | null;
+  bdpm_canonical_dci?: string | null;
+  bdpm_suggestions?: { dci: string; nom: string; cis: number; code_atc: string | null; score: number }[];
 }
 
 export interface ExtractOrdonnanceResult {
@@ -29,6 +37,7 @@ export interface ExtractOrdonnanceResult {
   date_prescription?: string;
   medications: ExtractedMedication[];
   storage_path?: string;
+  models_used?: string[];
 }
 
 export const extractOrdonnance = createServerFn({ method: "POST" })
@@ -57,6 +66,7 @@ export const extractOrdonnance = createServerFn({ method: "POST" })
 
     const { generateText } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
+    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
     const __aiTaskSlug = "extract_ordonnance";
     const __aiDefaultModel = "google/gemini-3-flash-preview";
 
@@ -104,34 +114,117 @@ Règles :
 Réponds UNIQUEMENT avec le JSON.`;
     const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
-    const result = await generateText({
+    const userMessages = [
+      {
+        role: "user" as const,
+        content: [
+          { type: "text" as const, text: "Voici l'ordonnance à analyser." },
+          {
+            type: "file" as const,
+            data: `data:${data.mimeType};base64,${data.fileBase64}`,
+            mediaType: data.mimeType,
+          },
+        ],
+      },
+    ];
+
+    // Modèle A — par défaut (Gemini via resolveAITask)
+    const callA = generateText({
       ...callOptions,
       model,
       system: __systemPrompt,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Voici l'ordonnance à analyser." },
-            {
-              type: "file",
-              data: `data:${data.mimeType};base64,${data.fileBase64}`,
-              mediaType: data.mimeType,
-            },
-          ],
-        },
-      ],
+      messages: userMessages,
+    }).then((r) => r.text).catch((e) => {
+      console.warn("[extractOrdonnance] modèle A a échoué:", e instanceof Error ? e.message : e);
+      return null;
     });
 
+    // Modèle B — second avis via Lovable Gateway (GPT-5-mini vision) en parallèle
+    const lovableKey = process.env.LOVABLE_API_KEY;
+    const callB = (async (): Promise<string | null> => {
+      if (!lovableKey) return null;
+      try {
+        const gateway = createLovableAiGatewayProvider(lovableKey);
+        const res = await generateText({
+          model: gateway("openai/gpt-5-mini"),
+          system: __systemPrompt,
+          messages: userMessages,
+        });
+        return res.text;
+      } catch (e) {
+        console.warn("[extractOrdonnance] modèle B a échoué:", e instanceof Error ? e.message : e);
+        return null;
+      }
+    })();
+
+    const [textA, textB] = await Promise.all([callA, callB]);
+
     const { parseLlmJson } = await import("@/lib/llm/parseLlmJson");
-    let parsed: ExtractOrdonnanceResult;
-    try {
-      parsed = parseLlmJson<ExtractOrdonnanceResult>(result.text);
-    } catch {
+    const safeParse = (text: string | null): ExtractOrdonnanceResult | null => {
+      if (!text) return null;
+      try { return parseLlmJson<ExtractOrdonnanceResult>(text); } catch { return null; }
+    };
+    const parsedA = safeParse(textA);
+    const parsedB = safeParse(textB);
+
+    if (!parsedA && !parsedB) {
       throw new Error("Impossible d'analyser la réponse IA. Réessayez avec une image plus nette.");
     }
 
-    return { ...parsed, storage_path: storagePath };
+    // Réconciliation : union par clé DCI normalisée, marquage agreement
+    const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+    const byKey = new Map<string, { med: ExtractedMedication; sources: number }>();
+    const ingest = (parsed: ExtractOrdonnanceResult | null) => {
+      if (!parsed) return;
+      for (const m of parsed.medications ?? []) {
+        if (!m.dci) continue;
+        const key = norm(m.dci);
+        const existing = byKey.get(key);
+        if (existing) {
+          existing.sources++;
+          // Préfère la version la plus riche (champs non vides en plus)
+          const countFields = (x: ExtractedMedication) => Object.values(x).filter((v) => v !== undefined && v !== null && v !== "").length;
+          if (countFields(m) > countFields(existing.med)) existing.med = { ...existing.med, ...m };
+        } else {
+          byKey.set(key, { med: { ...m }, sources: 1 });
+        }
+      }
+    };
+    ingest(parsedA);
+    ingest(parsedB);
+
+    const modelsRun = [parsedA && "google/gemini-3-flash-preview", parsedB && "openai/gpt-5-mini"].filter(Boolean) as string[];
+    const reconciledMeds: ExtractedMedication[] = Array.from(byKey.values()).map(({ med, sources }) => ({
+      ...med,
+      agreement: sources >= 2 ? "both" : "single",
+    }));
+
+    // Cross-check BDPM pour chaque ligne (suggestions top-3)
+    const { crossCheckBdpm } = await import("./crossCheckBdpm.server");
+    const enriched: ExtractedMedication[] = await Promise.all(
+      reconciledMeds.map(async (m) => {
+        const query = m.nom_commercial || m.dci;
+        const cc = await crossCheckBdpm(query);
+        return {
+          ...m,
+          match_status: cc.match_status,
+          bdpm_confidence: cc.bdpm_confidence,
+          bdpm_cis: cc.cis,
+          bdpm_code_atc: cc.code_atc,
+          bdpm_canonical_dci: cc.canonical_dci,
+          bdpm_suggestions: cc.suggestions,
+        };
+      }),
+    );
+
+    const meta = parsedA ?? parsedB;
+    return {
+      prescripteur: meta?.prescripteur,
+      date_prescription: meta?.date_prescription,
+      medications: enriched,
+      storage_path: storagePath,
+      models_used: modelsRun,
+    };
   });
 
 const ImportInput = z.object({

@@ -251,6 +251,7 @@ const PISTES: Piste[] = [
       "UI de correction assistée avec suggestions",
     ],
     prerequis: ["BDPM intégrée (piste 2)", "Corpus d'ordonnances annotées"],
+    statut: "Livré v1",
   },
   {
     id: 8,
