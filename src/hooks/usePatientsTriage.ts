@@ -153,7 +153,11 @@ export function usePatientsTriage(patientIds: string[]) {
           divergencesByGravity: divInfo?.byGravity ?? { mineur: 0, modere: 0, majeur: 0, critique: 0 },
           nbDivergencesNonIntentionnelles: divInfo?.nonIntentionnelles ?? 0,
           oldestPendingAnalysisAt: oldestAnalysisByPatient.get(pid) ?? null,
+          age: ageByPatient.get(pid) ?? null,
+          nbTraitements: nbTraitementsByPatient.get(pid) ?? 0,
+          hasInsuffisanceRenale: hasRenaleByPatient.get(pid) ?? false,
         });
+
       }
       return result;
     },
