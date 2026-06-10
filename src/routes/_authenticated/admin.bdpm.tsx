@@ -29,6 +29,7 @@ function BdpmAdminPage() {
   const statusFn = useServerFn(getBdpmStatus);
   const importFn = useServerFn(importBdpm);
   const searchFn = useServerFn(searchBdpm);
+  const backfillFn = useServerFn(backfillBdpmEnrichment);
   const qc = useQueryClient();
 
   const { data: status, isLoading } = useQuery({
@@ -45,6 +46,17 @@ function BdpmAdminPage() {
     onError: (e) =>
       toast.error(e instanceof Error ? e.message : "Échec de l'import BDPM"),
   });
+
+  const backfillMut = useMutation({
+    mutationFn: backfillFn,
+    onSuccess: (res) =>
+      toast.success(
+        `Backfill terminé · traitements ${res.traitements.updated}/${res.traitements.scanned} · prescriptions ${res.prescriptions.updated}/${res.prescriptions.scanned}`,
+      ),
+    onError: (e) =>
+      toast.error(e instanceof Error ? e.message : "Échec du backfill"),
+  });
+
 
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<BdpmSearchHit[]>([]);
