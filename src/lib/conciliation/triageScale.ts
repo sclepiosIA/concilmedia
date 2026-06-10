@@ -53,6 +53,8 @@ export interface TriageDetails {
   hasValidation: boolean;
   hasActiveEpisode: boolean;
   pendingSinceHours: number | null;
+  riskComputed: boolean;
+  analysisRun: boolean;
 }
 
 export interface TriageResult {
@@ -62,15 +64,35 @@ export interface TriageResult {
 }
 
 export function computePatientTriage(input: PatientTriageInput): TriageResult {
-  const { hasActiveEpisode, hasValidation, worstRisk, divergencesByGravity, nbDivergencesNonIntentionnelles, oldestPendingAnalysisAt } = input;
+  const {
+    hasActiveEpisode,
+    hasValidation,
+    worstRisk,
+    divergencesByGravity,
+    nbDivergencesNonIntentionnelles,
+    oldestPendingAnalysisAt,
+    age,
+    nbTraitements,
+    hasInsuffisanceRenale,
+  } = input;
+
+  const totalDiv =
+    divergencesByGravity.mineur +
+    divergencesByGravity.modere +
+    divergencesByGravity.majeur +
+    divergencesByGravity.critique;
+  const analysisRun = totalDiv > 0 || oldestPendingAnalysisAt != null || worstRisk != null;
 
   let level: TriageLevel = 5;
   let reason = "Aucun épisode de conciliation en cours";
 
   if (hasActiveEpisode && !(hasValidation && nbDivergencesNonIntentionnelles === 0)) {
-    // Par défaut, conciliation à faire
+    // Par défaut, conciliation à faire — on ne préjuge plus du niveau de risque
+    // quand aucune analyse n'a tourné.
     level = 4;
-    reason = "Conciliation à relire (risque faible)";
+    reason = analysisRun
+      ? "Conciliation à relire"
+      : "Conciliation à initier — risque non évalué";
 
     if (divergencesByGravity.mineur > 0) {
       level = 4;
@@ -106,6 +128,19 @@ export function computePatientTriage(input: PatientTriageInput): TriageResult {
         ? `${divergencesByGravity.critique} divergence(s) critique(s) non résolue(s)`
         : "Score de risque critique, non validé";
     }
+
+    // Garde de sécurité gériatrique : patient âgé polymédiqué ou IRC connue,
+    // tant qu'on n'a pas calculé de score, on plafonne le triage à P3 mini.
+    if (
+      !analysisRun &&
+      (age ?? 0) >= 75 &&
+      ((nbTraitements ?? 0) >= 5 || hasInsuffisanceRenale === true)
+    ) {
+      if (level > 3) {
+        level = 3;
+        reason = "Patient âgé polymédiqué — priorisation à calculer";
+      }
+    }
   }
   // NB : la validation pharmacien n'écrase plus le niveau P — le patient est
   // archivé automatiquement par saveConciliationValidation, donc il sort
@@ -121,6 +156,7 @@ export function computePatientTriage(input: PatientTriageInput): TriageResult {
     level = (level - 1) as TriageLevel;
     reason += ` · en attente depuis ${pendingSinceHours} h`;
   }
+
 
   return {
     level,
