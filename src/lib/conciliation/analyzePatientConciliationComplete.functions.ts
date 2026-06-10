@@ -51,6 +51,41 @@ function normalizeDrugName(value: string): string {
     .trim();
 }
 
+// Synonymes DCI → forme canonique (combos, vitamines, sels).
+// Permet de matcher "Vitamine D" ↔ "Cholécalciférol" ↔ "D3" dans un combo.
+const DRUG_SYNONYMS: Array<[RegExp, string]> = [
+  [/\b(cholecalciferol|colecalciferol|ergocalciferol|vitamine?\s*d3?|vit\s*d3?)\b/g, "vitamined"],
+  [/\b(calcium|calc|carbonate\s+de\s+calcium)\b/g, "calcium"],
+  [/\b(acide\s+folique|folate|vitamine?\s*b9)\b/g, "vitamineb9"],
+  [/\b(cyanocobalamine|hydroxocobalamine|vitamine?\s*b12)\b/g, "vitamineb12"],
+  [/\b(magnesium|mg\s+pidolate|magne\s*b6)\b/g, "magnesium"],
+  [/\b(potassium|kcl|chlorure\s+de\s+potassium|diffu\s*k)\b/g, "potassium"],
+  [/\b(fer|sulfate\s+de\s+fer|ferreuse|tardyferon|fumafer)\b/g, "fer"],
+];
+
+// Renvoie l'ensemble des tokens canoniques significatifs d'un nom de médicament.
+function drugTokens(value: string): Set<string> {
+  let s = " " + normalizeDrugName(value) + " ";
+  for (const [re, canon] of DRUG_SYNONYMS) s = s.replace(re, ` ${canon} `);
+  const STOP = new Set(["de", "la", "le", "du", "et", "ou", "a", "en", "po", "iv", "sc", "im"]);
+  return new Set(
+    s
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 2 && !STOP.has(t)),
+  );
+}
+
+// Une prescription hôpital `hosp` "couvre" un traitement domicile `home` si
+// tous les tokens significatifs de `home` sont présents dans `hosp` (combos,
+// sels, vitamines). Évite les faux positifs d'omission sur les associations.
+function hospitalCovers(homeTokens: Set<string>, hospTokens: Set<string>): boolean {
+  if (homeTokens.size === 0) return false;
+  for (const t of homeTokens) if (!hospTokens.has(t)) return false;
+  return true;
+}
+
+
 function compactText(value: unknown, maxLength = 180): string | null {
   const text = asString(value).replace(/\s+/g, " ");
   if (!text) return null;
@@ -218,15 +253,33 @@ function matchSwitchPairs(
 
 function buildFastConciliationPayload(dossier: AnalysisDossier, reason: string): AIAnalysisPayload {
   const ville = dossier.traitements_habituels
-    .map((t) => ({ row: t, label: drugLabel(t), key: normalizeDrugName(drugLabel(t)) }))
+    .map((t) => {
+      const label = drugLabel(t);
+      return { row: t, label, key: normalizeDrugName(label), tokens: drugTokens(label) };
+    })
     .filter((t) => t.key);
   const hopital = dossier.prescriptions_hospitalieres
-    .map((p) => ({ row: p, label: drugLabel(p), key: normalizeDrugName(drugLabel(p)) }))
+    .map((p) => {
+      const label = drugLabel(p);
+      return { row: p, label, key: normalizeDrugName(label), tokens: drugTokens(label) };
+    })
     .filter((p) => p.key);
   const hopitalKeys = new Set(hopital.map((p) => p.key));
   const villeKeys = new Set(ville.map((t) => t.key));
-  const villeUnmatched = new Set(ville.filter((t) => !hopitalKeys.has(t.key)).map((t) => t.key));
-  const hopitalUnmatched = new Set(hopital.filter((p) => !villeKeys.has(p.key)).map((p) => p.key));
+  // Matching tolérant : un traitement domicile est "couvert" si tous ses tokens
+  // significatifs (avec synonymes : vitamine D ↔ cholécalciférol, calcium…) sont
+  // présents dans au moins une prescription hôpital (gère les combos).
+  const villeUnmatched = new Set(
+    ville
+      .filter((t) => !hopitalKeys.has(t.key) && !hopital.some((p) => hospitalCovers(t.tokens, p.tokens)))
+      .map((t) => t.key),
+  );
+  const hopitalUnmatched = new Set(
+    hopital
+      .filter((p) => !villeKeys.has(p.key) && !ville.some((t) => hospitalCovers(t.tokens, p.tokens)))
+      .map((p) => p.key),
+  );
+
   // Détection des switchs thérapeutiques AVANT de produire omissions / ajouts.
   const switches = matchSwitchPairs(ville, hopital, villeUnmatched, hopitalUnmatched);
   const divergences: NonNullable<AIAnalysisPayload["divergences_conciliation"]> = [
