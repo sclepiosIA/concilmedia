@@ -26,7 +26,7 @@ function decisionKey(category: ItemDecision["category"], index: number) {
   return `${category}:${index}`;
 }
 
-export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
+export function ConciliationCompleteCard({ patientId, autoStart = false }: { patientId: string; autoStart?: boolean }) {
   const qc = useQueryClient();
   const analyzeFn = useServerFn(analyzePatientConciliationComplete);
   const saveFn = useServerFn(saveConciliationValidation);
@@ -34,8 +34,9 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
   const deleteValidationFn = useServerFn(deleteConciliationValidation);
   const uploadDocFn = useServerFn(uploadPharmacistDoc);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const didAutoStartRef = useRef(false);
 
-  const { data: latest } = useQuery({
+  const { data: latest, isLoading: latestLoading } = useQuery({
     queryKey: ["patient-conciliation-complete", patientId],
     queryFn: async () => {
       const { data } = await supabase
