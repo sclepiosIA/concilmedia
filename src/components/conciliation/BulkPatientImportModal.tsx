@@ -207,7 +207,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" /> Import PDF en masse — Extraction IA
+            <Sparkles className="h-5 w-5 text-primary" /> Import PDF patient — Extraction IA
           </DialogTitle>
         </DialogHeader>
 
@@ -333,7 +333,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
               <Button variant="outline" onClick={reset}>Recommencer</Button>
               <Button onClick={() => importMut.mutate()} disabled={readyCount === 0 || importMut.isPending}>
                 {importMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
-                Importer {readyCount} patient(s)
+                Importer {readyCount} document(s)
               </Button>
             </>
           )}
