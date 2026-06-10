@@ -61,7 +61,8 @@ async function loadTask(slug: string) {
 async function decryptProviderKey(providerId: string): Promise<string | null> {
   const masterKey = process.env.AI_PROVIDERS_ENCRYPTION_KEY;
   if (!masterKey) return null;
-  const { data, error } = await supabaseAdmin.rpc("ai_provider_decrypt_key", {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabaseAdmin.rpc as any)("ai_provider_decrypt_key", {
     _provider_id: providerId,
     _master_key: masterKey,
   });
