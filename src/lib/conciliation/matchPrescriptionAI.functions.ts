@@ -31,9 +31,12 @@ export const matchPrescriptionAI = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY manquant");
 
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
     const { generateText, Output } = await import("ai");
-    const gateway = createLovableAiGatewayProvider(apiKey);
+    const { resolveAITask } = await import("@/lib/ai/runAITask.server");
+    const { model: aiModel } = await resolveAITask("match_prescription", {
+      systemPrompt: "",
+      model: "google/gemini-2.5-flash",
+    });
 
     const prompt = `Tu es pharmacien clinicien. Analyse la concordance entre une prescription hospitalière et le traitement habituel du patient à domicile.
 
