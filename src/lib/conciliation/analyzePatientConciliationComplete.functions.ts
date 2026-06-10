@@ -510,12 +510,29 @@ export const analyzePatientConciliationComplete = createServerFn({ method: "POST
     const systemPrompt = `Tu es pharmacien clinicien. Produis UNIQUEMENT un JSON très court et valide de conciliation ville ↔ hôpital.
 Schéma obligatoire: {"synthese":"2-3 phrases","score_risque":0-100,"divergences_conciliation":[{"type":"omission|ajout_non_justifie|switch|modification_posologie|substitution_classe","medicament_ville":null,"medicament_hopital":null,"severite":"mineure|moderee|majeure|critique","justification_clinique":"court","risque":"court","recommandation":"action concrète","alternative":"","confiance":0-100,"reference":"HAS/SFPC/ANSM"}],"actions_prioritaires":[{"action":"court","urgence":"immediate|24h|differee","destinataire":"prescripteur|IDE|patient","justification":"court"}],"interactions":[],"doublons_therapeutiques":[],"contre_indications":[],"redondances_classe":[],"adaptations_posologiques":[],"medicaments_haut_risque":[],"allergies_croisees":[],"surveillance":[{"parametre":"","frequence":"","justification":""}],"conclusion_clinique":"1 phrase"}.
 Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas de doublons entre catégories. Réponses télégraphiques.`;
+    // RAG: enrichit le system prompt avec passages thésaurus (best-effort, non bloquant)
+    let __ragPassages: unknown[] = [];
+    let __finalSystemPrompt = systemPrompt;
+    try {
+      const { buildRagContext } = await import("@/lib/rag/buildRagContext.server");
+      const rag = await Promise.race([
+        buildRagContext(dossier as AnalysisDossier, {}),
+        new Promise<null>((r) => setTimeout(() => r(null), 1500)),
+      ]);
+      if (rag && rag.passages.length > 0) {
+        __ragPassages = rag.passages;
+        __finalSystemPrompt = rag.asPromptSection + "\n" + systemPrompt + `\n\nIMPORTANT — sourcing : pour chaque alerte, mets dans "reference" le code [Sn] correspondant ; sinon "reference": "non couvert RAG" et "confiance" ≤ 60.`;
+      }
+    } catch (e) {
+      console.warn("[conciliation_complete] RAG indisponible:", e instanceof Error ? e.message : String(e));
+    }
+
     const { model, systemPrompt: __systemPrompt, callOptions, modelId: __modelIdUsed } = data.modelOverride
       ? await (await import("@/lib/ai/runAITask.server")).resolveAITaskWithOverride(
-          { systemPrompt, model: __aiDefaultModel },
+          { systemPrompt: __finalSystemPrompt, model: __aiDefaultModel },
           data.modelOverride,
         )
-      : await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
+      : await resolveAITask(__aiTaskSlug, { systemPrompt: __finalSystemPrompt, model: __aiDefaultModel });
 
     // Garde-fou : on borne la durée d'appel et la longueur de sortie pour
     // éviter un "chargement infini" côté UI si le modèle traîne.
