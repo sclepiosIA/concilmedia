@@ -13,6 +13,8 @@ import {
 } from "recharts";
 import { getConciliationMetrics } from "@/lib/metrics/events.functions";
 import { listMyOrganizations } from "@/lib/dataIngest/ingestReal.functions";
+import { listFhirPushLogs } from "@/lib/sih/fhirPush.functions";
+import { Network } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/conciliation/metriques")({
   head: () => ({ meta: [{ title: "Métriques de conciliation — ConcilMed" }] }),
@@ -59,6 +61,16 @@ function MetricsPage() {
     queryKey: ["metrics", days, orgId],
     queryFn: () => getMetrics({ data: { from: range.from, to: range.to, organizationId: orgId || undefined } }),
   });
+
+  const listLogs = useServerFn(listFhirPushLogs);
+  const pushLogsQ = useQuery({
+    queryKey: ["fhir-push-logs", orgId],
+    queryFn: () => (orgId ? listLogs({ data: { organizationId: orgId } }) : { logs: [] as { ok: boolean; created_at: string; status_code: number | null; endpoint_url: string }[] }),
+    enabled: !!orgId,
+  });
+  const pushLogs = pushLogsQ.data?.logs ?? [];
+  const pushOk = pushLogs.filter((l) => l.ok).length;
+  const pushKo = pushLogs.length - pushOk;
 
   const m = q.data;
   const totalMedianMs = (m?.byStep ?? []).reduce((s, x) => s + x.p50, 0);
@@ -189,6 +201,45 @@ function MetricsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {orgId && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2"><Network className="h-4 w-4" /> Push FHIR vers SIH</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-6 flex-wrap">
+              <div>
+                <div className="text-2xl font-bold">{pushLogs.length}</div>
+                <p className="text-xs text-muted-foreground">Envois (50 derniers)</p>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-emerald-600">{pushOk}</div>
+                <p className="text-xs text-muted-foreground">Succès</p>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-destructive">{pushKo}</div>
+                <p className="text-xs text-muted-foreground">Échecs</p>
+              </div>
+            </div>
+            {pushLogs.length > 0 && (
+              <table className="text-xs w-full mt-3">
+                <thead><tr className="text-left text-muted-foreground"><th className="py-1">Date</th><th>HTTP</th><th>Endpoint</th><th>OK</th></tr></thead>
+                <tbody>
+                  {pushLogs.slice(0, 10).map((l, i) => (
+                    <tr key={i} className="border-t">
+                      <td className="py-1">{new Date(l.created_at).toLocaleString("fr-FR")}</td>
+                      <td>{l.status_code ?? "—"}</td>
+                      <td className="font-mono text-[10px] truncate max-w-[280px]">{l.endpoint_url}</td>
+                      <td>{l.ok ? <Badge className="bg-emerald-600">OK</Badge> : <Badge variant="destructive">KO</Badge>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Alert>
         <Timer className="h-4 w-4" />

@@ -58,7 +58,7 @@ interface Piste {
   benefices: string[];
   miseEnOeuvre: string[];
   prerequis: string[];
-  statut?: "Livré v1" | "En cours" | "Roadmap";
+  statut?: "Livré v1" | "Livré v2" | "En cours" | "Roadmap";
 }
 
 
@@ -228,7 +228,7 @@ const PISTES: Piste[] = [
       "Convention d'interopérabilité avec la DSI de l'établissement",
       "Tests sur environnement de qualification",
     ],
-    statut: "Livré v1",
+    statut: "Livré v2",
   },
   {
     id: 7,

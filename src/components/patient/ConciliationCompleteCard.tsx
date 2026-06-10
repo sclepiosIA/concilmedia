@@ -18,6 +18,7 @@ import {
   type ItemDecision,
 } from "@/lib/conciliation/validateConciliation.functions";
 import { uploadPharmacistDoc } from "@/lib/conciliation/pharmacistDoc.functions";
+import { ExportFhirButtons } from "@/components/conciliation/ExportFhirButtons";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -239,13 +240,18 @@ export function ConciliationCompleteCard({ patientId, autoStart = false }: { pat
             </span>
           )}
         </div>
-        <Button onClick={() => mut.mutate()} disabled={mut.isPending} size="sm" variant={payload ? "outline" : "default"}>
+        <div className="flex items-center gap-2 flex-wrap">
+          {validation?.id && (
+            <ExportFhirButtons validationId={validation.id} patientId={patientId} />
+          )}
+          <Button onClick={() => mut.mutate()} disabled={mut.isPending} size="sm" variant={payload ? "outline" : "default"}>
           {mut.isPending ? (
             <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Analyse en cours…</>
           ) : (
             <><Sparkles className="h-4 w-4 mr-1" /> {payload ? "Relancer l'IA" : "Lancer la conciliation complète"}</>
           )}
         </Button>
+        </div>
       </div>
 
       {!payload && !mut.isPending && (
