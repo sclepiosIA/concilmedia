@@ -289,7 +289,7 @@ Priorité: signaler surtout omissions/ajouts/switch/dose. Max 10 divergences, ma
           ...existing,
           verbosity: "low",
           reasoningEffort: "minimal",
-          maxCompletionTokens: (existing.maxCompletionTokens as number | undefined) ?? 1600,
+          maxCompletionTokens: (existing.maxCompletionTokens as number | undefined) ?? 900,
         },
       };
     } else if (callOptionsWithDefaults.maxOutputTokens === undefined) {
