@@ -45,7 +45,7 @@ async function loadTask(slug: string) {
   const { data, error } = await supabaseAdmin
     .from("ai_tasks")
     .select(
-      "slug, model, system_prompt, temperature, max_tokens, provider:ai_providers(id, kind, base_url, extra_config, is_active, api_key_plain:api_key_encrypted)"
+      "slug, model, system_prompt, temperature, max_tokens, provider:ai_providers(id, kind, base_url, extra_config, is_active)"
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -53,7 +53,8 @@ async function loadTask(slug: string) {
     console.warn(`[runAITask] DB error for slug=${slug}:`, error.message);
     return null;
   }
-  return data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return data as any;
 }
 
 // Decrypts an api key column via Postgres pgcrypto using the master key.
