@@ -87,6 +87,17 @@ Règles :
 - Toujours préférer la DCI (princeps) plutôt que le nom commercial.
 - Pour CHAQUE médicament, extraire impérativement : DCI, dosage + unité, schéma de prise (matin/midi/soir/coucher OU posologie_texte si schéma complexe) et la DURÉE de traitement.
 - Pour la durée : reprends exactement la mention de l'ordonnance ("3 mois", "30 jours", "à renouveler 3 fois", "au long cours", "jusqu'à nouvel ordre"...). Si non précisée, utilise "non précisée".
+- TU DOIS remplir les champs structurés posologie_matin / midi / soir / coucher dès que possible, même partiellement, en plus de posologie_texte. Mappings obligatoires :
+  • "matin", "petit-déjeuner", "au lever" → posologie_matin
+  • "midi", "déjeuner" → posologie_midi
+  • "soir", "dîner", "souper" → posologie_soir
+  • "coucher", "avant de dormir", "au lit", "la nuit" → posologie_coucher
+  • Fréquences "Nx/j" / "N fois par jour" → répartir : 1x/j → matin=1 ; 2x/j → matin=1, soir=1 ; 3x/j → matin=1, midi=1, soir=1 ; 4x/j → les 4 créneaux = 1.
+  • Intervalles "/Nh" ou "toutes les N heures" → calcule 24/N puis applique le mapping ci-dessus.
+  • Pour les ranges ("1-3x/j", "20-80 mg") prends la borne basse pour les créneaux.
+  • Pour "1 inj SC/j", "1 cp/j", "1 sachet/j" sans créneau précis → posologie_matin = 1.
+  • Pour les schémas hebdomadaires/mensuels ("1/semaine") → laisse les créneaux à null et précise dans posologie_texte.
+- Exemples : "1 cp matin et 1 cp soir" → matin=1, soir=1. "3x/j" → matin=1, midi=1, soir=1. "8-12 UI le soir" → soir=8.
 - Omets uniquement les champs vraiment absents (sauf duree : toujours renseignée).
 - Ignore les annotations administratives, en-têtes d'ordonnancier, signatures.
 - N'inclus que les médicaments réellement prescrits.
