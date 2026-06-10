@@ -60,7 +60,17 @@ function ProviderForm({ initial, onSaved, onClose }: { initial?: ProviderRow | n
           base_url: baseUrl || null,
           is_active: isActive,
           api_key: apiKey || undefined,
-          extra_config: kind === "azure_openai" ? { resource_name: resourceName, api_version: apiVersion } : {},
+          extra_config:
+            kind === "azure_openai"
+              ? {
+                  resource_name: resourceName || undefined,
+                  api_version: apiVersion || undefined,
+                  deployments: deployments
+                    .split("\n")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                }
+              : {},
         },
       }),
     onSuccess: () => {
