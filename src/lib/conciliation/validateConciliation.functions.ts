@@ -110,11 +110,14 @@ export const deleteConciliationValidation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => DeleteInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
+    // Défense en profondeur : on supprime uniquement si l'utilisateur courant
+    // est bien l'auteur de la validation (en plus de la RLS).
     const { error } = await supabase
       .from("conciliation_validations")
       .delete()
-      .eq("analysis_id", data.analysisId);
+      .eq("analysis_id", data.analysisId)
+      .eq("validated_by", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

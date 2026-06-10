@@ -30,7 +30,8 @@ export function usePatientsTriage(patientIds: string[]) {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     queryFn: async (): Promise<Record<string, TriageResult>> => {
-      const [episodesRes, divsRes, validationsRes, analysesRes, risksRes, patientsRes, traitementsRes, comorbRes] = await Promise.all([
+      // 1er round : on charge tout sauf risk_scores (qu'on scopera ensuite par épisode)
+      const [episodesRes, divsRes, validationsRes, analysesRes, patientsRes, traitementsRes, comorbRes] = await Promise.all([
         supabase
           .from("episodes")
           .select("id, patient_id, statut")
@@ -48,10 +49,6 @@ export function usePatientsTriage(patientIds: string[]) {
           .select("patient_id, created_at")
           .in("patient_id", patientIds),
         supabase
-          .from("risk_scores")
-          .select("episode_id, niveau, computed_at")
-          .order("computed_at", { ascending: false }),
-        supabase
           .from("patients")
           .select("id, date_naissance")
           .in("id", patientIds),
@@ -67,12 +64,22 @@ export function usePatientsTriage(patientIds: string[]) {
           .in("patient_id", patientIds),
       ]);
 
-
       const episodes = episodesRes.data ?? [];
+      const episodeIds = episodes.map((e) => e.id);
+      // 2nd round : risk_scores scopé par episode_id (évite de tirer toute la table)
+      const risksRes = episodeIds.length > 0
+        ? await supabase
+            .from("risk_scores")
+            .select("episode_id, niveau, computed_at")
+            .in("episode_id", episodeIds)
+            .order("computed_at", { ascending: false })
+        : { data: [] as Array<{ episode_id: string; niveau: string; computed_at: string }>, error: null };
+
       const divs = divsRes.data ?? [];
       const validations = validationsRes.data ?? [];
       const analyses = analysesRes.data ?? [];
       const risks = risksRes.data ?? [];
+
       const patientsData = patientsRes.data ?? [];
       const traitements = traitementsRes.data ?? [];
       const comorbs = comorbRes.data ?? [];
