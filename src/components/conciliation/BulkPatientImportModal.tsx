@@ -207,7 +207,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" /> Import PDF en masse — Extraction IA
+            <Sparkles className="h-5 w-5 text-primary" /> Import PDF patient — Extraction IA
           </DialogTitle>
         </DialogHeader>
 
