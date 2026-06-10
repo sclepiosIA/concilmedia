@@ -20,6 +20,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedPatientsIndexRouteImport } from './routes/_authenticated/patients.index'
 import { Route as AuthenticatedPatientsPatientIdRouteImport } from './routes/_authenticated/patients.$patientId'
 import { Route as AuthenticatedEpisodesEpisodeIdRouteImport } from './routes/_authenticated/episodes.$episodeId'
+import { Route as AuthenticatedConciliationSupervisionRouteImport } from './routes/_authenticated/conciliation.supervision'
 import { Route as AuthenticatedConciliationMetriquesRouteImport } from './routes/_authenticated/conciliation.metriques'
 import { Route as AuthenticatedAdminSihConfigRouteImport } from './routes/_authenticated/admin.sih-config'
 import { Route as AuthenticatedAdminRagRouteImport } from './routes/_authenticated/admin.rag'
@@ -90,6 +91,12 @@ const AuthenticatedEpisodesEpisodeIdRoute =
   AuthenticatedEpisodesEpisodeIdRouteImport.update({
     id: '/episodes/$episodeId',
     path: '/episodes/$episodeId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConciliationSupervisionRoute =
+  AuthenticatedConciliationSupervisionRouteImport.update({
+    id: '/conciliation/supervision',
+    path: '/conciliation/supervision',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedConciliationMetriquesRoute =
@@ -176,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/admin/rag': typeof AuthenticatedAdminRagRoute
   '/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
   '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
+  '/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients/': typeof AuthenticatedPatientsIndexRoute
@@ -199,6 +207,7 @@ export interface FileRoutesByTo {
   '/admin/rag': typeof AuthenticatedAdminRagRoute
   '/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
   '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
+  '/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients': typeof AuthenticatedPatientsIndexRoute
@@ -225,6 +234,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/rag': typeof AuthenticatedAdminRagRoute
   '/_authenticated/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
   '/_authenticated/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
+  '/_authenticated/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
   '/_authenticated/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/_authenticated/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/_authenticated/patients/': typeof AuthenticatedPatientsIndexRoute
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/admin/rag'
     | '/admin/sih-config'
     | '/conciliation/metriques'
+    | '/conciliation/supervision'
     | '/episodes/$episodeId'
     | '/patients/$patientId'
     | '/patients/'
@@ -274,6 +285,7 @@ export interface FileRouteTypes {
     | '/admin/rag'
     | '/admin/sih-config'
     | '/conciliation/metriques'
+    | '/conciliation/supervision'
     | '/episodes/$episodeId'
     | '/patients/$patientId'
     | '/patients'
@@ -299,6 +311,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/rag'
     | '/_authenticated/admin/sih-config'
     | '/_authenticated/conciliation/metriques'
+    | '/_authenticated/conciliation/supervision'
     | '/_authenticated/episodes/$episodeId'
     | '/_authenticated/patients/$patientId'
     | '/_authenticated/patients/'
@@ -393,6 +406,13 @@ declare module '@tanstack/react-router' {
       path: '/episodes/$episodeId'
       fullPath: '/episodes/$episodeId'
       preLoaderRoute: typeof AuthenticatedEpisodesEpisodeIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/conciliation/supervision': {
+      id: '/_authenticated/conciliation/supervision'
+      path: '/conciliation/supervision'
+      fullPath: '/conciliation/supervision'
+      preLoaderRoute: typeof AuthenticatedConciliationSupervisionRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/conciliation/metriques': {
@@ -527,6 +547,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEvaluationRoute: typeof AuthenticatedEvaluationRoute
   AuthenticatedConciliationMetriquesRoute: typeof AuthenticatedConciliationMetriquesRoute
+  AuthenticatedConciliationSupervisionRoute: typeof AuthenticatedConciliationSupervisionRoute
   AuthenticatedEpisodesEpisodeIdRoute: typeof AuthenticatedEpisodesEpisodeIdRoute
   AuthenticatedPatientsPatientIdRoute: typeof AuthenticatedPatientsPatientIdRoute
   AuthenticatedPatientsIndexRoute: typeof AuthenticatedPatientsIndexRoute
@@ -540,6 +561,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEvaluationRoute: AuthenticatedEvaluationRoute,
   AuthenticatedConciliationMetriquesRoute:
     AuthenticatedConciliationMetriquesRoute,
+  AuthenticatedConciliationSupervisionRoute:
+    AuthenticatedConciliationSupervisionRoute,
   AuthenticatedEpisodesEpisodeIdRoute: AuthenticatedEpisodesEpisodeIdRoute,
   AuthenticatedPatientsPatientIdRoute: AuthenticatedPatientsPatientIdRoute,
   AuthenticatedPatientsIndexRoute: AuthenticatedPatientsIndexRoute,
@@ -557,3 +580,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
