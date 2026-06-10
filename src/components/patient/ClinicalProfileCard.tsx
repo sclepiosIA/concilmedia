@@ -17,6 +17,7 @@ import {
   type ComplexityLevel,
 } from "@/lib/clinical/complexityScore";
 import { computeBmi } from "@/lib/clinical/bmi";
+import { dedupeComorbidites } from "@/lib/conciliation/normalizeComorbidites";
 
 const TONE: Record<ComplexityLevel, string> = {
   faible: "bg-green-100 text-green-800 border-green-200",
