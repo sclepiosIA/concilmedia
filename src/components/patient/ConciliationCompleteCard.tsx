@@ -515,6 +515,12 @@ export function ConciliationCompleteCard({ patientId, autoStart = false }: { pat
                     className="text-xs min-h-[70px]"
                   />
                 </div>
+                <CorrelationBadge
+                  pct={correlation.pct}
+                  decided={correlation.decided}
+                  undecided={correlation.undecided}
+                  counts={counts}
+                />
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="text-xs text-muted-foreground">
                     {counts.accepted} accepté{counts.accepted > 1 ? "s" : ""} • {counts.modified} modifié{counts.modified > 1 ? "s" : ""} • {counts.rejected} refusé{counts.rejected > 1 ? "s" : ""} sur {totalAlertes}
