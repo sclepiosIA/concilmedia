@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, FileText, ShieldCheck, Pencil, ArrowLeftRight, AlertCircle, Clock, Upload } from "lucide-react";
+import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, FileText, ShieldCheck, Pencil, ArrowLeftRight, AlertCircle, Clock, Upload, ChevronDown, ChevronUp } from "lucide-react";
 import { analyzePatientConciliationComplete } from "@/lib/conciliation/analyzePatientConciliationComplete.functions";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
@@ -76,6 +76,7 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
   const [pharmacienNom, setPharmacienNom] = useState("");
   const [commentaireGlobal, setCommentaireGlobal] = useState("");
   const [editingValidation, setEditingValidation] = useState(false);
+  const [decisionAidCollapsed, setDecisionAidCollapsed] = useState(false);
 
   // Hydrate local state from saved validation OR from auth user
   useEffect(() => {
@@ -273,10 +274,20 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
 
           <section className="rounded-lg border-2 border-sky-300 bg-sky-50/60 p-4 space-y-3">
             <header className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDecisionAidCollapsed((v) => !v)}
+                className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
+                aria-expanded={!decisionAidCollapsed}
+              >
+                {decisionAidCollapsed ? (
+                  <ChevronDown className="h-4 w-4 text-sky-700" />
+                ) : (
+                  <ChevronUp className="h-4 w-4 text-sky-700" />
+                )}
                 <Stethoscope className="h-4 w-4 text-sky-700" />
                 <h3 className="text-sm font-semibold text-sky-900">B. Aide à la décision pharmaceutique</h3>
-              </div>
+              </button>
               <Badge
                 variant={payload.score_risque > 60 ? "destructive" : payload.score_risque > 30 ? "default" : "secondary"}
                 className="text-[10px]"
@@ -284,6 +295,8 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
                 Score de risque {payload.score_risque}/100
               </Badge>
             </header>
+            {!decisionAidCollapsed && (<>
+
 
             {payload.synthese && (
               <div className="rounded-md border bg-white p-3 space-y-1">
@@ -410,6 +423,7 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
                 </ul>
               </div>
             )}
+            </>)}
           </section>
 
 
