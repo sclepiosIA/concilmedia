@@ -457,6 +457,7 @@ function PatientsListPage() {
                     </div>
                   </div>
                 </Link>
+                <WorkflowStatusBadge status={p.workflow_status as WorkflowStatus | undefined} />
                 <PatientRowQuickInfo info={quickInfoMap[p.id]} />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
