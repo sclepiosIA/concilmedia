@@ -7,6 +7,7 @@ import { CohortImportTab } from "@/components/cohort/CohortImportTab";
 import { CohortRunTab } from "@/components/cohort/CohortRunTab";
 import { GoldStandardTab } from "@/components/cohort/GoldStandardTab";
 import { CohortResultsTab } from "@/components/cohort/CohortResultsTab";
+import { BeforeAfterEvaluation } from "@/components/conciliation/BeforeAfterEvaluation";
 
 export const Route = createFileRoute("/_authenticated/evaluation")({
   head: () => ({ meta: [{ title: "Évaluation précision — cohortes" }] }),
