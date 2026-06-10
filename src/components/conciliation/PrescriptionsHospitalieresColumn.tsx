@@ -556,7 +556,6 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
             </div>
             {data.map((p) => {
               const [m, mi, s, c] = resolvePrises(p);
-              const hasPrises = m || mi || s || c;
               const status = (p.match_status as MatchStatus) ?? "en_cours";
               const meta = STATUS_META[status] ?? STATUS_META.en_cours;
               const isExpanded = expandedPrescriptionIds.has(p.id);
