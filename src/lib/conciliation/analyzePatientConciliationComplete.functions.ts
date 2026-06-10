@@ -129,14 +129,25 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
     // éviter un "chargement infini" côté UI si le modèle traîne.
     const TIMEOUT_MS = 110_000;
     const callOptionsWithDefaults: Record<string, unknown> = { ...callOptions };
-    const provOpts = callOptionsWithDefaults.providerOptions as
-      | Record<string, { maxCompletionTokens?: number } | undefined>
-      | undefined;
+    const { isGpt5Family } = await import("@/lib/ai/runAITask.server");
+    const isGpt5 = isGpt5Family(__modelIdUsed);
+    const provOpts = (callOptionsWithDefaults.providerOptions ?? {}) as
+      Record<string, Record<string, unknown> | undefined>;
     const hasMaxCompletion = !!(
-      provOpts?.openai?.maxCompletionTokens ?? provOpts?.lovable?.maxCompletionTokens
+      (provOpts.openai as { maxCompletionTokens?: number } | undefined)?.maxCompletionTokens ??
+      (provOpts.lovable as { maxCompletionTokens?: number } | undefined)?.maxCompletionTokens
     );
     if (callOptionsWithDefaults.maxOutputTokens === undefined && !hasMaxCompletion) {
-      callOptionsWithDefaults.maxOutputTokens = 4000;
+      if (isGpt5) {
+        // GPT-5 refuse max_tokens → max_completion_tokens via providerOptions
+        const key = provOpts.lovable !== undefined ? "lovable" : "openai";
+        callOptionsWithDefaults.providerOptions = {
+          ...provOpts,
+          [key]: { ...(provOpts[key] ?? {}), maxCompletionTokens: 4000 },
+        };
+      } else {
+        callOptionsWithDefaults.maxOutputTokens = 4000;
+      }
     }
 
 
