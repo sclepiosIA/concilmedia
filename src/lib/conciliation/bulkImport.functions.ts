@@ -112,12 +112,12 @@ const normalizeHospitalPrescriptionLines = <T extends DossierData>(dossier: T): 
     .map((t) => ({
       medicament: [t.dci, t.dosage, t.dosage_unite].filter(Boolean).join(" "),
       dosage: [t.dosage, t.dosage_unite].filter(Boolean).join(" ") || null,
-      posologie: t.posologie_texte ?? [
+      posologie: t.posologie_texte ?? ([
         t.posologie_matin ? `matin ${t.posologie_matin}` : null,
         t.posologie_midi ? `midi ${t.posologie_midi}` : null,
         t.posologie_soir ? `soir ${t.posologie_soir}` : null,
         t.posologie_coucher ? `coucher ${t.posologie_coucher}` : null,
-      ].filter(Boolean).join(" ; ") || null,
+      ].filter(Boolean).join(" ; ") || null),
       voie_administration: t.voie_administration ?? null,
       indication: t.indication?.includes("BMO") ? t.indication : ["BMO — traitement habituel maintenu", t.indication].filter(Boolean).join(" — "),
       date_debut: dossier.episode_context?.date_admission ?? null,
