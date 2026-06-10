@@ -355,10 +355,18 @@ export function ConciliationCompleteCard({ patientId, autoStart = false }: { pat
                           modification_posologie: "Modif. posologie",
                           substitution_classe: "Substitution classe",
                         };
+                        const typeBadgeClass =
+                          d.type === "switch"
+                            ? "bg-sky-100 text-sky-800 border-sky-300"
+                            : d.type === "omission"
+                              ? "bg-amber-100 text-amber-800 border-amber-300"
+                              : d.type === "ajout_non_justifie"
+                                ? "bg-slate-100 text-slate-700 border-slate-300"
+                                : "";
                         return (
                           <tr key={i} className="border-b last:border-0 align-top">
                             <td className="py-1.5 pr-2">
-                              <Badge variant="outline" className="text-[10px]">{typeLabels[d.type] ?? d.type}</Badge>
+                              <Badge variant="outline" className={`text-[10px] ${typeBadgeClass}`}>{typeLabels[d.type] ?? d.type}</Badge>
                               {isOverridden && <Badge className="ml-1 text-[9px] bg-amber-100 text-amber-800 hover:bg-amber-100">✎</Badge>}
                             </td>
                             <td className="py-1.5 pr-2">{d.medicament_ville ?? <span className="text-muted-foreground italic">—</span>}</td>
