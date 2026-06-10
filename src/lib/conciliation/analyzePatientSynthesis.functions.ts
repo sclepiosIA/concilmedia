@@ -82,9 +82,9 @@ Réponds UNIQUEMENT avec le JSON.`;
       throw e;
     }
 
-    const raw = result.text.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+    const { parseLlmJson } = await import("@/lib/llm/parseLlmJson");
     let payload: AIAnalysisPayload;
-    try { payload = JSON.parse(raw); } catch { throw new Error("Réponse IA non parsable"); }
+    try { payload = parseLlmJson<AIAnalysisPayload>(result.text); } catch { throw new Error("Réponse IA non parsable"); }
 
     await supabase.from("conciliation_ai_analyses").insert({
       episode_id: null,

@@ -27,6 +27,28 @@ import {
 } from "lucide-react";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import type { ItemDecision, ItemOverrides } from "@/lib/conciliation/validateConciliation.functions";
+import { classifyDci } from "@/lib/conciliation/atcInteractions";
+import type { DeterministicAlert } from "@/lib/conciliation/deterministicAlerts";
+
+type Provenance = "regle" | "ia_confirmee" | "ia";
+
+const PROVENANCE_BADGE: Record<Provenance, { label: string; cls: string; title: string }> = {
+  regle: {
+    label: "Règle vérifiée",
+    cls: "bg-emerald-600 text-white hover:bg-emerald-600 border-emerald-600",
+    title: "Alerte produite par le moteur déterministe (référentiel ATC / STOPP-START).",
+  },
+  ia_confirmee: {
+    label: "Confirmé par règle",
+    cls: "bg-emerald-800 text-white hover:bg-emerald-800 border-emerald-800",
+    title: "Alerte IA qui correspond à une alerte du moteur déterministe.",
+  },
+  ia: {
+    label: "Hypothèse IA",
+    cls: "bg-amber-100 text-amber-900 hover:bg-amber-100 border-amber-300",
+    title: "Alerte produite par le LLM, non confirmée par une règle déterministe.",
+  },
+};
 
 export type AlertCategory = ItemDecision["category"];
 
@@ -111,6 +133,8 @@ interface AlertItemProps {
   reference?: string;
   confiance?: number;
   icon?: typeof AlertTriangle;
+  /** Origine de l'alerte : règle déterministe, IA confirmée par règle, ou hypothèse IA. */
+  provenance?: Provenance;
   validation?: {
     decision: ItemDecision | undefined;
     onChange: (d: ItemDecision | null) => void;
@@ -133,6 +157,7 @@ function AlertItem({
   reference,
   confiance,
   icon: Icon = AlertTriangle,
+  provenance,
   validation,
 }: AlertItemProps) {
   const [open, setOpen] = useState(false);
@@ -250,6 +275,14 @@ function AlertItem({
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="font-semibold text-sm">{title}</span>
                 <Badge className={`text-[10px] ${sev.badge}`}>{sev.label}</Badge>
+                {provenance && (
+                  <Badge
+                    title={PROVENANCE_BADGE[provenance].title}
+                    className={`text-[10px] ${PROVENANCE_BADGE[provenance].cls}`}
+                  >
+                    {PROVENANCE_BADGE[provenance].label}
+                  </Badge>
+                )}
                 {conf !== null && (
                   <Badge variant="outline" className="text-[10px] bg-white">
                     Confiance IA {conf}%
@@ -509,9 +542,25 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
   const doublons = payload.doublons_therapeutiques ?? [];
   const allergies = payload.allergies_croisees ?? [];
   const hautRisque = payload.medicaments_haut_risque ?? [];
+  const regles = (payload.alertes_regles ?? []) as DeterministicAlert[];
+
+  // Couples de classes ATC déclenchés par le moteur déterministe (clé canonique triée)
+  const ruleInteractionKeys = new Set<string>(
+    regles
+      .filter((r): r is Extract<DeterministicAlert, { type: "interaction" }> => r.type === "interaction")
+      .map((r) => [r.classes[0], r.classes[1]].slice().sort().join("|")),
+  );
+
+  /** Une interaction IA est "confirmée par règle" si ses 2 DCI mappent vers un couple de classes du moteur. */
+  const interactionMatchesRule = (dci1: string, dci2: string): boolean => {
+    const c1 = classifyDci(dci1);
+    const c2 = classifyDci(dci2);
+    if (c1 === "autre" || c2 === "autre") return false;
+    return ruleInteractionKeys.has([c1, c2].slice().sort().join("|"));
+  };
 
   const hasAny =
-    divergences.length + interactions.length + ci.length + adaptations.length + doublons.length + allergies.length + hautRisque.length > 0;
+    divergences.length + interactions.length + ci.length + adaptations.length + doublons.length + allergies.length + hautRisque.length + regles.length > 0;
   if (!hasAny) return null;
 
   const valFor = (category: AlertCategory, index: number) => {
@@ -541,8 +590,42 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
     return "mineure";
   };
 
+  const regleSeverite = (g: DeterministicAlert["severite"]): Severity =>
+    g === "critique" ? "contre_indication" : g === "majeur" ? "majeure" : g === "modere" ? "moderee" : "mineure";
+
   return (
     <div className="space-y-4">
+      {regles.length > 0 && (
+        <Section title="Règles vérifiées (moteur déterministe)" count={regles.length} icon={ShieldAlert}>
+          {regles.map((r, k) => {
+            if (r.type === "interaction") {
+              return (
+                <AlertItem
+                  key={`rg-int-${k}`}
+                  title={r.libelle}
+                  medicaments={r.dci_concernes.join(", ")}
+                  severite={regleSeverite(r.severite)}
+                  mecanisme={r.mecanisme}
+                  reference={r.reference}
+                  provenance="regle"
+                />
+              );
+            }
+            return (
+              <AlertItem
+                key={`rg-stopp-${k}`}
+                title={`${r.id} — ${r.libelle}`}
+                medicaments={r.dci}
+                severite={regleSeverite(r.severite)}
+                mecanisme={`Critère ${r.id} déclenché pour ${r.dci} (classe ${r.classe})`}
+                reference={r.reference}
+                provenance="regle"
+              />
+            );
+          })}
+        </Section>
+      )}
+
       {divergences.length > 0 && (
         <Section title="Divergences de conciliation (ville ↔ hôpital)" count={divergences.length} icon={ArrowLeftRight}>
           {divergences.map((d, k) => {
@@ -571,6 +654,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
                 reference={d.reference}
                 confiance={d.confiance}
                 icon={ArrowLeftRight}
+                provenance="ia"
                 validation={valFor("divergences_conciliation", k)}
               />
             );
@@ -593,6 +677,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               alternative={i.alternative}
               reference={i.reference}
               confiance={i.confiance}
+              provenance={interactionMatchesRule(i.dci_1, i.dci_2) ? "ia_confirmee" : "ia"}
               validation={valFor("interactions", k)}
             />
           ))}
@@ -614,6 +699,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               alternative={c.alternative}
               reference={c.reference}
               confiance={c.confiance}
+              provenance="ia"
               validation={valFor("contre_indications", k)}
             />
           ))}
@@ -635,6 +721,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               alternative={a.alternative}
               reference={a.reference}
               confiance={a.confiance}
+              provenance="ia"
               validation={valFor("adaptations_posologiques", k)}
             />
           ))}
@@ -656,6 +743,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               alternative={d.alternative}
               reference={d.reference}
               confiance={d.confiance}
+              provenance="ia"
               validation={valFor("doublons_therapeutiques", k)}
             />
           ))}
@@ -675,6 +763,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               alternative={a.alternative}
               reference={a.reference}
               confiance={a.confiance}
+              provenance="ia"
               validation={valFor("allergies_croisees", k)}
             />
           ))}
@@ -696,6 +785,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               alternative={h.alternative}
               reference={h.reference}
               confiance={h.confiance}
+              provenance="ia"
               validation={valFor("medicaments_haut_risque", k)}
             />
           ))}

@@ -40,6 +40,12 @@ export type AIAnalysisPayload = {
   allergies_croisees?: Array<{ allergene: string; medicament: string; risque: string; severite?: string; recommandation?: string; reference?: string; alternative?: string; confiance?: number }>;
   surveillance?: Array<{ parametre: string; frequence: string; justification: string }>;
   conclusion_clinique?: string;
+  /**
+   * Alertes produites par le moteur déterministe (interactions de classe ATC +
+   * critères STOPP/START). Vérifiables et reproductibles, à distinguer des
+   * alertes LLM. Voir `computeDeterministicAlerts`.
+   */
+  alertes_regles?: import("./deterministicAlerts").DeterministicAlert[];
 };
 
 export const analyzeConciliation = createServerFn({ method: "POST" })
@@ -137,13 +143,28 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
       throw e;
     }
 
-    // Extraire JSON
-    const raw = result.text.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+    // Extraire JSON (tolérant : fences markdown + extraction objet équilibré)
+    const { parseLlmJson, LlmJsonParseError } = await import("@/lib/llm/parseLlmJson");
     let payload: AIAnalysisPayload;
     try {
-      payload = JSON.parse(raw);
-    } catch {
-      throw new Error("Réponse IA non parsable");
+      payload = parseLlmJson<AIAnalysisPayload>(result.text);
+    } catch (e) {
+      if (e instanceof LlmJsonParseError) {
+        // Retry unique avec un nudge système renforcé
+        try {
+          const retry = await generateText({
+            ...callOptions,
+            model,
+            system: __systemPrompt + "\n\nIMPORTANT: Réponds uniquement par un objet JSON valide, sans aucun texte avant ou après.",
+            prompt: `Dossier patient :\n${JSON.stringify(dossier, null, 2)}`,
+          });
+          payload = parseLlmJson<AIAnalysisPayload>(retry.text);
+        } catch {
+          throw new Error("Réponse IA non parsable (après retry)");
+        }
+      } else {
+        throw e;
+      }
     }
 
     // Enrichissement ML (Étage 4 — gravité oubli) si execution_mode = ml | both
@@ -171,6 +192,23 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
       }
     } catch (e) {
       console.warn("[analyze] ML layer4 enrichment failed:", e);
+    }
+
+    // Moteur déterministe : interactions de classe ATC + critères STOPP/START
+    try {
+      const { computeDeterministicAlerts } = await import("./deterministicAlerts");
+      const traitementsDci: string[] = [
+        ...(dossier.traitements_habituels ?? []).map((t: { dci?: string | null; medicament?: string | null }) => t.dci || t.medicament || ""),
+        ...(dossier.prescriptions_hospitalieres ?? []).map((p: { dci?: string | null; medicament?: string | null }) => p.dci || p.medicament || ""),
+      ].filter((s) => s.length > 0);
+      const det = computeDeterministicAlerts({
+        age: dossier.patient.age ?? null,
+        comorbidites: (dossier.comorbidites ?? []).map((c: { libelle?: string | null }) => c.libelle ?? ""),
+        traitements_dci: traitementsDci,
+      });
+      payload.alertes_regles = det.all;
+    } catch (e) {
+      console.warn("[analyze] deterministic alerts failed:", e);
     }
 
     await supabase.from("conciliation_ai_analyses").insert({

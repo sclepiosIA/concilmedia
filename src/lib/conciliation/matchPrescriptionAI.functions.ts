@@ -88,9 +88,10 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
             prompt +
             `\n\nRéponds UNIQUEMENT avec un JSON valide de la forme :\n{"status":"vert|jaune|orange|rouge","reason":"...","recommandation":"..."}`,
         });
-        const txt = res.text.trim().replace(/^```json\s*|\s*```$/g, "");
-        const match = txt.match(/\{[\s\S]*\}/);
-        if (match) output = AISchema.parse(JSON.parse(match[0]));
+        const { parseLlmJson } = await import("@/lib/llm/parseLlmJson");
+        try {
+          output = AISchema.parse(parseLlmJson(res.text));
+        } catch { /* gardé en fallback déterministe ci-dessous */ }
       } catch (e2) {
         lastError = e2;
       }

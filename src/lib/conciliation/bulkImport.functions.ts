@@ -156,10 +156,10 @@ Règles CRUCIALES de classification :
       ],
     });
 
-    const raw = result.text.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "");
+    const { parseLlmJson } = await import("@/lib/llm/parseLlmJson");
     let parsedJson: unknown;
     try {
-      parsedJson = JSON.parse(raw);
+      parsedJson = parseLlmJson(result.text);
     } catch {
       throw new Error("Réponse IA non valide. Réessayez avec un document plus net.");
     }
