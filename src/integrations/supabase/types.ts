@@ -753,6 +753,70 @@ export type Database = {
           },
         ]
       }
+      conciliation_events: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          episode_id: string | null
+          id: string
+          kind: string
+          metadata: Json
+          occurred_at: string
+          organization_id: string | null
+          patient_id: string | null
+          step: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          episode_id?: string | null
+          id?: string
+          kind: string
+          metadata?: Json
+          occurred_at?: string
+          organization_id?: string | null
+          patient_id?: string | null
+          step: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          episode_id?: string | null
+          id?: string
+          kind?: string
+          metadata?: Json
+          occurred_at?: string
+          organization_id?: string | null
+          patient_id?: string | null
+          step?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conciliation_events_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conciliation_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conciliation_events_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conciliation_medicaments: {
         Row: {
           action_corrective: string | null
