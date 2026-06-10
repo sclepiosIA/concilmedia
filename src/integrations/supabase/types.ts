@@ -112,6 +112,7 @@ export type Database = {
           created_at: string
           current_version: number
           description: string | null
+          execution_mode: string
           id: string
           label: string
           max_tokens: number | null
@@ -126,6 +127,7 @@ export type Database = {
           created_at?: string
           current_version?: number
           description?: string | null
+          execution_mode?: string
           id?: string
           label: string
           max_tokens?: number | null
@@ -140,6 +142,7 @@ export type Database = {
           created_at?: string
           current_version?: number
           description?: string | null
+          execution_mode?: string
           id?: string
           label?: string
           max_tokens?: number | null
@@ -367,6 +370,7 @@ export type Database = {
           model: string
           patient_id: string
           payload: Json
+          source: string
         }
         Insert: {
           analysis_type?: string
@@ -376,6 +380,7 @@ export type Database = {
           model: string
           patient_id: string
           payload: Json
+          source?: string
         }
         Update: {
           analysis_type?: string
@@ -385,6 +390,7 @@ export type Database = {
           model?: string
           patient_id?: string
           payload?: Json
+          source?: string
         }
         Relationships: [
           {
@@ -1030,6 +1036,7 @@ export type Database = {
           id: string
           niveau: string
           score: number
+          source: string
           variables: Json
         }
         Insert: {
@@ -1040,6 +1047,7 @@ export type Database = {
           id?: string
           niveau: string
           score: number
+          source?: string
           variables?: Json
         }
         Update: {
@@ -1050,6 +1058,7 @@ export type Database = {
           id?: string
           niveau?: string
           score?: number
+          source?: string
           variables?: Json
         }
         Relationships: [
