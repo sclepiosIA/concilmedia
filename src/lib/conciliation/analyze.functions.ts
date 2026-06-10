@@ -209,16 +209,27 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
     // Moteur déterministe : interactions de classe ATC + critères STOPP/START
     try {
       const { computeDeterministicAlerts } = await import("./deterministicAlerts");
-      const traitementsDci: string[] = [
-        ...(dossier.traitements_habituels ?? []).map((t: { dci?: string | null; medicament?: string | null }) => t.dci || t.medicament || ""),
-        ...(dossier.prescriptions_hospitalieres ?? []).map((p: { dci?: string | null; medicament?: string | null }) => p.dci || p.medicament || ""),
-      ].filter((s) => s.length > 0);
+      type RxLite = { dci?: string | null; medicament?: string | null; code_atc?: string | null };
+      const all: RxLite[] = [
+        ...(dossier.traitements_habituels ?? []),
+        ...(dossier.prescriptions_hospitalieres ?? []),
+      ];
+      const traitementsDci: string[] = [];
+      const traitementsAtc: (string | null)[] = [];
+      for (const t of all) {
+        const dci = t.dci || t.medicament || "";
+        if (!dci) continue;
+        traitementsDci.push(dci);
+        traitementsAtc.push(t.code_atc ?? null);
+      }
       const det = computeDeterministicAlerts({
         age: dossier.patient.age ?? null,
         comorbidites: (dossier.comorbidites ?? []).map((c: { libelle?: string | null }) => c.libelle ?? ""),
         traitements_dci: traitementsDci,
+        traitements_atc: traitementsAtc,
       });
       payload.alertes_regles = det.all;
+
     } catch (e) {
       console.warn("[analyze] deterministic alerts failed:", e);
     }
