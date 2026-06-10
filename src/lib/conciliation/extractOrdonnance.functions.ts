@@ -66,6 +66,7 @@ export const extractOrdonnance = createServerFn({ method: "POST" })
 
     const { generateText } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
+    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
     const __aiTaskSlug = "extract_ordonnance";
     const __aiDefaultModel = "google/gemini-3-flash-preview";
 
