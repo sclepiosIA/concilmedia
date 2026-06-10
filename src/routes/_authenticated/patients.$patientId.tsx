@@ -25,13 +25,19 @@ import { ConciliationCompleteCard } from "@/components/patient/ConciliationCompl
 import { FlaskConical, Hospital, Pill, Sparkles, Stethoscope } from "lucide-react";
 import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
 
+const patientSearchSchema = z.object({
+  autoConciliate: fallback(z.boolean(), false).default(false),
+});
+
 export const Route = createFileRoute("/_authenticated/patients/$patientId")({
   head: () => ({ meta: [{ title: "Fiche patient" }] }),
+  validateSearch: zodValidator(patientSearchSchema),
   component: PatientDetailPage,
 });
 
 function PatientDetailPage() {
   const { patientId } = Route.useParams();
+  const { autoConciliate } = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [bulkOpen, setBulkOpen] = useState(false);
