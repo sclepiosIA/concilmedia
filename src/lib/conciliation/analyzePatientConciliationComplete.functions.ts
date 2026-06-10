@@ -30,7 +30,12 @@ function asString(value: unknown): string {
 }
 
 function drugLabel(row: Record<string, unknown>): string {
-  return asString(row.dci) || asString(row.medicament) || asString(row.nom_commercial) || "Traitement non précisé";
+  return (
+    asString(row.dci) ||
+    asString(row.medicament) ||
+    asString(row.nom_commercial) ||
+    "Traitement non précisé"
+  );
 }
 
 function normalizeDrugName(value: string): string {
@@ -53,46 +58,70 @@ function doseSummary(row: Record<string, unknown>): string {
   ]
     .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "")
     .map(([k, v]) => `${k}: ${String(v).trim()}`);
-  return slots.join(", ") || asString(row.posologie_texte) || asString(row.posologie) || "posologie non précisée";
+  return (
+    slots.join(", ") ||
+    asString(row.posologie_texte) ||
+    asString(row.posologie) ||
+    "posologie non précisée"
+  );
 }
 
 function buildFastConciliationPayload(dossier: AnalysisDossier, reason: string): AIAnalysisPayload {
-  const ville = dossier.traitements_habituels.map((t) => ({ row: t, label: drugLabel(t), key: normalizeDrugName(drugLabel(t)) })).filter((t) => t.key);
-  const hopital = dossier.prescriptions_hospitalieres.map((p) => ({ row: p, label: drugLabel(p), key: normalizeDrugName(drugLabel(p)) })).filter((p) => p.key);
+  const ville = dossier.traitements_habituels
+    .map((t) => ({ row: t, label: drugLabel(t), key: normalizeDrugName(drugLabel(t)) }))
+    .filter((t) => t.key);
+  const hopital = dossier.prescriptions_hospitalieres
+    .map((p) => ({ row: p, label: drugLabel(p), key: normalizeDrugName(drugLabel(p)) }))
+    .filter((p) => p.key);
   const hopitalKeys = new Set(hopital.map((p) => p.key));
   const villeKeys = new Set(ville.map((t) => t.key));
   const divergences: NonNullable<AIAnalysisPayload["divergences_conciliation"]> = [
-    ...ville.filter((t) => !hopitalKeys.has(t.key)).slice(0, 12).map((t) => ({
-      type: "omission" as const,
-      medicament_ville: `${t.label} — ${doseSummary(t.row)}`,
-      medicament_hopital: null,
-      severite: "moderee" as const,
-      justification_clinique: "Traitement habituel absent des prescriptions hospitalières actives.",
-      risque: "Risque de rupture thérapeutique si le traitement est toujours indiqué.",
-      recommandation: `Vérifier l'indication et statuer sur la reprise ou l'arrêt documenté de ${t.label}.`,
-      alternative: "Documenter la décision médicale si arrêt volontaire.",
-      confiance: 82,
-      reference: "HAS conciliation médicamenteuse",
-    })),
-    ...hopital.filter((p) => !villeKeys.has(p.key)).slice(0, 8).map((p) => ({
-      type: "ajout_non_justifie" as const,
-      medicament_ville: null,
-      medicament_hopital: `${p.label} — ${doseSummary(p.row)}`,
-      severite: "mineure" as const,
-      justification_clinique: "Prescription hospitalière sans correspondance dans le traitement habituel importé.",
-      risque: "Ajout potentiellement justifié par l'hospitalisation, à confirmer dans le dossier.",
-      recommandation: `Confirmer l'indication hospitalière de ${p.label} et la durée prévue.`,
-      alternative: "Arrêter ou tracer l'indication si non justifié.",
-      confiance: 70,
-      reference: "HAS conciliation médicamenteuse",
-    })),
+    ...ville
+      .filter((t) => !hopitalKeys.has(t.key))
+      .slice(0, 12)
+      .map((t) => ({
+        type: "omission" as const,
+        medicament_ville: `${t.label} — ${doseSummary(t.row)}`,
+        medicament_hopital: null,
+        severite: "moderee" as const,
+        justification_clinique: "Traitement habituel absent des prescriptions hospitalières actives.",
+        risque: "Risque de rupture thérapeutique si le traitement est toujours indiqué.",
+        recommandation: `Vérifier l'indication et statuer sur la reprise ou l'arrêt documenté de ${t.label}.`,
+        alternative: "Documenter la décision médicale si arrêt volontaire.",
+        confiance: 82,
+        reference: "HAS conciliation médicamenteuse",
+      })),
+    ...hopital
+      .filter((p) => !villeKeys.has(p.key))
+      .slice(0, 8)
+      .map((p) => ({
+        type: "ajout_non_justifie" as const,
+        medicament_ville: null,
+        medicament_hopital: `${p.label} — ${doseSummary(p.row)}`,
+        severite: "mineure" as const,
+        justification_clinique:
+          "Prescription hospitalière sans correspondance dans le traitement habituel importé.",
+        risque: "Ajout potentiellement justifié par l'hospitalisation, à confirmer dans le dossier.",
+        recommandation: `Confirmer l'indication hospitalière de ${p.label} et la durée prévue.`,
+        alternative: "Arrêter ou tracer l'indication si non justifié.",
+        confiance: 70,
+        reference: "HAS conciliation médicamenteuse",
+      })),
   ];
-  const score = Math.min(100, 20 + divergences.length * 6 + dossier.allergies.length * 4 + dossier.comorbidites.length * 2);
+  const score = Math.min(
+    100,
+    20 + divergences.length * 6 + dossier.allergies.length * 4 + dossier.comorbidites.length * 2,
+  );
   return {
     synthese: `Conciliation générée en mode rapide car ${reason}. ${ville.length} traitement(s) habituel(s) et ${hopital.length} prescription(s) hospitalière(s) ont été comparés. Les divergences listées doivent être vérifiées et validées par le pharmacien dans le contexte clinique du patient.`,
     score_risque: score,
     divergences_conciliation: divergences,
-    actions_prioritaires: divergences.slice(0, 6).map((d) => ({ action: d.recommandation, urgence: d.severite === "majeure" || d.severite === "critique" ? "immediate" : "24h", destinataire: "prescripteur", justification: d.justification_clinique })),
+    actions_prioritaires: divergences.slice(0, 6).map((d) => ({
+      action: d.recommandation,
+      urgence: d.severite === "majeure" || d.severite === "critique" ? "immediate" : "24h",
+      destinataire: "prescripteur",
+      justification: d.justification_clinique,
+    })),
     interactions: [],
     doublons_therapeutiques: [],
     contre_indications: [],
@@ -100,8 +129,15 @@ function buildFastConciliationPayload(dossier: AnalysisDossier, reason: string):
     adaptations_posologiques: [],
     medicaments_haut_risque: [],
     allergies_croisees: [],
-    surveillance: [{ parametre: "Validation pharmaceutique", frequence: "Avant dispensation ou sortie", justification: "Résultat rapide basé sur rapprochement ville/hôpital à confirmer cliniquement." }],
-    conclusion_clinique: "Prioriser la revue des omissions et des ajouts non justifiés, puis tracer les décisions de reprise, arrêt ou modification.",
+    surveillance: [
+      {
+        parametre: "Validation pharmaceutique",
+        frequence: "Avant dispensation ou sortie",
+        justification: "Résultat rapide basé sur rapprochement ville/hôpital à confirmer cliniquement.",
+      },
+    ],
+    conclusion_clinique:
+      "Prioriser la revue des omissions et des ajouts non justifiés, puis tracer les décisions de reprise, arrêt ou modification.",
   };
 }
 
