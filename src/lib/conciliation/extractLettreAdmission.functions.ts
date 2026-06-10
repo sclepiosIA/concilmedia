@@ -196,22 +196,25 @@ Règles :
       }
     }
 
-    // Insert comorbidités
+    // Insert comorbidités (dédup robuste : accents, abréviations, qualificatifs)
     let comorbidites_inserted = 0;
     if (parsed.comorbidites?.length) {
+      const { filterNewComorbidites } = await import("./normalizeComorbidites");
       const { data: existing } = await supabase
         .from("comorbidites")
         .select("libelle")
         .eq("patient_id", data.patientId);
-      const existingSet = new Set((existing ?? []).map((c) => c.libelle.toLowerCase()));
-      const rows = parsed.comorbidites
-        .filter((c) => c.libelle && !existingSet.has(c.libelle.toLowerCase()))
-        .map((c) => ({
-          patient_id: data.patientId,
-          libelle: c.libelle,
-          code_cim10: c.code_cim10 ?? null,
-          statut: "actif",
-        }));
+      const existingLabels = (existing ?? []).map((c) => c.libelle ?? "");
+      const newOnes = filterNewComorbidites(
+        parsed.comorbidites.filter((c) => c.libelle),
+        existingLabels,
+      );
+      const rows = newOnes.map((c) => ({
+        patient_id: data.patientId,
+        libelle: c.libelle,
+        code_cim10: c.code_cim10 ?? null,
+        statut: "actif",
+      }));
       if (rows.length) {
         const { error } = await supabase.from("comorbidites").insert(rows as never);
         if (!error) comorbidites_inserted = rows.length;
