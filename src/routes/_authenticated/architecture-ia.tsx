@@ -313,7 +313,7 @@ function SimplifiedView() {
           <ul className="list-disc pl-5 space-y-1">
             
             <li>Les clés d'accès aux IA sont chiffrées et ne sortent jamais du serveur.</li>
-            <li>Les règles métier tournent en parallèle de l'IA pour détecter une éventuelle erreur.</li>
+            <li>Les règles métier sont rejouées en post-traitement de l'IA pour détecter une éventuelle erreur.</li>
             <li>L'IA propose, le pharmacien dispose — aucune décision n'est automatisée.</li>
           </ul>
         </CardContent>
