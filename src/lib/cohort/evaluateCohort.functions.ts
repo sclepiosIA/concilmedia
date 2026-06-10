@@ -58,7 +58,8 @@ export const evaluateCohort = createServerFn({ method: "POST" })
       supabase.from("biologie_resultats").select("patient_id, parametre, valeur, date_prelevement").in("patient_id", patientIds),
     ]);
 
-    const goldByPatient = new Map<string, (typeof gold)[number]>();
+    type GoldRow = NonNullable<typeof gold>[number];
+    const goldByPatient = new Map<string, GoldRow>();
     for (const g of gold ?? []) goldByPatient.set((g as { patient_id: string }).patient_id, g);
 
     const divsByPatient = new Map<string, typeof divsIA>();
@@ -93,7 +94,8 @@ export const evaluateCohort = createServerFn({ method: "POST" })
       if (param.includes("hba1c") && !hba1cByPatient.has(pid)) hba1cByPatient.set(pid, val);
     }
 
-    const epByPatient = new Map<string, (typeof episodes)[number]>();
+    type EpRow = NonNullable<typeof episodes>[number];
+    const epByPatient = new Map<string, EpRow>();
     for (const e of episodes ?? []) epByPatient.set((e as { patient_id: string }).patient_id, e);
 
     // Per-patient evaluation
