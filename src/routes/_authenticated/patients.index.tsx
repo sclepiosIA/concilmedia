@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useMemo, useState } from "react";
-import { Plus, Search, User, Sparkles, Trash2 } from "lucide-react";
+import { Plus, Search, User, Sparkles, Trash2, Archive, ArchiveRestore, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
@@ -24,6 +24,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { TRIAGE_META, type TriageLevel } from "@/lib/conciliation/triageScale";
 import { SynthesePatientDialog } from "@/components/patient/SynthesePatientDialog";
 import { fr } from "date-fns/locale";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
 
 
 export const Route = createFileRoute("/_authenticated/patients/")({
@@ -41,15 +43,17 @@ function PatientsListPage() {
   const [bulkTargetId, setBulkTargetId] = useState<string | undefined>(undefined);
   const [toDelete, setToDelete] = useState<{ id: string; nom: string; prenom: string } | null>(null);
   const [syntheseFor, setSyntheseFor] = useState<string | null>(null);
+  const [archiveFilter, setArchiveFilter] = useState<"active" | "archived" | "all">("active");
+  const [bulkAction, setBulkAction] = useState<"archive" | "delete" | null>(null);
   const pendingFiles = [...preHospFiles, ...prescriptionFiles];
 
   const { data: patients = [] } = useQuery({
-    queryKey: ["patients"],
+    queryKey: ["patients", archiveFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patients")
-        .select("*")
-        .order("created_at", { ascending: false });
+      let q = supabase.from("patients").select("*").order("created_at", { ascending: false });
+      if (archiveFilter === "active") q = q.eq("archived", false);
+      else if (archiveFilter === "archived") q = q.eq("archived", true);
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
@@ -130,6 +134,44 @@ function PatientsListPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
   });
 
+  const archiveMut = useMutation({
+    mutationFn: async ({ id, archived }: { id: string; archived: boolean }) => {
+      const { error } = await supabase.from("patients").update({ archived }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      toast.success(vars.archived ? "Patient archivé" : "Patient désarchivé");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
+  });
+
+  const bulkArchiveMut = useMutation({
+    mutationFn: async ({ ids, archived }: { ids: string[]; archived: boolean }) => {
+      const { error } = await supabase.from("patients").update({ archived }).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      toast.success(`${vars.archived ? "Archivés" : "Désarchivés"} : ${vars.ids.length} patient(s)`);
+      setBulkAction(null);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
+  });
+
+  const bulkDeleteMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("patients").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_, ids) => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      toast.success(`${ids.length} patient(s) supprimé(s)`);
+      setBulkAction(null);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
+  });
+
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -168,7 +210,14 @@ function PatientsListPage() {
               </PopoverContent>
             </Popover>
           </div>
-          <p className="text-sm text-muted-foreground">{patients.length} patient(s)</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-sm text-muted-foreground">{patients.length} patient(s)</p>
+            <ToggleGroup type="single" value={archiveFilter} onValueChange={(v) => v && setArchiveFilter(v as typeof archiveFilter)} size="sm">
+              <ToggleGroupItem value="active">Actifs</ToggleGroupItem>
+              <ToggleGroupItem value="archived">Archivés</ToggleGroupItem>
+              <ToggleGroupItem value="all">Tous</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </div>
         <div className="flex items-center gap-2">
         <Button variant="outline" onClick={() => setBulkOpen(true)}>
@@ -301,12 +350,39 @@ function PatientsListPage() {
           <Input placeholder="Rechercher un patient..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
 
+        {filtered.length > 0 && (
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs text-muted-foreground">{filtered.length} résultat(s)</span>
+            <div className="ml-auto flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBulkAction("archive")}
+                disabled={bulkArchiveMut.isPending || bulkDeleteMut.isPending}
+              >
+                <Archive className="h-3.5 w-3.5 mr-1" />
+                {archiveFilter === "archived" ? "Désarchiver tous les filtrés" : "Archiver tous les filtrés"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                onClick={() => setBulkAction("delete")}
+                disabled={bulkArchiveMut.isPending || bulkDeleteMut.isPending}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                Supprimer tous les filtrés
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-3">
           {filtered.length === 0 && (
             <Card><CardContent className="py-12 text-center text-muted-foreground">Aucun patient</CardContent></Card>
           )}
           {filtered.map((p) => (
-            <Card key={p.id} className="hover:bg-accent/50 transition">
+            <Card key={p.id} className={`hover:bg-accent/50 transition ${p.archived ? "opacity-60 bg-muted/40" : ""}`}>
               <CardContent className="py-4 flex items-center gap-4">
                 <TriageBadge
                   level={triageMap[p.id]?.level ?? 5}
@@ -322,7 +398,14 @@ function PatientsListPage() {
                     <User className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{p.nom.toUpperCase()} {p.prenom}</div>
+                    <div className="font-medium truncate">
+                      {p.nom.toUpperCase()} {p.prenom}
+                      {p.archived && (
+                        <span className="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground border">
+                          <Archive className="h-3 w-3 mr-1" /> Archivé
+                        </span>
+                      )}
+                    </div>
                     <div className="text-sm text-muted-foreground truncate">
                       {p.date_naissance && `Né(e) le ${format(new Date(p.date_naissance), "d MMM yyyy", { locale: fr })}`}
                       {p.sexe && ` • ${p.sexe}`}
@@ -330,20 +413,71 @@ function PatientsListPage() {
                   </div>
                 </Link>
                 <PatientRowQuickInfo info={quickInfoMap[p.id]} />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setToDelete({ id: p.id, nom: p.nom, prenom: p.prenom })}
-                  aria-label="Supprimer le patient"
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="Actions">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => archiveMut.mutate({ id: p.id, archived: !p.archived })}
+                    >
+                      {p.archived ? (
+                        <><ArchiveRestore className="h-4 w-4 mr-2" /> Désarchiver</>
+                      ) : (
+                        <><Archive className="h-4 w-4 mr-2" /> Archiver</>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                      onClick={() => setToDelete({ id: p.id, nom: p.nom, prenom: p.prenom })}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" /> Supprimer
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CardContent>
             </Card>
           ))}
 
         </div>
       </TooltipProvider>
+
+      <AlertDialog open={!!bulkAction} onOpenChange={(o) => !o && setBulkAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {bulkAction === "archive"
+                ? archiveFilter === "archived" ? "Désarchiver tous les patients filtrés ?" : "Archiver tous les patients filtrés ?"
+                : "Supprimer tous les patients filtrés ?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkAction === "archive"
+                ? `${filtered.length} patient(s) seront ${archiveFilter === "archived" ? "désarchivé(s)" : "archivé(s)"}.`
+                : `${filtered.length} patient(s) seront supprimé(s) définitivement, ainsi que toutes leurs données associées. Cette action est irréversible.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBulkAction(null)}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                const ids = filtered.map((p) => p.id);
+                if (bulkAction === "archive") {
+                  bulkArchiveMut.mutate({ ids, archived: archiveFilter !== "archived" });
+                } else if (bulkAction === "delete") {
+                  bulkDeleteMut.mutate(ids);
+                }
+              }}
+              disabled={bulkArchiveMut.isPending || bulkDeleteMut.isPending}
+              className={bulkAction === "delete" ? "bg-destructive hover:bg-destructive/90" : ""}
+            >
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>

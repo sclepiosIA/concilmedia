@@ -83,7 +83,7 @@ function DashboardPage() {
   const { data: patientsCount = 0 } = useQuery({
     queryKey: ["dash-patients-count"],
     queryFn: async () => {
-      const { count } = await supabase.from("patients").select("id", { count: "exact", head: true });
+      const { count } = await supabase.from("patients").select("id", { count: "exact", head: true }).eq("archived", false);
       return count ?? 0;
     },
   });

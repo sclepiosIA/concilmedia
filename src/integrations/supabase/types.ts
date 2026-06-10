@@ -828,6 +828,7 @@ export type Database = {
       }
       patients: {
         Row: {
+          archived: boolean
           cohort_id: string | null
           cohort_tag: string | null
           created_at: string
@@ -845,6 +846,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived?: boolean
           cohort_id?: string | null
           cohort_tag?: string | null
           created_at?: string
@@ -862,6 +864,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived?: boolean
           cohort_id?: string | null
           cohort_tag?: string | null
           created_at?: string
