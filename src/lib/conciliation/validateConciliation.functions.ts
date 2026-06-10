@@ -2,13 +2,34 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+export type ItemOverrides = Partial<{
+  severite: string;
+  medicaments: string;
+  mecanisme: string;
+  risque: string;
+  recommandation: string;
+  alternative: string;
+  reference: string;
+}>;
+
 export type ItemDecision = {
   category: "interactions" | "contre_indications" | "adaptations_posologiques" | "doublons_therapeutiques" | "allergies_croisees" | "medicaments_haut_risque" | "divergences_conciliation";
   index: number;
   status: "accepted" | "rejected" | "modified";
   comment?: string;
   modification?: string;
+  overrides?: ItemOverrides;
 };
+
+const ItemOverridesSchema: z.ZodType<ItemOverrides> = z.object({
+  severite: z.string().max(100).optional(),
+  medicaments: z.string().max(1000).optional(),
+  mecanisme: z.string().max(4000).optional(),
+  risque: z.string().max(4000).optional(),
+  recommandation: z.string().max(4000).optional(),
+  alternative: z.string().max(4000).optional(),
+  reference: z.string().max(1000).optional(),
+}).partial();
 
 const ItemDecisionSchema: z.ZodType<ItemDecision> = z.object({
   category: z.enum([
@@ -24,6 +45,7 @@ const ItemDecisionSchema: z.ZodType<ItemDecision> = z.object({
   status: z.enum(["accepted", "rejected", "modified"]),
   comment: z.string().max(2000).optional(),
   modification: z.string().max(2000).optional(),
+  overrides: ItemOverridesSchema.optional(),
 });
 
 const SaveInput = z.object({

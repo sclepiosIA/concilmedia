@@ -312,10 +312,15 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
                     </thead>
                     <tbody>
                       {payload.divergences_conciliation.map((d, i) => {
+                        const key = `divergences_conciliation:${i}`;
+                        const ov = decisions[key]?.overrides ?? {};
+                        const effSev = (ov.severite ?? d.severite) as string;
+                        const effReco = ov.recommandation ?? d.recommandation;
+                        const isOverridden = Object.keys(ov).length > 0;
                         const sevColor =
-                          d.severite === "critique" ? "bg-red-700 text-white" :
-                          d.severite === "majeure" ? "bg-red-600 text-white" :
-                          d.severite === "moderee" ? "bg-orange-500 text-white" :
+                          effSev === "critique" || effSev === "contre_indication" ? "bg-red-700 text-white" :
+                          effSev === "majeure" ? "bg-red-600 text-white" :
+                          effSev === "moderee" ? "bg-orange-500 text-white" :
                           "bg-yellow-500 text-white";
                         const typeLabels: Record<string, string> = {
                           omission: "Omission",
@@ -326,11 +331,14 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
                         };
                         return (
                           <tr key={i} className="border-b last:border-0 align-top">
-                            <td className="py-1.5 pr-2"><Badge variant="outline" className="text-[10px]">{typeLabels[d.type] ?? d.type}</Badge></td>
+                            <td className="py-1.5 pr-2">
+                              <Badge variant="outline" className="text-[10px]">{typeLabels[d.type] ?? d.type}</Badge>
+                              {isOverridden && <Badge className="ml-1 text-[9px] bg-amber-100 text-amber-800 hover:bg-amber-100">✎</Badge>}
+                            </td>
                             <td className="py-1.5 pr-2">{d.medicament_ville ?? <span className="text-muted-foreground italic">—</span>}</td>
                             <td className="py-1.5 pr-2">{d.medicament_hopital ?? <span className="text-muted-foreground italic">—</span>}</td>
-                            <td className="py-1.5 pr-2"><Badge className={`text-[10px] ${sevColor}`}>{d.severite}</Badge></td>
-                            <td className="py-1.5 leading-snug">{d.recommandation}</td>
+                            <td className="py-1.5 pr-2"><Badge className={`text-[10px] ${sevColor}`}>{effSev}</Badge></td>
+                            <td className="py-1.5 leading-snug">{effReco}</td>
                           </tr>
                         );
                       })}

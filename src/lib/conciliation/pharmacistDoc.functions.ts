@@ -4,6 +4,71 @@ import { z } from "zod";
 
 const BUCKET = "ordonnances";
 
+// Map AI payload array keys → ItemDecision category names.
+const CATEGORY_TO_PAYLOAD_KEY: Record<string, string> = {
+  interactions: "interactions",
+  contre_indications: "contre_indications",
+  adaptations_posologiques: "adaptations_posologiques",
+  doublons_therapeutiques: "doublons_therapeutiques",
+  allergies_croisees: "allergies_croisees",
+  medicaments_haut_risque: "medicaments_haut_risque",
+  divergences_conciliation: "divergences_conciliation",
+};
+
+/**
+ * Returns a deep-cloned payload with pharmacist overrides applied per item,
+ * plus a `_pharmacist_status` and `_pharmacist_comment` per item if a decision exists.
+ * Rejected items are filtered out so the comparison doesn't surface them.
+ */
+function applyPharmacistOverrides(
+  payload: Record<string, unknown>,
+  decisions: Array<{
+    category: string;
+    index: number;
+    status: "accepted" | "rejected" | "modified";
+    comment?: string;
+    modification?: string;
+    overrides?: Record<string, string | undefined>;
+  }>,
+): Record<string, unknown> {
+  const clone: Record<string, unknown> = JSON.parse(JSON.stringify(payload ?? {}));
+  if (!Array.isArray(decisions) || decisions.length === 0) return clone;
+
+  const byCat: Record<string, typeof decisions> = {};
+  for (const d of decisions) {
+    if (!d || typeof d !== "object") continue;
+    (byCat[d.category] ||= []).push(d);
+  }
+
+  for (const [cat, list] of Object.entries(byCat)) {
+    const key = CATEGORY_TO_PAYLOAD_KEY[cat];
+    if (!key) continue;
+    const arr = clone[key];
+    if (!Array.isArray(arr)) continue;
+    // Apply overrides on a per-index basis.
+    for (const d of list) {
+      const item = arr[d.index] as Record<string, unknown> | undefined;
+      if (!item || typeof item !== "object") continue;
+      if (d.overrides) {
+        for (const [k, v] of Object.entries(d.overrides)) {
+          if (v !== undefined && v !== "") item[k] = v;
+        }
+      }
+      item._pharmacist_status = d.status;
+      if (d.comment) item._pharmacist_comment = d.comment;
+      if (d.modification) item._pharmacist_modification = d.modification;
+    }
+    // Filter out rejected items.
+    clone[key] = arr.filter((_, i) => {
+      const d = list.find((x) => x.index === i);
+      return !d || d.status !== "rejected";
+    });
+  }
+
+  return clone;
+}
+
+
 const UploadInput = z.object({
   analysisId: z.string().uuid(),
   patientId: z.string().uuid(),
@@ -133,6 +198,19 @@ export const comparePharmacistVsAI = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!analysis) throw new Error("Analyse IA introuvable.");
 
+    // Merge pharmacist overrides into the AI payload so the comparison reflects
+    // the validated/corrected version (not the raw IA output).
+    const { data: validationRow } = await supabase
+      .from("conciliation_validations")
+      .select("item_decisions")
+      .eq("analysis_id", data.analysisId)
+      .maybeSingle();
+    const mergedPayload = applyPharmacistOverrides(
+      analysis.payload as Record<string, unknown>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (validationRow?.item_decisions as any[] | null) ?? [],
+    );
+
     // Télécharger le PDF
     const { data: file, error: dlErr } = await supabase.storage.from(BUCKET).download(doc.storage_path);
     if (dlErr || !file) throw new Error("Impossible de lire le PDF.");
@@ -174,7 +252,7 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
           {
             role: "user",
             content: [
-              { type: "text", text: `Analyse IA (JSON) :\n${JSON.stringify(analysis.payload)}\n\nDocument PDF du pharmacien ci-joint.` },
+              { type: "text", text: `Analyse IA (corrigée par le pharmacien si applicable) JSON :\n${JSON.stringify(mergedPayload)}\n\nDocument PDF du pharmacien ci-joint.` },
               { type: "file", data: base64, mediaType: "application/pdf", filename: doc.file_name },
             ],
           },

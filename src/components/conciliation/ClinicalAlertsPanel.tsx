@@ -1,6 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useId, useState } from "react";
 import {
   Collapsible,
@@ -18,12 +20,13 @@ import {
   Pencil,
   Pill,
   Repeat,
+  RotateCcw,
   Sparkles,
   X,
   ArrowLeftRight,
 } from "lucide-react";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
-import type { ItemDecision } from "@/lib/conciliation/validateConciliation.functions";
+import type { ItemDecision, ItemOverrides } from "@/lib/conciliation/validateConciliation.functions";
 
 export type AlertCategory = ItemDecision["category"];
 
@@ -36,6 +39,9 @@ export interface ValidationControl {
 function decisionKey(category: AlertCategory, index: number) {
   return `${category}:${index}`;
 }
+
+type OverrideField = keyof ItemOverrides;
+
 
 
 type Severity = "mineure" | "moderee" | "majeure" | "contre_indication" | string;
@@ -130,11 +136,26 @@ function AlertItem({
   validation,
 }: AlertItemProps) {
   const [open, setOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const detailsId = useId();
-  const sev = sevStyle(severite);
-  const conf = typeof confiance === "number" ? Math.max(0, Math.min(100, Math.round(confiance))) : null;
   const decision = validation?.decision;
   const readOnly = validation?.readOnly;
+  const overrides = decision?.overrides ?? {};
+
+  // Effective values (override > AI value)
+  const eff = {
+    severite: (overrides.severite ?? severite) as Severity | undefined,
+    medicaments: overrides.medicaments ?? medicaments,
+    mecanisme: overrides.mecanisme ?? mecanisme,
+    risque: overrides.risque ?? risque,
+    recommandation: overrides.recommandation ?? recommandation,
+    alternative: overrides.alternative ?? alternative,
+    reference: overrides.reference ?? reference,
+  };
+  const sev = sevStyle(eff.severite);
+  const conf = typeof confiance === "number" ? Math.max(0, Math.min(100, Math.round(confiance))) : null;
+
+  const isOverridden = (f: OverrideField) => overrides[f] !== undefined && overrides[f] !== "";
 
   const decisionBadge = decision ? (
     <Badge
@@ -152,15 +173,19 @@ function AlertItem({
     <Badge variant="outline" className="text-[10px] bg-white text-amber-700 border-amber-400">À valider</Badge>
   ) : null;
 
+  const buildDecision = (patch: Partial<ItemDecision>): ItemDecision => ({
+    category: validation!.category,
+    index: validation!.index,
+    status: decision?.status ?? "modified",
+    comment: decision?.comment,
+    modification: decision?.modification,
+    overrides: decision?.overrides,
+    ...patch,
+  });
+
   const setStatus = (status: ItemDecision["status"]) => {
     if (!validation) return;
-    validation.onChange({
-      category: validation.category,
-      index: validation.index,
-      status,
-      comment: decision?.comment,
-      modification: decision?.modification,
-    });
+    validation.onChange(buildDecision({ status }));
     setOpen(true);
   };
 
@@ -168,6 +193,42 @@ function AlertItem({
     if (!validation || !decision) return;
     validation.onChange({ ...decision, [field]: value });
   };
+
+  const updateOverride = (field: OverrideField, value: string) => {
+    if (!validation) return;
+    const nextOverrides: ItemOverrides = { ...(decision?.overrides ?? {}) };
+    const trimmed = value.trim();
+    // If value equals the original AI value or is empty, drop the override key.
+    const original = (
+      field === "severite" ? (severite ?? "") :
+      field === "medicaments" ? (medicaments ?? "") :
+      field === "mecanisme" ? (mecanisme ?? "") :
+      field === "risque" ? (risque ?? "") :
+      field === "recommandation" ? (recommandation ?? "") :
+      field === "alternative" ? (alternative ?? "") :
+      (reference ?? "")
+    );
+    if (!trimmed || trimmed === original.trim()) {
+      delete nextOverrides[field];
+    } else {
+      nextOverrides[field] = value;
+    }
+    const cleanOverrides = Object.keys(nextOverrides).length > 0 ? nextOverrides : undefined;
+    validation.onChange(
+      buildDecision({
+        status: decision?.status ?? "modified",
+        overrides: cleanOverrides,
+      }),
+    );
+  };
+
+  const resetOverrides = () => {
+    if (!validation || !decision) return;
+    validation.onChange({ ...decision, overrides: undefined });
+  };
+
+  const canEdit = !!validation && !readOnly;
+  const hasAnyOverride = Object.keys(overrides).length > 0;
 
   return (
     <Collapsible
@@ -194,6 +255,11 @@ function AlertItem({
                     Confiance IA {conf}%
                   </Badge>
                 )}
+                {hasAnyOverride && (
+                  <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-800 border-amber-300">
+                    ✎ Corrigé pharmacien
+                  </Badge>
+                )}
                 {decisionBadge}
               </div>
               {subtitle && <p className="text-xs mt-0.5 opacity-80">{subtitle}</p>}
@@ -204,13 +270,107 @@ function AlertItem({
       <CollapsibleContent id={detailsId} className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
         <div className="px-3 pb-3">
           <div className="space-y-2 text-xs bg-white/80 rounded p-3 border">
-          <Detail icon={Pill} label="Médicaments concernés" value={medicaments || title} />
-          <Detail icon={AlertTriangle} label="Gravité" value={sev.label} />
-          <Detail icon={Stethoscope} label="Mécanisme / explication clinique" value={mecanisme || "Non renseigné dans l'analyse."} />
-          <Detail icon={ShieldAlert} label="Risque clinique" value={risque || "Non renseigné dans l'analyse."} />
-          <Detail icon={Sliders} label="Recommandation pratique" value={recommandation || "Non renseignée dans l'analyse."} />
-          <Detail icon={Repeat} label="Alternative thérapeutique" value={alternative || "Non proposée dans cette recommandation."} />
-          <Detail icon={BookOpen} label="Références" value={reference || "Référence non renseignée dans l'analyse."} />
+
+          {canEdit && (
+            <div className="flex items-center justify-between gap-2 -mt-1 mb-1">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+                {editMode ? "Édition des constatations IA" : "Constatations IA"}
+              </span>
+              <div className="flex gap-1">
+                {hasAnyOverride && (
+                  <Button
+                    type="button" size="sm" variant="ghost"
+                    className="h-7 text-xs text-muted-foreground"
+                    onClick={(e) => { e.stopPropagation(); resetOverrides(); }}
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" /> Revenir à l'IA
+                  </Button>
+                )}
+                <Button
+                  type="button" size="sm" variant={editMode ? "default" : "outline"}
+                  className={`h-7 text-xs ${editMode ? "bg-amber-600 hover:bg-amber-700" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditMode((v) => !v);
+                    if (!editMode && !decision) setStatus("modified");
+                  }}
+                >
+                  <Pencil className="h-3 w-3 mr-1" /> {editMode ? "Terminer l'édition" : "Éditer"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {editMode && canEdit ? (
+            <div className="space-y-2">
+              <EditField label="Médicaments concernés" icon={Pill} overridden={isOverridden("medicaments")}>
+                <Input
+                  value={eff.medicaments ?? ""}
+                  onChange={(e) => updateOverride("medicaments", e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </EditField>
+              <EditField label="Gravité" icon={AlertTriangle} overridden={isOverridden("severite")}>
+                <Select
+                  value={(eff.severite ?? "").toLowerCase() || undefined}
+                  onValueChange={(v) => updateOverride("severite", v)}
+                >
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mineure">Mineure</SelectItem>
+                    <SelectItem value="moderee">Modérée</SelectItem>
+                    <SelectItem value="majeure">Majeure</SelectItem>
+                    <SelectItem value="contre_indication">Contre-indication</SelectItem>
+                  </SelectContent>
+                </Select>
+              </EditField>
+              <EditField label="Mécanisme / explication clinique" icon={Stethoscope} overridden={isOverridden("mecanisme")}>
+                <Textarea
+                  value={eff.mecanisme ?? ""}
+                  onChange={(e) => updateOverride("mecanisme", e.target.value)}
+                  className="text-xs min-h-[60px]"
+                />
+              </EditField>
+              <EditField label="Risque clinique" icon={ShieldAlert} overridden={isOverridden("risque")}>
+                <Textarea
+                  value={eff.risque ?? ""}
+                  onChange={(e) => updateOverride("risque", e.target.value)}
+                  className="text-xs min-h-[60px]"
+                />
+              </EditField>
+              <EditField label="Recommandation pratique" icon={Sliders} overridden={isOverridden("recommandation")}>
+                <Textarea
+                  value={eff.recommandation ?? ""}
+                  onChange={(e) => updateOverride("recommandation", e.target.value)}
+                  className="text-xs min-h-[60px]"
+                />
+              </EditField>
+              <EditField label="Alternative thérapeutique" icon={Repeat} overridden={isOverridden("alternative")}>
+                <Textarea
+                  value={eff.alternative ?? ""}
+                  onChange={(e) => updateOverride("alternative", e.target.value)}
+                  className="text-xs min-h-[50px]"
+                />
+              </EditField>
+              <EditField label="Références" icon={BookOpen} overridden={isOverridden("reference")}>
+                <Input
+                  value={eff.reference ?? ""}
+                  onChange={(e) => updateOverride("reference", e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </EditField>
+            </div>
+          ) : (
+            <>
+              <Detail icon={Pill} label="Médicaments concernés" value={eff.medicaments || title} overridden={isOverridden("medicaments")} />
+              <Detail icon={AlertTriangle} label="Gravité" value={sev.label} overridden={isOverridden("severite")} />
+              <Detail icon={Stethoscope} label="Mécanisme / explication clinique" value={eff.mecanisme || "Non renseigné dans l'analyse."} overridden={isOverridden("mecanisme")} />
+              <Detail icon={ShieldAlert} label="Risque clinique" value={eff.risque || "Non renseigné dans l'analyse."} overridden={isOverridden("risque")} />
+              <Detail icon={Sliders} label="Recommandation pratique" value={eff.recommandation || "Non renseignée dans l'analyse."} overridden={isOverridden("recommandation")} />
+              <Detail icon={Repeat} label="Alternative thérapeutique" value={eff.alternative || "Non proposée dans cette recommandation."} overridden={isOverridden("alternative")} />
+              <Detail icon={BookOpen} label="Références" value={eff.reference || "Référence non renseignée dans l'analyse."} overridden={isOverridden("reference")} />
+            </>
+          )}
           {conf !== null && (
             <div className="flex gap-2 pt-1">
               <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
@@ -308,17 +468,38 @@ function AlertItem({
 }
 
 
-function Detail({ icon: Icon, label, value }: { icon: typeof BookOpen; label: string; value: string }) {
+function Detail({ icon: Icon, label, value, overridden }: { icon: typeof BookOpen; label: string; value: string; overridden?: boolean }) {
   return (
     <div className="flex gap-2">
       <Icon className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
       <div className="min-w-0">
-        <div className="font-semibold uppercase tracking-wide text-[10px] text-muted-foreground">{label}</div>
+        <div className="font-semibold uppercase tracking-wide text-[10px] text-muted-foreground flex items-center gap-1">
+          {label}
+          {overridden && (
+            <span className="text-amber-700 normal-case font-medium">• ✎ modifié pharmacien</span>
+          )}
+        </div>
         <div className="text-foreground leading-snug whitespace-pre-wrap">{value}</div>
       </div>
     </div>
   );
 }
+
+function EditField({ icon: Icon, label, overridden, children }: { icon: typeof BookOpen; label: string; overridden?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-2">
+      <Icon className="h-3.5 w-3.5 mt-1.5 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1">
+        <div className="font-semibold uppercase tracking-wide text-[10px] text-muted-foreground mb-1 flex items-center gap-1">
+          {label}
+          {overridden && <span className="text-amber-700 normal-case font-medium">• corrigé</span>}
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 
 export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalysisPayload; validation?: ValidationControl }) {
   const divergences = payload.divergences_conciliation ?? [];
