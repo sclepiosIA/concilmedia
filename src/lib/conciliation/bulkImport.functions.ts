@@ -139,6 +139,21 @@ Règles CRUCIALES de classification :
 - Biologie prioritaire : DFG, créatinine, kaliémie, natrémie, INR, TP, hémoglobine, plaquettes, leucocytes, ASAT, ALAT, glycémie, HbA1c, CRP.
 - Omets les champs inconnus, n'invente rien. Renvoie [] pour les sections vides.
 - COMORBIDITÉS — règles strictes anti-doublons : UNE seule entrée par pathologie ; garde le libellé le plus précis (type, stade, sévérité, contrôle) ; ne répète JAMAIS une abréviation et sa forme développée (HTA/Hypertension artérielle, IRC/Insuffisance rénale chronique, FA/Fibrillation auriculaire, BPCO, AVC, IDM, DT2…) ; ne décompose pas une même maladie en plusieurs lignes ("Diabète", "Diabète de type 2", "Diabète déséquilibré" → 1 seule entrée la plus précise).
+- POSOLOGIE STRUCTURÉE — règles OBLIGATOIRES pour chaque "traitements[*]" :
+  • Tu DOIS remplir les champs structurés "posologie_matin", "posologie_midi", "posologie_soir", "posologie_coucher" dès que la posologie le permet, même partiellement. Ne te contente PAS de remplir uniquement "posologie_texte".
+  • Conventions : nombre d'unités de prise (comprimé/gélule/dose/UI/goutte/sachet/mL/inj) — accepte fractions ("0.5", "1", "1/2", "0.5-1", "8-12"). Mets "" ou null pour les créneaux non concernés.
+  • Mappings français → créneaux : "matin"/"déjeuner"/"petit-déjeuner"/"au lever" → matin ; "midi"/"déjeuner du midi"/"repas de midi" → midi ; "soir"/"dîner"/"souper" → soir ; "coucher"/"au coucher"/"avant de dormir"/"au lit" → coucher.
+  • Schémas fréquents à structurer :
+    – "1 cp matin et 1 cp soir" → matin="1", soir="1".
+    – "1 cp/j le matin" / "1 par jour le matin" → matin="1".
+    – "1/2 à 1 cp au coucher" → coucher="0.5-1".
+    – "8-12 UI SC le soir au coucher" → coucher="8-12" (et "voie_administration":"SC", "dosage_unite":"UI").
+    – "1 inj SC/j" sans moment précis → matin="1" (par défaut prise du matin) ; sinon mets le créneau indiqué.
+    – "1 ampoule/semaine" / fréquences non quotidiennes (hebdo, mensuel, 1 jour sur 2, à la demande) → laisse les 4 créneaux vides et mets le détail dans "posologie_texte" + "duree"/"indication".
+    – "3 fois par jour" sans créneaux précis → matin="1", midi="1", soir="1" (répartition standard).
+    – "si besoin" / "à la demande" / PRN → laisse créneaux vides, mets le détail dans "posologie_texte".
+  • Toujours remplir "dosage" (nombre) + "dosage_unite" (mg, mcg, UI, g, mL, %…) séparément si l'ordonnance les donne.
+  • "voie_administration" : code court (PO, SC, IM, IV, IR, INH, TD, SL, NAS, OPH, AUR, VAG, TOP). Déduis-la du contexte (insuline, patch, collyre, suppositoire…) si non explicite.
 - Ne renvoie QUE le JSON.`;
     const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
