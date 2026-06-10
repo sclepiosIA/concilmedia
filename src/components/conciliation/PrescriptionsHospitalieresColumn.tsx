@@ -171,11 +171,37 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
     data.map((p) => dciKey(p.medicament ?? p.nom_commercial ?? "")).filter(Boolean),
   );
   const justifiedTraitementIds = new Set(omissions.filter((o) => o.justifiee).map((o) => o.traitement_id));
-  const missingTreatments = domicile.filter((t) => {
+  const missingTreatmentsRaw = domicile.filter((t) => {
     if (justifiedTraitementIds.has(t.id)) return false;
     const k = dciKey(t.dci ?? t.nom_commercial ?? "");
     return k.length > 0 && !presentKeys.has(k);
   });
+
+  const scoreOmissions = useServerFn(scoreOmissionsSeverity);
+  const missingIdsKey = missingTreatmentsRaw.map((t) => t.id).sort().join(",");
+  const { data: severityMap = {} } = useQuery({
+    queryKey: ["omission_severity", episodeId, missingIdsKey],
+    enabled: missingTreatmentsRaw.length > 0,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const items = missingTreatmentsRaw.map((t) => ({
+        traitement_id: t.id,
+        dci: t.dci ?? t.nom_commercial ?? "?",
+        atc_class: null,
+      }));
+      const r = await scoreOmissions({ data: { episodeId, patientId, items } });
+      const map: Record<string, { severity_score: number; level: "high" | "moderate" | "low" }> = {};
+      for (const x of r.results) map[x.traitement_id] = { severity_score: x.severity_score, level: x.level };
+      return map;
+    },
+  });
+
+  const missingTreatments = [...missingTreatmentsRaw].sort((a, b) => {
+    const sa = severityMap[a.id]?.severity_score ?? 0;
+    const sb = severityMap[b.id]?.severity_score ?? 0;
+    return sb - sa;
+  });
+  const highCount = missingTreatments.filter((t) => severityMap[t.id]?.level === "high").length;
 
   const addFromDomicile = useMutation({
     mutationFn: async (t: DomicileTraitement) => {
