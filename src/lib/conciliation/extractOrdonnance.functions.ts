@@ -144,23 +144,38 @@ export const importExtractedMedications = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ImportInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const rows = data.medications.map((m) => ({
-      patient_id: data.patientId,
-      dci: String(m.dci ?? "Inconnu"),
-      nom_commercial: m.nom_commercial ? String(m.nom_commercial) : null,
-      dosage: m.dosage ? String(m.dosage) : null,
-      dosage_unite: m.dosage_unite ? String(m.dosage_unite) : null,
-      voie_administration: m.voie_administration ? String(m.voie_administration) : null,
-      posologie_matin: typeof m.posologie_matin === "number" ? m.posologie_matin : null,
-      posologie_midi: typeof m.posologie_midi === "number" ? m.posologie_midi : null,
-      posologie_soir: typeof m.posologie_soir === "number" ? m.posologie_soir : null,
-      posologie_coucher: typeof m.posologie_coucher === "number" ? m.posologie_coucher : null,
-      posologie_texte: m.posologie_texte ? String(m.posologie_texte) : null,
-      indication: m.indication ? String(m.indication) : null,
-      duree: m.duree ? String(m.duree) : null,
-      source: "ordonnance_ocr",
-      actif: true,
-    }));
+    const { fillMissingPosologieSlots } = await import("./parsePosologie");
+    const rows = data.medications.map((raw) => {
+      const m = fillMissingPosologieSlots({
+        posologie_matin: raw.posologie_matin != null ? String(raw.posologie_matin) : null,
+        posologie_midi: raw.posologie_midi != null ? String(raw.posologie_midi) : null,
+        posologie_soir: raw.posologie_soir != null ? String(raw.posologie_soir) : null,
+        posologie_coucher: raw.posologie_coucher != null ? String(raw.posologie_coucher) : null,
+        posologie_texte: raw.posologie_texte ? String(raw.posologie_texte) : null,
+      });
+      const num = (v: string | null | undefined) => {
+        if (!v) return null;
+        const n = parseFloat(String(v).replace(",", "."));
+        return Number.isFinite(n) ? n : null;
+      };
+      return {
+        patient_id: data.patientId,
+        dci: String(raw.dci ?? "Inconnu"),
+        nom_commercial: raw.nom_commercial ? String(raw.nom_commercial) : null,
+        dosage: raw.dosage ? String(raw.dosage) : null,
+        dosage_unite: raw.dosage_unite ? String(raw.dosage_unite) : null,
+        voie_administration: raw.voie_administration ? String(raw.voie_administration) : null,
+        posologie_matin: num(m.posologie_matin),
+        posologie_midi: num(m.posologie_midi),
+        posologie_soir: num(m.posologie_soir),
+        posologie_coucher: num(m.posologie_coucher),
+        posologie_texte: raw.posologie_texte ? String(raw.posologie_texte) : null,
+        indication: raw.indication ? String(raw.indication) : null,
+        duree: raw.duree ? String(raw.duree) : null,
+        source: "ordonnance_ocr",
+        actif: true,
+      };
+    });
     if (rows.length === 0) return { inserted: 0 };
     const { error } = await supabaseAdmin.from("traitements_habituels").insert(rows as never);
     if (error) throw new Error(error.message);
