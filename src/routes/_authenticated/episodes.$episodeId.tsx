@@ -161,6 +161,11 @@ function EpisodeConciliationPage() {
             <Button variant="outline" size="sm" onClick={downloadPdf}>
               <Download className="h-4 w-4 mr-1" /> Export PDF
             </Button>
+            <Link to="/episodes/$episodeId/sortie" params={{ episodeId }}>
+              <Button variant="outline" size="sm">
+                <CheckCircle2 className="h-4 w-4 mr-1" /> Conciliation de sortie
+              </Button>
+            </Link>
             <Button
               variant="outline"
               size="sm"

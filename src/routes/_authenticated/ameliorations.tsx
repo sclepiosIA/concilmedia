@@ -298,6 +298,7 @@ const PISTES: Piste[] = [
       "Template PDF lettre de liaison + envoi MSSanté",
     ],
     prerequis: ["Intégration MSSanté pour l'envoi sécurisé"],
+    statut: "Livré v1",
   },
   {
     id: 10,
