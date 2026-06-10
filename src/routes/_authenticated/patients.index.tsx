@@ -311,7 +311,9 @@ function PatientsListPage() {
         targetPatientId={bulkTargetId}
         initialFiles={bulkTargetId ? pendingFiles : undefined}
         onCompleted={() => {
-          if (bulkTargetId) setSyntheseFor(bulkTargetId);
+          if (bulkTargetId) {
+            navigate({ to: "/patients/$patientId", params: { patientId: bulkTargetId }, search: { autoConciliate: true } });
+          }
         }}
       />
 
