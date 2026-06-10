@@ -373,10 +373,13 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               : d.medicament_hopital
               ? `${d.medicament_hopital} (ajouté à l'hôpital)`
               : "Divergence";
+            const mlPct = typeof d.ml_severity_score === "number"
+              ? Math.round(d.ml_severity_score * 100)
+              : null;
             return (
               <AlertItem
                 key={`dv-${k}`}
-                title={`${typeLabel} — ${title}`}
+                title={`${typeLabel} — ${title}${mlPct !== null ? ` · Gravité ML ${mlPct}%${d.ml_is_severe ? " ⚠" : ""}` : ""}`}
                 medicaments={[d.medicament_ville, d.medicament_hopital].filter(Boolean).join(" / ") || title}
                 subtitle={d.justification_clinique}
                 severite={divergenceSevToAlertSev(d.severite)}
