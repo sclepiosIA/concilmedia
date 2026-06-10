@@ -313,7 +313,7 @@ function SimplifiedView() {
           <ul className="list-disc pl-5 space-y-1">
             
             <li>Les clés d'accès aux IA sont chiffrées et ne sortent jamais du serveur.</li>
-            <li>Les règles métier tournent en parallèle de l'IA pour détecter une éventuelle erreur.</li>
+            <li>Les règles métier sont rejouées en post-traitement de l'IA pour détecter une éventuelle erreur.</li>
             <li>L'IA propose, le pharmacien dispose — aucune décision n'est automatisée.</li>
           </ul>
         </CardContent>
@@ -355,9 +355,9 @@ function PrioritizationSimple() {
           <h4 className="text-sm font-semibold mb-1">Ce qui fait monter la priorité</h4>
           <ul className="list-disc pl-5 space-y-1">
             <li>Une <strong>divergence critique</strong> non résolue (ex. anticoagulant oublié) → P1.</li>
-            <li>Une divergence <strong>majeure</strong>, ou ≥ 3 divergences non intentionnelles → P2.</li>
+            <li>Une divergence <strong>majeure</strong>, ou un <strong>score de risque élevé</strong> non validé, ou ≥ 3 divergences non intentionnelles → P2.</li>
             <li>Une divergence <strong>modérée</strong> ou un score de risque modéré → P3.</li>
-            <li>Patient <strong>âgé (≥ 75 ans) polymédiqué ou insuffisant rénal</strong> tant que la conciliation n'a pas tourné → plafond P3.</li>
+            <li>Patient <strong>âgé (≥ 75 ans) polymédiqué (≥ 5 traitements habituels) ou insuffisant rénal</strong> tant que la conciliation n'a pas tourné → plafond P3.</li>
             <li>Dossier <strong>en attente depuis &gt; 48 h</strong> → on remonte d'un palier.</li>
           </ul>
         </div>
@@ -432,12 +432,58 @@ function PrioritizationDetailed() {
   + 0.015·max(0, age-50)
   + 0.05 ·nb_meds_hospitalier
   + 0.3  si durée séjour > 10 j
-severity = σ(z)
-level    = high ≥ 0.7 · moderate ≥ 0.4 · low sinon`}</pre>
+severity = σ(z) ∈ [0, 1]
+is_severe = 1 si severity ≥ 0.5, sinon 0   (seuil binaire unique)`}</pre>
         </div>
 
         <div>
-          <h4 className="font-semibold mb-2">3. Niveau de tri patient P1-P5 — <code>computePatientTriage</code></h4>
+          <h4 className="font-semibold mb-2">3. Score de risque règles-métier — <code>computeRiskScore</code> (riskScore.ts)</h4>
+          <p className="text-xs text-muted-foreground mb-2">
+            <strong>C'est ce score (et non les modèles ML ci-dessus) qui produit le <code>worstRisk</code></strong>{" "}
+            (faible / modéré / élevé / critique) consommé par <code>computePatientTriage</code>. Système à
+            points additifs, plafonné à 100, écrit dans la table <code>risk_scores</code> par{" "}
+            <code>prioritize.functions.ts</code>.
+          </p>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Variable</TableHead>
+                  <TableHead>Points</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[
+                  ["Âge ≥ 75 ans", "+20"],
+                  ["Âge 65–74 ans", "+10"],
+                  ["≥ 10 médicaments", "+25"],
+                  ["≥ 5 médicaments", "+15"],
+                  ["Classes ATC à risque", "+8 / classe (plafond 30)"],
+                  ["≥ 3 comorbidités", "+10"],
+                  ["Insuffisance rénale", "+10"],
+                  ["Insuffisance hépatique", "+10"],
+                  ["Admission via urgences", "+15"],
+                ].map(([v, p]) => (
+                  <TableRow key={v}>
+                    <TableCell className="text-xs">{v}</TableCell>
+                    <TableCell className="font-mono text-xs">{p}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <pre className="bg-muted p-2 rounded text-[10px] mt-2 overflow-x-auto">{`niveau = critique si score ≥ 70
+       · élevé    si score ≥ 50
+       · modéré   si score ≥ 30
+       · faible   sinon`}</pre>
+          <p className="text-xs text-muted-foreground mt-1">
+            Le ML <code>predictLayer2Sync</code> reste un signal complémentaire (best-effort) — il
+            n'alimente pas <code>worstRisk</code>.
+          </p>
+        </div>
+
+        <div>
+          <h4 className="font-semibold mb-2">4. Niveau de tri patient P1-P5 — <code>computePatientTriage</code></h4>
           <p className="text-xs text-muted-foreground mb-2">
             Règles métier déterministes (<code>src/lib/conciliation/triageScale.ts</code>), inspirées
             de l'échelle FRENCH (SFMU). Calculées dans l'ordre suivant, le pire l'emporte :
@@ -479,10 +525,10 @@ level    = high ≥ 0.7 · moderate ≥ 0.4 · low sinon`}</pre>
         </div>
 
         <div>
-          <h4 className="font-semibold mb-2">4. Explicabilité — comment c'est restitué à l'écran</h4>
+          <h4 className="font-semibold mb-2">5. Explicabilité — comment c'est restitué à l'écran</h4>
           <ul className="list-disc pl-5 text-xs space-y-1">
             <li>Chaque <code>TriageBadge</code> P1-P5 expose une infobulle <code>TriageDetails</code> : nombre de divergences par gravité (mineur/modéré/majeur/critique), <code>worstRisk</code>, <code>hasValidation</code>, ancienneté en heures, indicateurs <code>riskComputed</code> / <code>analysisRun</code>.</li>
-            <li>Chaque divergence affiche son <code>ml_severity_score</code> (badge ML) + la règle déterministe qui l'a déclenchée (rule.id STOPP/START ou interaction ATC).</li>
+            <li>Chaque divergence affiche son <code>ml_severity_score</code> (badge ML) + la règle déterministe qui l'a déclenchée (rule.id STOPP ou interaction ATC).</li>
             <li>Le <code>reason</code> retourné par <code>computePatientTriage</code> est une phrase humaine ("3 divergences majeures non résolues · en attente depuis 52 h") affichée sous le badge.</li>
             <li>Les coefficients ML sont versionnés (<code>model_version = "inline-1.0.0"</code>) — toute calibration future bumpe la version pour traçabilité.</li>
             <li>100 % reproductible : aucun appel LLM dans la chaîne de priorisation — un même dossier renvoie toujours le même P et le même score.</li>
@@ -555,8 +601,9 @@ function ArchitectureIAPage() {
             ne couvre tous ses tokens significatifs.
           </li>
           <li>
-            <code className="text-xs bg-muted px-1 rounded">deterministicAlerts.ts</code> — règles
-            STOPP/START + interactions de classe ATC, dédupliquées par <code>rule.id</code>.
+            <code className="text-xs bg-muted px-1 rounded">deterministicAlerts.ts</code> — 7 règles
+            STOPP v2 (A1, B1, B2, C1, D1, E1, F1) + interactions de classe ATC, dédupliquées par <code>rule.id</code>.
+            <span className="text-xs text-muted-foreground"> (Les règles START ne sont pas encore codées.)</span>
           </li>
           <li>Sert de garde-fou aux sorties LLM (alertes vérifiables affichées en parallèle).</li>
         </ul>
@@ -624,7 +671,7 @@ score = σ(z) ∈ [0, 1]`}
   + 0.05·nb_meds_hosp
   + 0.3 si durée > 10
 severity = σ(z) ∈ [0, 1]
-level = high ≥ 0.7 | mod ≥ 0.4 | low`}
+is_severe = 1 si severity ≥ 0.5, sinon 0`}
               </pre>
               <p>
                 <strong>Injection :</strong> <code>DivergenceConciliation.ml_severity_score</code>{" "}
@@ -802,7 +849,7 @@ level = high ≥ 0.7 | mod ≥ 0.4 | low`}
             <ul className="list-disc pl-5 text-xs space-y-1">
               <li>Toutes les server fn IA passent par <code>requireSupabaseAuth</code> (middleware) — RLS appliqué comme l'utilisateur.</li>
               <li><code>attachSupabaseAuth</code> côté client attache le bearer à chaque RPC.</li>
-              <li>Tables <code>patients</code> / <code>episodes</code> protégées par <code>owns_patient()</code> / <code>owns_episode()</code> (SECURITY DEFINER).</li>
+              <li>Tables <code>patients</code> / <code>episodes</code> accessibles à tout utilisateur authentifié via <code>owns_patient()</code> / <code>owns_episode()</code> (SECURITY DEFINER) — <strong>partage global de la cohorte</strong> (tout pharmacien voit tous les patients).</li>
               <li>Rôles via table <code>user_roles</code> + <code>has_role()</code>, jamais sur <code>profiles</code>.</li>
             </ul>
           </div>
