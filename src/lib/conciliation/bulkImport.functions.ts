@@ -293,7 +293,11 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             source_document_id: sourceDocumentId,
           })) as never);
         }
-        const newComorb = item.comorbidites.filter((c) => !existingComorb.has(c.libelle.toLowerCase().trim()));
+        const { filterNewComorbidites } = await import("./normalizeComorbidites");
+        const newComorb = filterNewComorbidites(
+          item.comorbidites,
+          Array.from(existingComorb),
+        );
         if (newComorb.length) {
           await supabase.from("comorbidites").insert(newComorb.map((c) => ({
             patient_id: patientId!, libelle: c.libelle, statut: c.statut,
