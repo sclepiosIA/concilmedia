@@ -81,6 +81,15 @@ function PatientsListPage() {
           p.nir?.includes(search),
       )
       .filter((p) => {
+        if (assignFilter === "mine") return meId !== null && p.assigned_to === meId;
+        if (assignFilter === "unassigned") return !p.assigned_to;
+        return true;
+      })
+      .filter((p) => {
+        if (statusFilter === "all") return true;
+        return (p.workflow_status ?? "a_faire") === statusFilter;
+      })
+      .filter((p) => {
         const lvl = triageMap[p.id]?.level ?? 5;
         if (filterMode === "todo") return lvl <= 3;
         if (filterMode === "done") return lvl === 5;
@@ -91,14 +100,12 @@ function PatientsListPage() {
         const la = triageMap[a.id]?.level ?? 5;
         const lb = triageMap[b.id]?.level ?? 5;
         if (la !== lb) return la - lb;
-        // À priorité égale : plus de médicaments habituels d'abord (complexité)
         const ma = quickInfoMap[a.id]?.traitements.length ?? 0;
         const mb = quickInfoMap[b.id]?.traitements.length ?? 0;
         if (ma !== mb) return mb - ma;
-        // Puis par ancienneté d'arrivée du dossier (le plus ancien d'abord)
         return (a.created_at ?? "").localeCompare(b.created_at ?? "");
       });
-  }, [patients, search, filterMode, triageMap, quickInfoMap]);
+  }, [patients, search, filterMode, triageMap, quickInfoMap, assignFilter, statusFilter, meId]);
 
 
 
