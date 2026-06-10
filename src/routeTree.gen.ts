@@ -18,7 +18,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedPatientsIndexRouteImport } from './routes/_authenticated/patients.index'
 import { Route as AuthenticatedPatientsPatientIdRouteImport } from './routes/_authenticated/patients.$patientId'
 import { Route as AuthenticatedEpisodesEpisodeIdRouteImport } from './routes/_authenticated/episodes.$episodeId'
-import { Route as AuthenticatedAdminAiRouteImport } from './routes/_authenticated/admin.ai'
+import { Route as AuthenticatedAdminAiIndexRouteImport } from './routes/_authenticated/admin.ai.index'
 import { Route as AuthenticatedAdminAiProvidersRouteImport } from './routes/_authenticated/admin.ai.providers'
 import { Route as AuthenticatedAdminAiTasksSlugRouteImport } from './routes/_authenticated/admin.ai.tasks.$slug'
 
@@ -69,22 +69,23 @@ const AuthenticatedEpisodesEpisodeIdRoute =
     path: '/episodes/$episodeId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminAiRoute = AuthenticatedAdminAiRouteImport.update({
-  id: '/ai',
-  path: '/ai',
-  getParentRoute: () => AuthenticatedAdminRoute,
-} as any)
+const AuthenticatedAdminAiIndexRoute =
+  AuthenticatedAdminAiIndexRouteImport.update({
+    id: '/ai/',
+    path: '/ai/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminAiProvidersRoute =
   AuthenticatedAdminAiProvidersRouteImport.update({
-    id: '/providers',
-    path: '/providers',
-    getParentRoute: () => AuthenticatedAdminAiRoute,
+    id: '/ai/providers',
+    path: '/ai/providers',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminAiTasksSlugRoute =
   AuthenticatedAdminAiTasksSlugRouteImport.update({
-    id: '/tasks/$slug',
-    path: '/tasks/$slug',
-    getParentRoute: () => AuthenticatedAdminAiRoute,
+    id: '/ai/tasks/$slug',
+    path: '/ai/tasks/$slug',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -93,11 +94,11 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
-  '/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients/': typeof AuthenticatedPatientsIndexRoute
   '/admin/ai/providers': typeof AuthenticatedAdminAiProvidersRoute
+  '/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
 }
 export interface FileRoutesByTo {
@@ -106,11 +107,11 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
-  '/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients': typeof AuthenticatedPatientsIndexRoute
   '/admin/ai/providers': typeof AuthenticatedAdminAiProvidersRoute
+  '/admin/ai': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
 }
 export interface FileRoutesById {
@@ -121,11 +122,11 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/evaluation': typeof AuthenticatedEvaluationRoute
-  '/_authenticated/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/_authenticated/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/_authenticated/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/_authenticated/patients/': typeof AuthenticatedPatientsIndexRoute
   '/_authenticated/admin/ai/providers': typeof AuthenticatedAdminAiProvidersRoute
+  '/_authenticated/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/_authenticated/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
 }
 export interface FileRouteTypes {
@@ -136,11 +137,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/evaluation'
-    | '/admin/ai'
     | '/episodes/$episodeId'
     | '/patients/$patientId'
     | '/patients/'
     | '/admin/ai/providers'
+    | '/admin/ai/'
     | '/admin/ai/tasks/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -149,11 +150,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/evaluation'
-    | '/admin/ai'
     | '/episodes/$episodeId'
     | '/patients/$patientId'
     | '/patients'
     | '/admin/ai/providers'
+    | '/admin/ai'
     | '/admin/ai/tasks/$slug'
   id:
     | '__root__'
@@ -163,11 +164,11 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/evaluation'
-    | '/_authenticated/admin/ai'
     | '/_authenticated/episodes/$episodeId'
     | '/_authenticated/patients/$patientId'
     | '/_authenticated/patients/'
     | '/_authenticated/admin/ai/providers'
+    | '/_authenticated/admin/ai/'
     | '/_authenticated/admin/ai/tasks/$slug'
   fileRoutesById: FileRoutesById
 }
@@ -242,49 +243,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEpisodesEpisodeIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/ai': {
-      id: '/_authenticated/admin/ai'
+    '/_authenticated/admin/ai/': {
+      id: '/_authenticated/admin/ai/'
       path: '/ai'
-      fullPath: '/admin/ai'
-      preLoaderRoute: typeof AuthenticatedAdminAiRouteImport
+      fullPath: '/admin/ai/'
+      preLoaderRoute: typeof AuthenticatedAdminAiIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/ai/providers': {
       id: '/_authenticated/admin/ai/providers'
-      path: '/providers'
+      path: '/ai/providers'
       fullPath: '/admin/ai/providers'
       preLoaderRoute: typeof AuthenticatedAdminAiProvidersRouteImport
-      parentRoute: typeof AuthenticatedAdminAiRoute
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/ai/tasks/$slug': {
       id: '/_authenticated/admin/ai/tasks/$slug'
-      path: '/tasks/$slug'
+      path: '/ai/tasks/$slug'
       fullPath: '/admin/ai/tasks/$slug'
       preLoaderRoute: typeof AuthenticatedAdminAiTasksSlugRouteImport
-      parentRoute: typeof AuthenticatedAdminAiRoute
+      parentRoute: typeof AuthenticatedAdminRoute
     }
   }
 }
 
-interface AuthenticatedAdminAiRouteChildren {
+interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAiProvidersRoute: typeof AuthenticatedAdminAiProvidersRoute
+  AuthenticatedAdminAiIndexRoute: typeof AuthenticatedAdminAiIndexRoute
   AuthenticatedAdminAiTasksSlugRoute: typeof AuthenticatedAdminAiTasksSlugRoute
 }
 
-const AuthenticatedAdminAiRouteChildren: AuthenticatedAdminAiRouteChildren = {
-  AuthenticatedAdminAiProvidersRoute: AuthenticatedAdminAiProvidersRoute,
-  AuthenticatedAdminAiTasksSlugRoute: AuthenticatedAdminAiTasksSlugRoute,
-}
-
-const AuthenticatedAdminAiRouteWithChildren =
-  AuthenticatedAdminAiRoute._addFileChildren(AuthenticatedAdminAiRouteChildren)
-
-interface AuthenticatedAdminRouteChildren {
-  AuthenticatedAdminAiRoute: typeof AuthenticatedAdminAiRouteWithChildren
-}
-
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
-  AuthenticatedAdminAiRoute: AuthenticatedAdminAiRouteWithChildren,
+  AuthenticatedAdminAiProvidersRoute: AuthenticatedAdminAiProvidersRoute,
+  AuthenticatedAdminAiIndexRoute: AuthenticatedAdminAiIndexRoute,
+  AuthenticatedAdminAiTasksSlugRoute: AuthenticatedAdminAiTasksSlugRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
@@ -319,3 +311,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
