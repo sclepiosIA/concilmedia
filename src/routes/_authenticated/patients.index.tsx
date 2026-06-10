@@ -43,15 +43,17 @@ function PatientsListPage() {
   const [bulkTargetId, setBulkTargetId] = useState<string | undefined>(undefined);
   const [toDelete, setToDelete] = useState<{ id: string; nom: string; prenom: string } | null>(null);
   const [syntheseFor, setSyntheseFor] = useState<string | null>(null);
+  const [archiveFilter, setArchiveFilter] = useState<"active" | "archived" | "all">("active");
+  const [bulkAction, setBulkAction] = useState<"archive" | "delete" | null>(null);
   const pendingFiles = [...preHospFiles, ...prescriptionFiles];
 
   const { data: patients = [] } = useQuery({
-    queryKey: ["patients"],
+    queryKey: ["patients", archiveFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("patients")
-        .select("*")
-        .order("created_at", { ascending: false });
+      let q = supabase.from("patients").select("*").order("created_at", { ascending: false });
+      if (archiveFilter === "active") q = q.eq("archived", false);
+      else if (archiveFilter === "archived") q = q.eq("archived", true);
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
@@ -128,6 +130,44 @@ function PatientsListPage() {
       qc.invalidateQueries({ queryKey: ["patients"] });
       toast.success("Patient supprimé");
       setToDelete(null);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
+  });
+
+  const archiveMut = useMutation({
+    mutationFn: async ({ id, archived }: { id: string; archived: boolean }) => {
+      const { error } = await supabase.from("patients").update({ archived }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      toast.success(vars.archived ? "Patient archivé" : "Patient désarchivé");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
+  });
+
+  const bulkArchiveMut = useMutation({
+    mutationFn: async ({ ids, archived }: { ids: string[]; archived: boolean }) => {
+      const { error } = await supabase.from("patients").update({ archived }).in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      toast.success(`${vars.archived ? "Archivés" : "Désarchivés"} : ${vars.ids.length} patient(s)`);
+      setBulkAction(null);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
+  });
+
+  const bulkDeleteMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from("patients").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: (_, ids) => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      toast.success(`${ids.length} patient(s) supprimé(s)`);
+      setBulkAction(null);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
   });
