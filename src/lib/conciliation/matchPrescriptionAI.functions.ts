@@ -79,6 +79,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
       lastError = e;
       try {
         const res = await generateText({
+          ...callOptions,
           model: aiModel,
           prompt:
             prompt +
