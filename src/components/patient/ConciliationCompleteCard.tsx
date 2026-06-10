@@ -145,6 +145,13 @@ export function ConciliationCompleteCard({ patientId, autoStart = false }: { pat
     return c;
   }, [decisions]);
 
+  const correlation = useMemo(() => {
+    const decided = counts.accepted + counts.modified + counts.rejected;
+    if (decided === 0) return { pct: null as number | null, decided, undecided: totalAlertes - decided };
+    const weighted = counts.accepted * 1 + counts.modified * 0.5;
+    return { pct: Math.round((weighted / decided) * 100), decided, undecided: totalAlertes - decided };
+  }, [counts, totalAlertes]);
+
   const saveMut = useMutation({
     mutationFn: () => {
       if (!analysisId) throw new Error("Aucune analyse à valider");

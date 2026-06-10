@@ -1,45 +1,32 @@
-## Problème
+## Objectif
+Afficher en fin de validation pharmacien un **% de corrélation IA ↔ pharmacien**, calculé à partir des décisions prises sur chaque alerte/divergence.
 
-Quand on importe 6 PDF du même patient via "Import PDF", la fonction `commitBulkImport` (`src/lib/conciliation/bulkImport.functions.ts`) crée **6 patients en doublon**, et duplique tous les antécédents / comorbidités / allergies / biologie.
+## Calcul
+Pour chaque item décidé par le pharmacien :
+- `accepté` → 1 (l'IA avait raison)
+- `modifié` → 0.5 (partiellement d'accord)
+- `refusé` → 0 (désaccord)
 
-Cause :
-1. `extractPatientDossier` détecte `existing_patient_id` au moment de l'extraction. Pour 6 PDF d'un patient encore inconnu en base, les 6 items reçoivent `existing_patient_id = null`.
-2. Dans la boucle de commit (l. 318-501), chaque item à `existing_patient_id = null` exécute `INSERT INTO patients` (l. 322-335) → 6 patients distincts.
-3. La déduplication des antécédents/comorbidités/allergies/biologie n'est exécutée que `if (item.existing_patient_id)` (l. 383) → pour les nouveaux items, aucun dédup intra-batch → tout est dupliqué.
-4. Seul le bloc `traitements` (l. 396-399) ré-interroge la DB systématiquement, c'est pourquoi les médicaments sont déjà dédupliqués mais pas le reste.
+Corrélation = `Σ(poids) / nb_items_décidés × 100`, arrondi à l'entier.
+- Si aucun item décidé → afficher "—" (pas de score).
+- Items sans décision ignorés (et signalés : `X non décidés sur Y`).
 
-## Correctif (un seul fichier : `src/lib/conciliation/bulkImport.functions.ts`)
+## Affichage
+Dans `src/components/patient/ConciliationCompleteCard.tsx`, section « Validation pharmacien » :
 
-### 1. Résolution d'identité patient avec cache intra-batch
+1. **Mode lecture (validation enregistrée)** — ajouter un encart visible avec :
+   - Grand pourcentage coloré (vert ≥80, ambre 50–79, rouge <50)
+   - Libellé : « Corrélation IA ↔ pharmacien »
+   - Détail : `N acceptés · M modifiés · K refusés sur T alertes`
+   - Tooltip/légende expliquant le calcul (accepté = 1, modifié = 0.5, refusé = 0)
 
-Avant la boucle d'items, créer une map `resolvedPatientByIdentity = Map<string, string>` où la clé est `normalize(nom)|normalize(prenom)|date_naissance ?? ""`.
+2. **Mode édition** — afficher en live le même indicateur juste au-dessus du bouton « Valider » pour que le pharmacien voie son taux d'accord évoluer.
 
-Dans la boucle, avant la branche "insert patient" :
-- Construire `identityKey` à partir de `item.patient.nom/prenom/date_naissance`.
-- Si `item.existing_patient_id` est fourni → l'utiliser et l'enregistrer dans la map sous `identityKey`.
-- Sinon, si la map contient déjà `identityKey` → réutiliser ce `patientId` (et compter en `updated`, pas `created`).
-- Sinon, faire une recherche de sécurité en DB par `nom + prenom (ilike)` + `date_naissance` (même logique que `extractPatientDossier`) ; si trouvé, réutiliser ; sinon `INSERT` puis enregistrer dans la map.
-
-Cela règle le doublon patient même quand plusieurs PDF du même patient arrivent ensemble.
-
-### 2. Déduplication systématique des sections cliniques
-
-Retirer la garde `if (item.existing_patient_id)` (l. 383) : **toujours** charger les `Set` d'antécédents / comorbidités / allergies / biologie déjà présents en DB pour ce `patientId` avant chaque item. C'est déjà ce qui est fait pour `traitements_habituels` (l. 396-399), on étend la même logique aux 4 autres tables. Coût négligeable (1 select par section par PDF).
-
-### 3. Documents sources : pas de changement
-
-Chaque PDF doit rester tracé dans `documents_sources` (l. 344-375) — c'est correct, on garde une ligne par PDF, juste rattachée au bon `patient_id` mutualisé.
-
-### 4. Épisodes hospi : déjà groupés par `patientId`
-
-La map `hospiByPatient` (l. 316) groupe déjà par `patientId`. Une fois le point 1 corrigé, les 6 PDF du même patient produiront **un seul** épisode agrégé, sans changement supplémentaire.
-
-## Vérification
-
-1. Importer 6 PDF du même patient (mélange ordonnance ville, ordo hospi, lettre admission, bilan bio) → un seul patient créé, un seul épisode, antécédents/comorbidités/allergies/bio sans doublons.
-2. Réimporter le même lot une 2ᵉ fois → toujours un seul patient (réutilisé), aucune ligne dupliquée ajoutée.
-3. Importer 2 patients différents en même temps (3 PDF chacun) → 2 patients créés, chacun avec ses données fusionnées.
+## Détails techniques
+- Le calcul réutilise `decisions` (state local) et `totalAlertes` déjà présents (l. 88, 132-140).
+- Ajouter un `useMemo` `correlation` à côté de `counts` (l. 142-146).
+- Nouveau petit composant interne `CorrelationBadge` (couleur + valeur + sous-ligne).
+- Aucune modif backend, aucun changement de schéma : le score est dérivé à la lecture.
 
 ## Fichier modifié
-
-- `src/lib/conciliation/bulkImport.functions.ts`
+- `src/components/patient/ConciliationCompleteCard.tsx`
