@@ -272,6 +272,8 @@ function PatientDetailPage() {
       <SynthesePatientDialog patientId={patientId} open={syntheseOpen} onOpenChange={setSyntheseOpen} />
 
       <div className="space-y-3">
+        <AssignmentPanel patientId={patientId} />
+
         <CollapsibleSection
           title="Profil clinique"
           icon={<Stethoscope className="h-4 w-4 text-primary" />}
