@@ -140,13 +140,32 @@ function TaskEditor() {
             <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder="ex: gpt-4o-mini" />
           </div>
           <div>
-            <Label>Température</Label>
-            <Input value={temperature} onChange={(e) => setTemperature(e.target.value)} placeholder="ex: 0.2" inputMode="decimal" />
+            <Label>Température {isGpt5 && <span className="text-xs text-muted-foreground">(non supporté par GPT-5.x)</span>}</Label>
+            <Input
+              value={isGpt5 ? "" : temperature}
+              onChange={(e) => setTemperature(e.target.value)}
+              placeholder={isGpt5 ? "—" : "ex: 0.2"}
+              inputMode="decimal"
+              disabled={isGpt5}
+            />
           </div>
           <div>
-            <Label>Max tokens</Label>
+            <Label>{isGpt5 ? "Max completion tokens" : "Max tokens"}</Label>
             <Input value={maxTokens} onChange={(e) => setMaxTokens(e.target.value)} placeholder="ex: 4000" inputMode="numeric" />
           </div>
+          {isGpt5 && (
+            <div>
+              <Label>Reasoning effort</Label>
+              <Select value={reasoningEffort || "medium"} onValueChange={(v) => setReasoningEffort(v as "low" | "medium" | "high")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">low (rapide, peu profond)</SelectItem>
+                  <SelectItem value="medium">medium (équilibré)</SelectItem>
+                  <SelectItem value="high">high (raisonnement étendu)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <div>
           <Label>Mode d'exécution</Label>
