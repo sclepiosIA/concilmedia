@@ -89,6 +89,11 @@ Règles :
 - N'invente RIEN. Omets les champs non explicitement présents.
 - Le poids doit être en kg, la taille en cm.
 - N'inclus que les vraies allergies médicamenteuses ou alimentaires (pas les intolérances vagues).
+- COMORBIDITÉS — règles strictes anti-doublons :
+  • UNE seule entrée par pathologie. Ne JAMAIS répéter la même maladie sous plusieurs libellés (ex. "Diabète", "Diabète de type 2", "Diabète déséquilibré" → UNE seule entrée).
+  • Conserve le libellé le plus précis et le plus informatif (type, stade, étiologie, sévérité, contrôle) dans un seul champ. Ex : préfère "Diabète de type 2 déséquilibré" plutôt que "Diabète" ; "Insuffisance rénale chronique sévère stade 5" plutôt que "IRC" + "Insuffisance rénale chronique sévère".
+  • N'inclus PAS séparément une abréviation et sa forme développée (HTA/Hypertension artérielle, IRC/Insuffisance rénale chronique, FA/Fibrillation auriculaire, BPCO, AVC, IDM, DT2…). Choisis une seule formulation (de préférence développée + qualificatif).
+  • Pas de redite entre une comorbidité et la séquelle qui la décrit déjà (ex. ne pas mettre "AVC ischémique sylvien gauche avec déficit moteur" ET "AVC" ET "Hémiplégie droite séquellaire AVC").
 - Réponds UNIQUEMENT avec le JSON, sans texte autour.`;
     const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
