@@ -85,9 +85,15 @@ function PatientsListPage() {
         const la = triageMap[a.id]?.level ?? 5;
         const lb = triageMap[b.id]?.level ?? 5;
         if (la !== lb) return la - lb;
-        return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+        // À priorité égale : plus de médicaments habituels d'abord (complexité)
+        const ma = quickInfoMap[a.id]?.traitements.length ?? 0;
+        const mb = quickInfoMap[b.id]?.traitements.length ?? 0;
+        if (ma !== mb) return mb - ma;
+        // Puis par ancienneté d'arrivée du dossier (le plus ancien d'abord)
+        return (a.created_at ?? "").localeCompare(b.created_at ?? "");
       });
-  }, [patients, search, filterMode, triageMap]);
+  }, [patients, search, filterMode, triageMap, quickInfoMap]);
+
 
 
   const counts = useMemo(() => {
