@@ -437,7 +437,53 @@ is_severe = 1 si severity ≥ 0.5, sinon 0   (seuil binaire unique)`}</pre>
         </div>
 
         <div>
-          <h4 className="font-semibold mb-2">3. Niveau de tri patient P1-P5 — <code>computePatientTriage</code></h4>
+          <h4 className="font-semibold mb-2">3. Score de risque règles-métier — <code>computeRiskScore</code> (riskScore.ts)</h4>
+          <p className="text-xs text-muted-foreground mb-2">
+            <strong>C'est ce score (et non les modèles ML ci-dessus) qui produit le <code>worstRisk</code></strong>{" "}
+            (faible / modéré / élevé / critique) consommé par <code>computePatientTriage</code>. Système à
+            points additifs, plafonné à 100, écrit dans la table <code>risk_scores</code> par{" "}
+            <code>prioritize.functions.ts</code>.
+          </p>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Variable</TableHead>
+                  <TableHead>Points</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[
+                  ["Âge ≥ 75 ans", "+20"],
+                  ["Âge 65–74 ans", "+10"],
+                  ["≥ 10 médicaments", "+25"],
+                  ["≥ 5 médicaments", "+15"],
+                  ["Classes ATC à risque", "+8 / classe (plafond 30)"],
+                  ["≥ 3 comorbidités", "+10"],
+                  ["Insuffisance rénale", "+10"],
+                  ["Insuffisance hépatique", "+10"],
+                  ["Admission via urgences", "+15"],
+                ].map(([v, p]) => (
+                  <TableRow key={v}>
+                    <TableCell className="text-xs">{v}</TableCell>
+                    <TableCell className="font-mono text-xs">{p}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <pre className="bg-muted p-2 rounded text-[10px] mt-2 overflow-x-auto">{`niveau = critique si score ≥ 70
+       · élevé    si score ≥ 50
+       · modéré   si score ≥ 30
+       · faible   sinon`}</pre>
+          <p className="text-xs text-muted-foreground mt-1">
+            Le ML <code>predictLayer2Sync</code> reste un signal complémentaire (best-effort) — il
+            n'alimente pas <code>worstRisk</code>.
+          </p>
+        </div>
+
+        <div>
+          <h4 className="font-semibold mb-2">4. Niveau de tri patient P1-P5 — <code>computePatientTriage</code></h4>
           <p className="text-xs text-muted-foreground mb-2">
             Règles métier déterministes (<code>src/lib/conciliation/triageScale.ts</code>), inspirées
             de l'échelle FRENCH (SFMU). Calculées dans l'ordre suivant, le pire l'emporte :
