@@ -362,7 +362,7 @@ export const commitBulkImport = createServerFn({ method: "POST" })
         }
 
         // Agréger prescriptions hospi pour ce patient
-        const hasHospiSignal = item.document_type === "ordonnance_hospitaliere" || item.document_type === "lettre_admission" || (item.prescriptions_hospitalieres?.length ?? 0) > 0 || !!item.episode_context?.motif;
+        const hasHospiSignal = item.document_type === "ordonnance_hospitaliere" || (item.prescriptions_hospitalieres?.length ?? 0) > 0 || !!item.episode_context?.motif;
         if (data.auto_create_episode && hasHospiSignal && patientId) {
           const existing = hospiByPatient.get(patientId) ?? {
             patientId,
