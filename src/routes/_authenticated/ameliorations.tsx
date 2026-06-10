@@ -544,6 +544,11 @@ function AmeliorationsPage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
+                      {p.statut && (
+                        <Badge className="bg-emerald-600 hover:bg-emerald-700">
+                          {p.statut}
+                        </Badge>
+                      )}
                       <Badge variant="outline" className={HORIZON_VARIANT[p.horizon]}>
                         {p.horizon}
                       </Badge>
@@ -552,6 +557,7 @@ function AmeliorationsPage() {
                       </Badge>
                     </div>
                   </div>
+
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
                   <div>
