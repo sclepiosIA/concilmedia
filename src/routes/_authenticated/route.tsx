@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, redirect, Link, useRouter } from "@tanstack/re
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, LogOut, LayoutDashboard, Settings } from "lucide-react";
+import { Users, LogOut, LayoutDashboard, Settings, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isAdmin } from "@/lib/admin/ai.functions";
 import logoAsset from "@/assets/concilmed-logo.png.asset.json";
@@ -56,6 +56,13 @@ function AuthLayout() {
               activeProps={{ className: "text-sm font-medium px-3 py-2 rounded-full bg-accent text-accent-foreground flex items-center gap-1.5" }}
             >
               <Users className="h-4 w-4" /> Patients
+            </Link>
+            <Link
+              to="/architecture-ia"
+              className="text-sm font-medium px-3 py-2 rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1.5"
+              activeProps={{ className: "text-sm font-medium px-3 py-2 rounded-full bg-accent text-accent-foreground flex items-center gap-1.5" }}
+            >
+              <Layers className="h-4 w-4" /> Architecture IA
             </Link>
             {adminQ.data?.isAdmin && (
               <Link
