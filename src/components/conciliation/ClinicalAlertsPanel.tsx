@@ -654,6 +654,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
                 reference={d.reference}
                 confiance={d.confiance}
                 icon={ArrowLeftRight}
+                provenance="ia"
                 validation={valFor("divergences_conciliation", k)}
               />
             );
@@ -698,6 +699,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               alternative={c.alternative}
               reference={c.reference}
               confiance={c.confiance}
+              provenance="ia"
               validation={valFor("contre_indications", k)}
             />
           ))}
@@ -719,6 +721,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               alternative={a.alternative}
               reference={a.reference}
               confiance={a.confiance}
+              provenance="ia"
               validation={valFor("adaptations_posologiques", k)}
             />
           ))}
@@ -740,6 +743,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               alternative={d.alternative}
               reference={d.reference}
               confiance={d.confiance}
+              provenance="ia"
               validation={valFor("doublons_therapeutiques", k)}
             />
           ))}
@@ -759,6 +763,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               alternative={a.alternative}
               reference={a.reference}
               confiance={a.confiance}
+              provenance="ia"
               validation={valFor("allergies_croisees", k)}
             />
           ))}
@@ -780,6 +785,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               alternative={h.alternative}
               reference={h.reference}
               confiance={h.confiance}
+              provenance="ia"
               validation={valFor("medicaments_haut_risque", k)}
             />
           ))}
