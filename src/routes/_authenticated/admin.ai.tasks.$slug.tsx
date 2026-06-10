@@ -193,7 +193,14 @@ function TaskEditor() {
         </div>
         <div>
           <div className="flex items-center justify-between mb-1">
-            <Label>Prompt système</Label>
+            <Label>
+              Prompt système
+              {taskQ.data && !(taskQ.data as { has_db_prompt?: boolean }).has_db_prompt && (
+                <span className="ml-2 text-xs text-muted-foreground font-normal">
+                  (prompt par défaut codé — édite puis enregistre pour le persister)
+                </span>
+              )}
+            </Label>
             <Button
               type="button"
               variant="outline"
@@ -212,7 +219,7 @@ function TaskEditor() {
                 }
               }}
             >
-              Charger le prompt par défaut
+              Recharger le prompt par défaut
             </Button>
           </div>
           <Textarea
@@ -220,7 +227,7 @@ function TaskEditor() {
             onChange={(e) => setSystemPrompt(e.target.value)}
             rows={18}
             className="font-mono text-xs"
-            placeholder="(vide = utilise le prompt par défaut codé dans la fonction — clique « Charger le prompt par défaut » pour le voir/modifier)"
+            placeholder="Prompt système…"
           />
         </div>
         <div>
