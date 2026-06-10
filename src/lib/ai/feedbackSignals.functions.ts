@@ -87,10 +87,13 @@ export const recordFeedbackSignals = createServerFn({ method: "POST" })
         severity_corrected: severityCorrected,
         had_override: hadOverride,
         comment: d.comment ?? null,
-        llm_payload: llmItem,
-        human_payload: humanItem,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        llm_payload: (llmItem ?? null) as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        human_payload: (humanItem ?? null) as any,
         pharmacien_id: userId,
       };
+
     });
 
     if (rows.length === 0) return { ok: true, inserted: 0 };
