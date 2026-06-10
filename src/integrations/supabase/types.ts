@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_feedback_signals: {
+        Row: {
+          analysis_id: string
+          category: string
+          comment: string | null
+          created_at: string
+          decision: string
+          had_override: boolean
+          human_payload: Json | null
+          id: string
+          item_index: number
+          llm_payload: Json | null
+          model: string | null
+          patient_id: string
+          pharmacien_id: string | null
+          severity_corrected: string | null
+          severity_original: string | null
+          task_slug: string
+          validation_id: string
+        }
+        Insert: {
+          analysis_id: string
+          category: string
+          comment?: string | null
+          created_at?: string
+          decision: string
+          had_override?: boolean
+          human_payload?: Json | null
+          id?: string
+          item_index: number
+          llm_payload?: Json | null
+          model?: string | null
+          patient_id: string
+          pharmacien_id?: string | null
+          severity_corrected?: string | null
+          severity_original?: string | null
+          task_slug?: string
+          validation_id: string
+        }
+        Update: {
+          analysis_id?: string
+          category?: string
+          comment?: string | null
+          created_at?: string
+          decision?: string
+          had_override?: boolean
+          human_payload?: Json | null
+          id?: string
+          item_index?: number
+          llm_payload?: Json | null
+          model?: string | null
+          patient_id?: string
+          pharmacien_id?: string | null
+          severity_corrected?: string | null
+          severity_original?: string | null
+          task_slug?: string
+          validation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_feedback_signals_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "conciliation_ai_analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_signals_validation_id_fkey"
+            columns: ["validation_id"]
+            isOneToOne: false
+            referencedRelation: "conciliation_validations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_prompt_versions: {
         Row: {
           created_at: string
