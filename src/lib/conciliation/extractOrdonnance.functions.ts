@@ -194,24 +194,34 @@ export const importExtractedHospitalPrescriptions = createServerFn({ method: "PO
   .inputValidator((d: unknown) => ImportHospitalInput.parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const rows = data.medications.map((m) => ({
-      episode_id: data.episodeId,
-      patient_id: data.patientId,
-      medicament: String(m.dci ?? "Inconnu"),
-      nom_commercial: m.nom_commercial ? String(m.nom_commercial) : null,
-      dosage: m.dosage ? String(m.dosage) : null,
-      dosage_unite: m.dosage_unite ? String(m.dosage_unite) : null,
-      posologie: m.posologie_texte ? String(m.posologie_texte) : null,
-      posologie_matin: m.posologie_matin ? String(m.posologie_matin) : null,
-      posologie_midi: m.posologie_midi ? String(m.posologie_midi) : null,
-      posologie_soir: m.posologie_soir ? String(m.posologie_soir) : null,
-      posologie_coucher: m.posologie_coucher ? String(m.posologie_coucher) : null,
-      voie_administration: m.voie_administration ? String(m.voie_administration) : null,
-      prescripteur: m.prescripteur ? String(m.prescripteur) : null,
-      indication: m.indication ? String(m.indication) : null,
-      source: "ordonnance_ocr",
-      actif: true,
-    }));
+    const { fillMissingPosologieSlots } = await import("./parsePosologie");
+    const rows = data.medications.map((raw) => {
+      const slots = fillMissingPosologieSlots({
+        posologie_matin: raw.posologie_matin != null ? String(raw.posologie_matin) : null,
+        posologie_midi: raw.posologie_midi != null ? String(raw.posologie_midi) : null,
+        posologie_soir: raw.posologie_soir != null ? String(raw.posologie_soir) : null,
+        posologie_coucher: raw.posologie_coucher != null ? String(raw.posologie_coucher) : null,
+        posologie_texte: raw.posologie_texte ? String(raw.posologie_texte) : null,
+      });
+      return {
+        episode_id: data.episodeId,
+        patient_id: data.patientId,
+        medicament: String(raw.dci ?? "Inconnu"),
+        nom_commercial: raw.nom_commercial ? String(raw.nom_commercial) : null,
+        dosage: raw.dosage ? String(raw.dosage) : null,
+        dosage_unite: raw.dosage_unite ? String(raw.dosage_unite) : null,
+        posologie: raw.posologie_texte ? String(raw.posologie_texte) : null,
+        posologie_matin: slots.posologie_matin ?? null,
+        posologie_midi: slots.posologie_midi ?? null,
+        posologie_soir: slots.posologie_soir ?? null,
+        posologie_coucher: slots.posologie_coucher ?? null,
+        voie_administration: raw.voie_administration ? String(raw.voie_administration) : null,
+        prescripteur: raw.prescripteur ? String(raw.prescripteur) : null,
+        indication: raw.indication ? String(raw.indication) : null,
+        source: "ordonnance_ocr",
+        actif: true,
+      };
+    });
     if (rows.length === 0) return { inserted: 0 };
     const { error } = await supabaseAdmin.from("prescriptions_hospitalieres").insert(rows as never);
     if (error) throw new Error(error.message);
