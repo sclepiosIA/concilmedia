@@ -484,8 +484,13 @@ export function ConciliationCompleteCard({ patientId, autoStart = false }: { pat
                     <p className="whitespace-pre-wrap text-muted-foreground">{validation.commentaire_global}</p>
                   </div>
                 )}
-                <div className="mt-2 text-muted-foreground">
-                  {counts.accepted} accepté{counts.accepted > 1 ? "s" : ""} • {counts.modified} modifié{counts.modified > 1 ? "s" : ""} • {counts.rejected} refusé{counts.rejected > 1 ? "s" : ""}
+                <div className="mt-3">
+                  <CorrelationBadge
+                    pct={correlation.pct}
+                    decided={correlation.decided}
+                    undecided={correlation.undecided}
+                    counts={counts}
+                  />
                 </div>
               </div>
             ) : (
