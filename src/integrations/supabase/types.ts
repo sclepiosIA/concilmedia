@@ -1050,6 +1050,85 @@ export type Database = {
           },
         ]
       }
+      discharge_letters: {
+        Row: {
+          comparison_json: Json
+          created_at: string
+          created_by: string | null
+          episode_id: string
+          id: string
+          letter_html: string | null
+          letter_text: string | null
+          organization_id: string | null
+          patient_id: string
+          recipient_medecin_mssante: string | null
+          recipient_medecin_nom: string | null
+          recipient_pharmacien_mssante: string | null
+          recipient_pharmacien_nom: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          comparison_json?: Json
+          created_at?: string
+          created_by?: string | null
+          episode_id: string
+          id?: string
+          letter_html?: string | null
+          letter_text?: string | null
+          organization_id?: string | null
+          patient_id: string
+          recipient_medecin_mssante?: string | null
+          recipient_medecin_nom?: string | null
+          recipient_pharmacien_mssante?: string | null
+          recipient_pharmacien_nom?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          comparison_json?: Json
+          created_at?: string
+          created_by?: string | null
+          episode_id?: string
+          id?: string
+          letter_html?: string | null
+          letter_text?: string | null
+          organization_id?: string | null
+          patient_id?: string
+          recipient_medecin_mssante?: string | null
+          recipient_medecin_nom?: string | null
+          recipient_pharmacien_mssante?: string | null
+          recipient_pharmacien_nom?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discharge_letters_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discharge_letters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discharge_letters_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents_sources: {
         Row: {
           created_at: string
@@ -1127,6 +1206,7 @@ export type Database = {
           created_at: string
           date_entree: string
           date_sortie: string | null
+          discharge_conciliation_completed_at: string | null
           etat_general: string | null
           eva_douleur: number | null
           external_ref: string | null
@@ -1159,6 +1239,7 @@ export type Database = {
           created_at?: string
           date_entree?: string
           date_sortie?: string | null
+          discharge_conciliation_completed_at?: string | null
           etat_general?: string | null
           eva_douleur?: number | null
           external_ref?: string | null
@@ -1191,6 +1272,7 @@ export type Database = {
           created_at?: string
           date_entree?: string
           date_sortie?: string | null
+          discharge_conciliation_completed_at?: string | null
           etat_general?: string | null
           eva_douleur?: number | null
           external_ref?: string | null
