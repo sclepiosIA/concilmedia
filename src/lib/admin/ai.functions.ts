@@ -71,7 +71,8 @@ export const upsertProvider = createServerFn({ method: "POST" })
       name: data.name,
       kind: data.kind,
       base_url: data.base_url ?? null,
-      extra_config: data.extra_config ?? {},
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      extra_config: (data.extra_config ?? {}) as any,
       is_active: data.is_active ?? true,
     };
     if (providerId) {
