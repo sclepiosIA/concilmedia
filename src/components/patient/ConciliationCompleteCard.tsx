@@ -295,8 +295,8 @@ export function ConciliationCompleteCard({ patientId }: { patientId: string }) {
                 Score de risque {payload.score_risque}/100
               </Badge>
             </header>
-            {!decisionAidCollapsed && (<>
-            </>)}
+            {!decisionAidCollapsed && (<></>)}
+            {!decisionAidCollapsed && (<></>)}
 
             {payload.synthese && (
               <div className="rounded-md border bg-white p-3 space-y-1">
