@@ -228,6 +228,7 @@ const PISTES: Piste[] = [
       "Convention d'interopérabilité avec la DSI de l'établissement",
       "Tests sur environnement de qualification",
     ],
+    statut: "Livré v1 (FHIR R4 lecture — Bundle Patient + Medication)",
   },
   {
     id: 7,
