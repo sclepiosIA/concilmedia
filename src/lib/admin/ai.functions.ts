@@ -168,6 +168,7 @@ const updateTaskSchema = z.object({
   temperature: z.number().nullable().optional(),
   max_tokens: z.number().int().positive().nullable().optional(),
   execution_mode: z.enum(["llm", "ml", "both"]).optional(),
+  reasoning_effort: z.enum(["low", "medium", "high"]).nullable().optional(),
   note: z.string().optional(),
 });
 
