@@ -432,26 +432,41 @@ export const commitBulkImport = createServerFn({ method: "POST" })
         // NOTE : la lettre d'admission ne sert pas au bilan médicamenteux (motif + comorbidités seulement)
         if (item.document_type !== "lettre_admission" && item.traitements.length) {
           const { fillMissingPosologieSlots } = await import("./parsePosologie");
-          const traitsToInsert = item.traitements.map(fillMissingPosologieSlots);
-          const { data: insertedTraits, error: tErr } = await supabase.from("traitements_habituels").insert(traitsToInsert.map((t) => ({
-            patient_id: patientId!, dci: t.dci, nom_commercial: t.nom_commercial ?? null, dosage: t.dosage ?? null,
-            dosage_unite: t.dosage_unite ?? null, voie_administration: t.voie_administration ?? null,
-            posologie_matin: t.posologie_matin ?? null, posologie_midi: t.posologie_midi ?? null,
-            posologie_soir: t.posologie_soir ?? null, posologie_coucher: t.posologie_coucher ?? null,
-            posologie_texte: t.posologie_texte ?? null,
-            indication: t.indication ?? null, duree: t.duree ?? null,
-            source: "pdf_import", actif: true,
-            source_document_id: sourceDocumentId,
-          })) as never).select("id");
-          if (tErr) throw tErr;
-          // Lien dans la table de jonction (multi-sources)
-          if (sourceDocumentId && insertedTraits) {
-            await supabase.from("traitement_sources").insert(
-              (insertedTraits as { id: string }[]).map((row) => ({
-                traitement_id: row.id,
-                source_document_id: sourceDocumentId!,
-              })) as never,
-            );
+          const dedupKey = (dci: string, dosage?: string | null, unite?: string | null) =>
+            normalizeKey(`${dci} ${dosage ?? ""} ${unite ?? ""}`);
+          // Dedup contre l'existant en base ET contre ce qui a déjà été inséré dans ce batch
+          const seenKeys = new Set<string>(Array.from(existingTraitements).map((d) => normalizeKey(d)));
+          const traitsToInsert: typeof item.traitements = [];
+          for (const raw of item.traitements.map(fillMissingPosologieSlots)) {
+            const k = dedupKey(raw.dci, raw.dosage, raw.dosage_unite);
+            if (!k || seenKeys.has(k)) continue;
+            // dédup souple : même DCI seule déjà vue (sans dosage)
+            const dciOnly = normalizeKey(raw.dci);
+            if (seenKeys.has(dciOnly)) continue;
+            seenKeys.add(k);
+            seenKeys.add(dciOnly);
+            traitsToInsert.push(raw);
+          }
+          if (traitsToInsert.length) {
+            const { data: insertedTraits, error: tErr } = await supabase.from("traitements_habituels").insert(traitsToInsert.map((t) => ({
+              patient_id: patientId!, dci: t.dci, nom_commercial: t.nom_commercial ?? null, dosage: t.dosage ?? null,
+              dosage_unite: t.dosage_unite ?? null, voie_administration: t.voie_administration ?? null,
+              posologie_matin: t.posologie_matin ?? null, posologie_midi: t.posologie_midi ?? null,
+              posologie_soir: t.posologie_soir ?? null, posologie_coucher: t.posologie_coucher ?? null,
+              posologie_texte: t.posologie_texte ?? null,
+              indication: t.indication ?? null, duree: t.duree ?? null,
+              source: "pdf_import", actif: true,
+              source_document_id: sourceDocumentId,
+            })) as never).select("id");
+            if (tErr) throw tErr;
+            if (sourceDocumentId && insertedTraits) {
+              await supabase.from("traitement_sources").insert(
+                (insertedTraits as { id: string }[]).map((row) => ({
+                  traitement_id: row.id,
+                  source_document_id: sourceDocumentId!,
+                })) as never,
+              );
+            }
           }
         }
 
