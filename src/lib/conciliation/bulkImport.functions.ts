@@ -126,7 +126,7 @@ Réponds STRICTEMENT en JSON valide (aucun texte avant/après, pas de markdown) 
   "episode_context": { "motif":"...", "service":"...", "date_admission":"YYYY-MM-DD" }
 }
 Règles CRUCIALES de classification :
-- "lettre_admission" = lettre/courrier d'admission, lettre du médecin adressant le patient, demande d'hospitalisation, fiche d'admission aux urgences. PRIORITÉ ABSOLUE : remplis "episode_context.motif" (motif d'admission/d'hospitalisation, ex. "chute mécanique avec fracture col fémur", "décompensation cardiaque") + "episode_context.service" + "episode_context.date_admission". Extrais AUSSI les antécédents et allergies mentionnés dans la lettre (souvent listés). Les traitements habituels listés vont dans "traitements". Ne mets RIEN dans "prescriptions_hospitalieres" (pas de prescription du jour J ici).
+- "lettre_admission" = lettre/courrier d'admission, lettre du médecin adressant le patient, demande d'hospitalisation, fiche d'admission aux urgences. PRIORITÉ ABSOLUE : remplis "episode_context.motif" (motif d'admission/d'hospitalisation) + "episode_context.service" + "episode_context.date_admission". Extrais AUSSI les antécédents, allergies et comorbidités mentionnés dans la lettre. NE extrais PAS les traitements de la lettre d'admission (ne remplis PAS "traitements" ni "prescriptions_hospitalieres" pour ce type de document).
 - "ordonnance_hospitaliere" = prescription rédigée PENDANT une hospitalisation (en-tête hôpital/service, date d'admission, ordonnance de séjour) → met les lignes dans "prescriptions_hospitalieres" ET remplis "episode_context".
 - "ordonnance_ville" = ordonnance de médecin traitant / sortie / traitement habituel → met les lignes dans "traitements".
 - "compte_rendu" = CRH, lettre de consultation → extrais antécédents/comorbidités/allergies/traitements habituels mentionnés.
@@ -335,7 +335,8 @@ export const commitBulkImport = createServerFn({ method: "POST" })
           })) as never);
         }
         // Pas de fusion : chaque ordonnance contribue toutes ses lignes (une par occurrence).
-        if (item.traitements.length) {
+        // NOTE : la lettre d'admission ne sert pas au bilan médicamenteux (motif + comorbidités seulement)
+        if (item.document_type !== "lettre_admission" && item.traitements.length) {
           const { fillMissingPosologieSlots } = await import("./parsePosologie");
           const traitsToInsert = item.traitements.map(fillMissingPosologieSlots);
           const { data: insertedTraits, error: tErr } = await supabase.from("traitements_habituels").insert(traitsToInsert.map((t) => ({
@@ -361,7 +362,7 @@ export const commitBulkImport = createServerFn({ method: "POST" })
         }
 
         // Agréger prescriptions hospi pour ce patient
-        const hasHospiSignal = item.document_type === "ordonnance_hospitaliere" || item.document_type === "lettre_admission" || (item.prescriptions_hospitalieres?.length ?? 0) > 0 || !!item.episode_context?.motif;
+        const hasHospiSignal = item.document_type === "ordonnance_hospitaliere" || (item.prescriptions_hospitalieres?.length ?? 0) > 0 || !!item.episode_context?.motif;
         if (data.auto_create_episode && hasHospiSignal && patientId) {
           const existing = hospiByPatient.get(patientId) ?? {
             patientId,
