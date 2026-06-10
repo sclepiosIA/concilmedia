@@ -228,7 +228,7 @@ const PISTES: Piste[] = [
       "Convention d'interopérabilité avec la DSI de l'établissement",
       "Tests sur environnement de qualification",
     ],
-    statut: "Livré v1",
+    statut: "Livré v2",
   },
   {
     id: 7,
