@@ -256,7 +256,7 @@ export const evaluateCohort = createServerFn({ method: "POST" })
       severity_ml_accuracy: sevPairs === 0 ? null : sevMLcorrect / sevPairs,
     };
 
-    // Persist
+    // Persist (upsert sur (cohort, run_tag, model_label))
     const { error: insErr } = await supabase
       .from("cohort_evaluations")
       .insert({
@@ -265,10 +265,12 @@ export const evaluateCohort = createServerFn({ method: "POST" })
         metrics_ml: metricsML as never,
         per_patient: perPatient as never,
         computed_by: userId,
+        run_tag: data.runTag ?? null,
+        model_label: data.modelLabel ?? null,
       } as never);
     if (insErr) console.warn("evaluateCohort persist failed:", insErr.message);
 
-    return { metricsIA, metricsML, perPatient };
+    return { metricsIA, metricsML, perPatient, runTag: data.runTag ?? null, modelLabel: data.modelLabel ?? null };
   });
 
 export type EvaluateCohortResult = Awaited<ReturnType<typeof evaluateCohort>>;
