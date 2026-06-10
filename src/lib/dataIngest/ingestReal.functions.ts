@@ -7,8 +7,24 @@ import { PatientCsvSchema, TraitementCsvSchema } from "./csvSchemas.server";
 import {
   deriveOrgSalt, hashIpp, deriveDateOffsetDays, offsetDate, redactName,
 } from "./pseudonymize.server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
+type DB = SupabaseClient<Database>;
 type FileKind = "patients" | "traitements";
+
+interface PatientValid {
+  external_pseudo: string; date_offset_days: number;
+  date_naissance: string | null; sexe: string;
+  nom: string; prenom: string;
+  poids_kg: number | null; taille_cm: number | null;
+}
+interface TraitementValid {
+  patient_external_pseudo: string; dci: string;
+  dosage: string; dosage_unite: string;
+  voie_administration: string; posologie_texte: string; indication: string;
+}
+type ValidRow = PatientValid | TraitementValid;
 
 const PreviewInput = z.object({
   organizationId: z.string().uuid(),
@@ -16,22 +32,19 @@ const PreviewInput = z.object({
   csvText: z.string().min(1).max(5_000_000),
 });
 
-const ConfirmInput = PreviewInput;
-
 interface Issue { line: number; message: string }
 interface PreviewResult {
   ok: boolean;
   fileKind: FileKind;
   stats: { total: number; valid: number; rejected: number };
-  sample: Record<string, unknown>[];
+  sample: ValidRow[];
   errors: Issue[];
   forbiddenColumns: string[];
   sampleLeaks: { column: string; kind: string; sample: string }[];
   sha256: string;
 }
 
-async function assertOrgAdmin(supabase: ReturnType<typeof Object>, orgId: string, userId: string): Promise<void> {
-  // @ts-expect-error supabase is the typed Database client from middleware
+async function assertOrgAdmin(supabase: DB, orgId: string, userId: string): Promise<void> {
   const { data, error } = await supabase
     .from("organization_members")
     .select("role")
@@ -42,10 +55,11 @@ async function assertOrgAdmin(supabase: ReturnType<typeof Object>, orgId: string
   if (!data || data.role !== "admin") throw new Error("Accès refusé : admin de l'organisation requis.");
 }
 
-async function pseudonymizeRows(orgId: string, fileKind: FileKind, rows: Record<string, string>[]):
-  Promise<{ valid: Array<Record<string, unknown>>; errors: Issue[]; orgSalt: string }> {
+async function pseudonymizeRows(
+  orgId: string, fileKind: FileKind, rows: Record<string, string>[],
+): Promise<{ valid: ValidRow[]; errors: Issue[] }> {
   const orgSalt = await deriveOrgSalt(orgId);
-  const valid: Array<Record<string, unknown>> = [];
+  const valid: ValidRow[] = [];
   const errors: Issue[] = [];
   for (let i = 0; i < rows.length; i++) {
     const raw = rows[i];
@@ -61,8 +75,8 @@ async function pseudonymizeRows(orgId: string, fileKind: FileKind, rows: Record<
           sexe: p.sexe,
           nom: redactName("Patient"),
           prenom: redactName(pseudo),
-          poids_kg: p.poids_kg,
-          taille_cm: p.taille_cm,
+          poids_kg: p.poids_kg ?? null,
+          taille_cm: p.taille_cm ?? null,
         });
       } else {
         const t = TraitementCsvSchema.parse(raw);
@@ -70,11 +84,11 @@ async function pseudonymizeRows(orgId: string, fileKind: FileKind, rows: Record<
         valid.push({
           patient_external_pseudo: pseudo,
           dci: t.dci,
-          dosage: t.dosage || null,
-          dosage_unite: t.dosage_unite || null,
-          voie_administration: t.voie_administration || null,
-          posologie_texte: t.posologie_texte || null,
-          indication: t.indication || null,
+          dosage: t.dosage ?? "",
+          dosage_unite: t.dosage_unite ?? "",
+          voie_administration: t.voie_administration ?? "",
+          posologie_texte: t.posologie_texte ?? "",
+          indication: t.indication ?? "",
         });
       }
     } catch (e) {
@@ -84,27 +98,28 @@ async function pseudonymizeRows(orgId: string, fileKind: FileKind, rows: Record<
       errors.push({ line: i + 2, message: msg });
     }
   }
-  return { valid, errors, orgSalt };
+  return { valid, errors };
 }
 
 export const previewImport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => PreviewInput.parse(d))
-  .handler(async ({ data, context }): Promise<PreviewResult> => {
-    await assertOrgAdmin(context.supabase, data.organizationId, context.userId);
+  .handler(async ({ data, context }) => {
+    await assertOrgAdmin(context.supabase as unknown as DB, data.organizationId, context.userId);
     const sha = await sha256Hex(data.csvText);
     const { headers, rows } = parseCsv(data.csvText);
     const forb = checkForbidden(headers, rows);
     if (!forb.ok) {
-      return {
+      const r: PreviewResult = {
         ok: false, fileKind: data.fileKind,
         stats: { total: rows.length, valid: 0, rejected: rows.length },
         sample: [], errors: [{ line: 1, message: "Colonnes interdites ou valeurs identifiantes détectées." }],
         forbiddenColumns: forb.forbiddenColumns, sampleLeaks: forb.sampleLeaks, sha256: sha,
       };
+      return r;
     }
     const { valid, errors } = await pseudonymizeRows(data.organizationId, data.fileKind, rows);
-    return {
+    const r: PreviewResult = {
       ok: errors.length === 0,
       fileKind: data.fileKind,
       stats: { total: rows.length, valid: valid.length, rejected: errors.length },
@@ -114,13 +129,14 @@ export const previewImport = createServerFn({ method: "POST" })
       sampleLeaks: [],
       sha256: sha,
     };
+    return r;
   });
 
 export const confirmImport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => ConfirmInput.parse(d))
+  .inputValidator((d: unknown) => PreviewInput.parse(d))
   .handler(async ({ data, context }) => {
-    await assertOrgAdmin(context.supabase, data.organizationId, context.userId);
+    await assertOrgAdmin(context.supabase as unknown as DB, data.organizationId, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const sha = await sha256Hex(data.csvText);
@@ -128,7 +144,6 @@ export const confirmImport = createServerFn({ method: "POST" })
     const forb = checkForbidden(headers, rows);
     if (!forb.ok) throw new Error("Colonnes interdites détectées — import refusé.");
 
-    // Crée la ligne d'audit en 'pending'
     const { data: imp, error: impErr } = await supabaseAdmin
       .from("data_imports")
       .insert({
@@ -150,20 +165,19 @@ export const confirmImport = createServerFn({ method: "POST" })
     let inserted = 0;
     try {
       if (data.fileKind === "patients") {
-        // Upsert sur (organization_id, external_pseudo)
-        const payload = valid.map((v) => ({
+        const payload = (valid as PatientValid[]).map((v) => ({
           organization_id: data.organizationId,
           data_source: "real_pseudonymized",
           imported_via: imp.id,
           created_by: context.userId,
-          external_pseudo: v.external_pseudo as string,
-          date_offset_days: v.date_offset_days as number,
-          date_naissance: v.date_naissance as string | null,
-          sexe: v.sexe as string,
-          nom: v.nom as string,
-          prenom: v.prenom as string,
-          poids_kg: v.poids_kg as number | null,
-          taille_cm: v.taille_cm as number | null,
+          external_pseudo: v.external_pseudo,
+          date_offset_days: v.date_offset_days,
+          date_naissance: v.date_naissance,
+          sexe: v.sexe,
+          nom: v.nom,
+          prenom: v.prenom,
+          poids_kg: v.poids_kg,
+          taille_cm: v.taille_cm,
           is_synthetic: false,
         }));
         if (payload.length > 0) {
@@ -174,25 +188,27 @@ export const confirmImport = createServerFn({ method: "POST" })
           inserted = count ?? payload.length;
         }
       } else {
-        // Pour traitements : on rattache au patient via (org, external_pseudo)
-        const pseudos = Array.from(new Set(valid.map((v) => v.patient_external_pseudo as string)));
+        const traits = valid as TraitementValid[];
+        const pseudos = Array.from(new Set(traits.map((v) => v.patient_external_pseudo)));
         const { data: pats, error: pErr } = await supabaseAdmin
           .from("patients")
           .select("id, external_pseudo")
           .eq("organization_id", data.organizationId)
           .in("external_pseudo", pseudos);
         if (pErr) throw new Error(pErr.message);
-        const map = new Map((pats ?? []).map((p) => [p.external_pseudo as string, p.id]));
-        const payload: Array<Record<string, unknown>> = [];
-        for (const v of valid) {
-          const pid = map.get(v.patient_external_pseudo as string);
+        const map = new Map((pats ?? []).map((p) => [p.external_pseudo as string, p.id as string]));
+        const payload: Database["public"]["Tables"]["traitements_habituels"]["Insert"][] = [];
+        for (const v of traits) {
+          const pid = map.get(v.patient_external_pseudo);
           if (!pid) { errors.push({ line: 0, message: `Patient pseudo introuvable : ${v.patient_external_pseudo}` }); continue; }
           payload.push({
             patient_id: pid,
             dci: v.dci,
-            dosage: v.dosage, dosage_unite: v.dosage_unite,
-            voie_administration: v.voie_administration,
-            posologie_texte: v.posologie_texte, indication: v.indication,
+            dosage: v.dosage || null,
+            dosage_unite: v.dosage_unite || null,
+            voie_administration: v.voie_administration || null,
+            posologie_texte: v.posologie_texte || null,
+            indication: v.indication || null,
             source: "import_reel",
             actif: true,
           });
@@ -206,14 +222,16 @@ export const confirmImport = createServerFn({ method: "POST" })
 
       await supabaseAdmin.from("data_imports").update({
         rows_inserted: inserted, rows_rejected: errors.length,
-        status: "success", errors: errors.slice(0, 100) as never, finished_at: new Date().toISOString(),
+        status: "success", errors: errors.slice(0, 100) as unknown as Database["public"]["Tables"]["data_imports"]["Update"]["errors"],
+        finished_at: new Date().toISOString(),
       }).eq("id", imp.id);
 
       return { ok: true, importId: imp.id, inserted, rejected: errors.length };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erreur inconnue";
       await supabaseAdmin.from("data_imports").update({
-        status: "error", errors: [{ line: 0, message: msg }] as never,
+        status: "error",
+        errors: [{ line: 0, message: msg }] as unknown as Database["public"]["Tables"]["data_imports"]["Update"]["errors"],
         finished_at: new Date().toISOString(),
       }).eq("id", imp.id);
       throw new Error(`Import échoué : ${msg}`);
@@ -224,8 +242,8 @@ export const listImports = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ organizationId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    // @ts-expect-error typed client
-    const { data: rows, error } = await context.supabase
+    const sb = context.supabase as unknown as DB;
+    const { data: rows, error } = await sb
       .from("data_imports")
       .select("id, file_kind, source_sha256, rows_total, rows_inserted, rows_rejected, status, started_at, finished_at")
       .eq("organization_id", data.organizationId)
@@ -238,19 +256,21 @@ export const listImports = createServerFn({ method: "POST" })
 export const listMyOrganizations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    // @ts-expect-error typed client
-    const { data, error } = await context.supabase
+    const sb = context.supabase as unknown as DB;
+    const { data, error } = await sb
       .from("organization_members")
       .select("role, organization_id, organizations(id, nom, finess, hds_provider)")
       .eq("user_id", context.userId);
     if (error) throw new Error(error.message);
-    return {
-      orgs: (data ?? []).map((m: { role: string; organizations: { id: string; nom: string; finess: string | null; hds_provider: string | null } | null }) => ({
-        id: m.organizations?.id ?? "", nom: m.organizations?.nom ?? "",
-        finess: m.organizations?.finess ?? null, hds_provider: m.organizations?.hds_provider ?? null,
-        role: m.role,
-      })).filter((o) => o.id),
-    };
+    const orgs = (data ?? [])
+      .map((m) => {
+        const o = m.organizations as { id: string; nom: string; finess: string | null; hds_provider: string | null } | null;
+        return o
+          ? { id: o.id, nom: o.nom, finess: o.finess, hds_provider: o.hds_provider, role: m.role as string }
+          : null;
+      })
+      .filter((x): x is { id: string; nom: string; finess: string | null; hds_provider: string | null; role: string } => x !== null);
+    return { orgs };
   });
 
 const CreateOrgInput = z.object({ nom: z.string().min(2).max(120), finess: z.string().max(20).optional() });
