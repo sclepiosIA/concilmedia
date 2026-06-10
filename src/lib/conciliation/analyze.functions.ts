@@ -248,6 +248,11 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
       console.warn("[analyze] deterministic alerts failed:", e);
     }
 
+    // Persiste les sources RAG dans le payload pour traçabilité
+    if (__ragPassages.length > 0) {
+      (payload as unknown as Record<string, unknown>).rag_sources = __ragPassages;
+    }
+
     await supabase.from("conciliation_ai_analyses").insert({
       episode_id: data.episodeId,
       patient_id: patientId,
@@ -255,6 +260,7 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
       payload: payload as any,
       model: "google/gemini-3-flash-preview",
     });
+
 
     void userId;
     return payload;
