@@ -39,7 +39,12 @@ export interface PatientTriageInput {
   nbDivergencesNonIntentionnelles: number;
   // analyse IA la plus ancienne en attente de relecture (ms since epoch) ou null
   oldestPendingAnalysisAt: number | null;
+  // contexte clinique (utilisé pour la garde de sécurité gériatrique)
+  age?: number | null;
+  nbTraitements?: number;
+  hasInsuffisanceRenale?: boolean;
 }
+
 
 export interface TriageDetails {
   divergences: Record<Gravite, number>;
