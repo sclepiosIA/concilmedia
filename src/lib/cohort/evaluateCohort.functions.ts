@@ -63,13 +63,6 @@ export const evaluateCohort = createServerFn({ method: "POST" })
       throw new Error("Aucun patient dans cette cohorte. Importez des fichiers d'abord.");
     }
 
-    const [{ data: gold }, { data: episodes }, { data: divsIA }, { data: comorb }, { data: bio }] = await Promise.all([
-      supabase.from("pharmacist_gold_standards").select("*").eq("cohort_id", data.cohortId),
-      supabase.from("episodes").select("id, patient_id, motif, service, date_entree").in("patient_id", patientIds),
-      supabase.from("conciliation_medicaments").select("*").in("patient_id", patientIds).neq("type_divergence", "aucune"),
-      supabase.from("comorbidites").select("patient_id, libelle, statut").in("patient_id", patientIds),
-      supabase.from("biologie_resultats").select("patient_id, parametre, valeur, date_prelevement").in("patient_id", patientIds),
-    ]);
 
     // Lecture des divergences IA depuis le payload stocké dans conciliation_ai_analyses,
     // filtré sur le run_tag + model_label si fournis. On garde la plus récente analyse par patient.
