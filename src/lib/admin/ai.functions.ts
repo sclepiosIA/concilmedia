@@ -177,7 +177,8 @@ export const updateTask = createServerFn({ method: "POST" })
 
     const { error: upErr } = await supabaseAdmin
       .from("ai_tasks")
-      .update(update)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update(update as any)
       .eq("id", current.id);
     if (upErr) throw new Error(upErr.message);
 
