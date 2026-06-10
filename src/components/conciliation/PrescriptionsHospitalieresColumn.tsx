@@ -26,6 +26,8 @@ import {
   type HospPrescription,
 } from "@/lib/conciliation/prescriptionMatch";
 import { matchPrescriptionAI } from "@/lib/conciliation/matchPrescriptionAI.functions";
+import { scoreOmissionsSeverity } from "@/lib/conciliation/scoreOmissions.functions";
+import { ShieldAlert } from "lucide-react";
 
 type Prescription = {
   id: string;
@@ -169,11 +171,37 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
     data.map((p) => dciKey(p.medicament ?? p.nom_commercial ?? "")).filter(Boolean),
   );
   const justifiedTraitementIds = new Set(omissions.filter((o) => o.justifiee).map((o) => o.traitement_id));
-  const missingTreatments = domicile.filter((t) => {
+  const missingTreatmentsRaw = domicile.filter((t) => {
     if (justifiedTraitementIds.has(t.id)) return false;
     const k = dciKey(t.dci ?? t.nom_commercial ?? "");
     return k.length > 0 && !presentKeys.has(k);
   });
+
+  const scoreOmissions = useServerFn(scoreOmissionsSeverity);
+  const missingIdsKey = missingTreatmentsRaw.map((t) => t.id).sort().join(",");
+  const { data: severityMap = {} } = useQuery({
+    queryKey: ["omission_severity", episodeId, missingIdsKey],
+    enabled: missingTreatmentsRaw.length > 0,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const items = missingTreatmentsRaw.map((t) => ({
+        traitement_id: t.id,
+        dci: t.dci ?? t.nom_commercial ?? "?",
+        atc_class: null,
+      }));
+      const r = await scoreOmissions({ data: { episodeId, patientId, items } });
+      const map: Record<string, { severity_score: number; level: "high" | "moderate" | "low" }> = {};
+      for (const x of r.results) map[x.traitement_id] = { severity_score: x.severity_score, level: x.level };
+      return map;
+    },
+  });
+
+  const missingTreatments = [...missingTreatmentsRaw].sort((a, b) => {
+    const sa = severityMap[a.id]?.severity_score ?? 0;
+    const sb = severityMap[b.id]?.severity_score ?? 0;
+    return sb - sa;
+  });
+  const highCount = missingTreatments.filter((t) => severityMap[t.id]?.level === "high").length;
 
   const addFromDomicile = useMutation({
     mutationFn: async (t: DomicileTraitement) => {
@@ -324,16 +352,39 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
       <CardContent className="space-y-3">
         {missingTreatments.length > 0 && (
           <div className="rounded-md border border-amber-300/60 bg-amber-50/60 dark:bg-amber-950/20 p-2 space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-200">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-900 dark:text-amber-200 flex-wrap">
               <AlertTriangle className="h-3.5 w-3.5" />
               {missingTreatments.length} médicament{missingTreatments.length > 1 ? "s" : ""} du domicile non repris
+              {highCount > 0 && (
+                <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 ml-1">
+                  <ShieldAlert className="h-3 w-3 mr-0.5" />{highCount} grave{highCount > 1 ? "s" : ""}
+                </Badge>
+              )}
             </div>
             <div className="space-y-1.5">
-              {missingTreatments.map((t) => (
+              {missingTreatments.map((t) => {
+                const sev = severityMap[t.id];
+                const sevBadge = sev ? (
+                  sev.level === "high" ? (
+                    <TooltipProvider delayDuration={150}><Tooltip><TooltipTrigger asChild>
+                      <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4 gap-0.5"><ShieldAlert className="h-3 w-3" />Grave</Badge>
+                    </TooltipTrigger><TooltipContent>Score ML omission&nbsp;: {sev.severity_score.toFixed(2)} — médicament à haut risque</TooltipContent></Tooltip></TooltipProvider>
+                  ) : sev.level === "moderate" ? (
+                    <TooltipProvider delayDuration={150}><Tooltip><TooltipTrigger asChild>
+                      <Badge className="text-[10px] px-1 py-0 h-4 bg-orange-500 hover:bg-orange-600 text-white">Modéré</Badge>
+                    </TooltipTrigger><TooltipContent>Score ML omission&nbsp;: {sev.severity_score.toFixed(2)}</TooltipContent></Tooltip></TooltipProvider>
+                  ) : (
+                    <TooltipProvider delayDuration={150}><Tooltip><TooltipTrigger asChild>
+                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">Faible</Badge>
+                    </TooltipTrigger><TooltipContent>Score ML omission&nbsp;: {sev.severity_score.toFixed(2)}</TooltipContent></Tooltip></TooltipProvider>
+                  )
+                ) : null;
+                return (
                 <div key={t.id} className="rounded border border-amber-200/70 bg-background/70 p-2 text-xs space-y-1.5">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <Pill className="h-3 w-3 text-amber-600 shrink-0" />
                     <span className="font-medium">{t.dci ?? t.nom_commercial}</span>
+                    {sevBadge}
                     {t.dosage && (
                       <Badge variant="outline" className="font-mono text-[10px] px-1 py-0">
                         {t.dosage}{t.dosage_unite ? ` ${t.dosage_unite}` : ""}
@@ -397,7 +448,8 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
