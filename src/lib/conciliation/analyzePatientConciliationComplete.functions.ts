@@ -188,6 +188,11 @@ function buildFastConciliationPayload(dossier: AnalysisDossier, reason: string):
   };
 }
 
+function isRealtimeSafeModel(modelId: string): boolean {
+  const id = modelId.toLowerCase();
+  return id.includes("flash") || id.includes("nano");
+}
+
 async function attachDeterministicAlerts(payload: AIAnalysisPayload, dossier: AnalysisDossier): Promise<AIAnalysisPayload> {
   try {
     const { computeDeterministicAlerts } = await import("./deterministicAlerts");
@@ -212,8 +217,6 @@ export const analyzePatientConciliationComplete = createServerFn({ method: "POST
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY manquante");
 
     const { data: patient } = await supabase
       .from("patients")
@@ -293,14 +296,36 @@ export const analyzePatientConciliationComplete = createServerFn({ method: "POST
       return fastPayload;
     }
 
+    if (data.modelOverride && !isRealtimeSafeModel(data.modelOverride.modelId)) {
+      const fastPayload = await attachDeterministicAlerts(
+        buildFastConciliationPayload(
+          dossier as AnalysisDossier,
+          `le modèle ${data.modelLabel ?? data.modelOverride.modelId} est trop lent pour l'exécution web synchrone`,
+        ),
+        dossier as AnalysisDossier,
+      );
+      await supabase.from("conciliation_ai_analyses").insert({
+        episode_id: null,
+        patient_id: data.patientId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        payload: fastPayload as any,
+        model: data.modelOverride.modelId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        analysis_type: "conciliation_complete" as any,
+        run_tag: data.runTag ?? null,
+        model_label: data.modelLabel ?? `${data.modelOverride.modelId} — mode rapide`,
+      } as never);
+      return fastPayload;
+    }
+
     const { generateText } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
     const __aiTaskSlug = "analyze_patient_complete";
     const __aiDefaultModel = "google/gemini-3-flash-preview";
 
-    const systemPrompt = `Tu es pharmacien clinicien. Produis UNIQUEMENT un JSON court et valide de conciliation ville ↔ hôpital.
+    const systemPrompt = `Tu es pharmacien clinicien. Produis UNIQUEMENT un JSON très court et valide de conciliation ville ↔ hôpital.
 Schéma obligatoire: {"synthese":"2-3 phrases","score_risque":0-100,"divergences_conciliation":[{"type":"omission|ajout_non_justifie|switch|modification_posologie|substitution_classe","medicament_ville":null,"medicament_hopital":null,"severite":"mineure|moderee|majeure|critique","justification_clinique":"court","risque":"court","recommandation":"action concrète","alternative":"","confiance":0-100,"reference":"HAS/SFPC/ANSM"}],"actions_prioritaires":[{"action":"court","urgence":"immediate|24h|differee","destinataire":"prescripteur|IDE|patient","justification":"court"}],"interactions":[],"doublons_therapeutiques":[],"contre_indications":[],"redondances_classe":[],"adaptations_posologiques":[],"medicaments_haut_risque":[],"allergies_croisees":[],"surveillance":[{"parametre":"","frequence":"","justification":""}],"conclusion_clinique":"1 phrase"}.
-Priorité: signaler surtout omissions/ajouts/switch/dose. Max 10 divergences, max 5 actions. Pas de doublons entre catégories. Réponses très concises.`;
+Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas de doublons entre catégories. Réponses télégraphiques.`;
     const { model, systemPrompt: __systemPrompt, callOptions, modelId: __modelIdUsed } = data.modelOverride
       ? await (await import("@/lib/ai/runAITask.server")).resolveAITaskWithOverride(
           { systemPrompt, model: __aiDefaultModel },
@@ -310,7 +335,7 @@ Priorité: signaler surtout omissions/ajouts/switch/dose. Max 10 divergences, ma
 
     // Garde-fou : on borne la durée d'appel et la longueur de sortie pour
     // éviter un "chargement infini" côté UI si le modèle traîne.
-    const TIMEOUT_MS = 18_000;
+    const TIMEOUT_MS = 8_000;
     const callOptionsWithDefaults: Record<string, unknown> = { ...callOptions };
     const { isGpt5Family } = await import("@/lib/ai/runAITask.server");
     const isGpt5 = isGpt5Family(__modelIdUsed, "lovable");
@@ -326,12 +351,12 @@ Priorité: signaler surtout omissions/ajouts/switch/dose. Max 10 divergences, ma
         [key]: {
           ...existing,
           verbosity: "low",
-          reasoningEffort: "minimal",
-          maxCompletionTokens: (existing.maxCompletionTokens as number | undefined) ?? 900,
+          reasoningEffort: "low",
+          maxCompletionTokens: Math.min((existing.maxCompletionTokens as number | undefined) ?? 650, 650),
         },
       };
     } else if (callOptionsWithDefaults.maxOutputTokens === undefined) {
-      callOptionsWithDefaults.maxOutputTokens = 900;
+      callOptionsWithDefaults.maxOutputTokens = 650;
     }
 
 
