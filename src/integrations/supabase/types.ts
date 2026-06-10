@@ -14,6 +14,152 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_prompt_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          max_tokens: number | null
+          model: string
+          note: string | null
+          provider_id: string | null
+          system_prompt: string
+          task_id: string
+          temperature: number | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          max_tokens?: number | null
+          model: string
+          note?: string | null
+          provider_id?: string | null
+          system_prompt: string
+          task_id: string
+          temperature?: number | null
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          max_tokens?: number | null
+          model?: string
+          note?: string | null
+          provider_id?: string | null
+          system_prompt?: string
+          task_id?: string
+          temperature?: number | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_prompt_versions_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "ai_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_prompt_versions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "ai_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_providers: {
+        Row: {
+          api_key_encrypted: string | null
+          base_url: string | null
+          created_at: string
+          extra_config: Json
+          id: string
+          is_active: boolean
+          kind: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          api_key_encrypted?: string | null
+          base_url?: string | null
+          created_at?: string
+          extra_config?: Json
+          id?: string
+          is_active?: boolean
+          kind: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          api_key_encrypted?: string | null
+          base_url?: string | null
+          created_at?: string
+          extra_config?: Json
+          id?: string
+          is_active?: boolean
+          kind?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_tasks: {
+        Row: {
+          created_at: string
+          current_version: number
+          description: string | null
+          id: string
+          label: string
+          max_tokens: number | null
+          model: string
+          provider_id: string | null
+          slug: string
+          system_prompt: string
+          temperature: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_version?: number
+          description?: string | null
+          id?: string
+          label: string
+          max_tokens?: number | null
+          model: string
+          provider_id?: string | null
+          slug: string
+          system_prompt?: string
+          temperature?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_version?: number
+          description?: string | null
+          id?: string
+          label?: string
+          max_tokens?: number | null
+          model?: string
+          provider_id?: string | null
+          slug?: string
+          system_prompt?: string
+          temperature?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_tasks_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "ai_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       allergies: {
         Row: {
           created_at: string
@@ -1033,16 +1179,44 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       owns_episode: { Args: { _episode_id: string }; Returns: boolean }
       owns_patient: { Args: { _patient_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1169,6 +1343,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
