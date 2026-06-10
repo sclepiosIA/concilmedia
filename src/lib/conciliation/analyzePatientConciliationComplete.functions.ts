@@ -274,6 +274,25 @@ export const analyzePatientConciliationComplete = createServerFn({ method: "POST
       prescriptions_hospitalieres: prescriptions.data ?? [],
     };
 
+    if (!data.modelOverride && !data.runTag && !data.modelLabel) {
+      const fastPayload = await attachDeterministicAlerts(
+        buildFastConciliationPayload(dossier as AnalysisDossier, "le mode anti-timeout est activé"),
+        dossier as AnalysisDossier,
+      );
+      await supabase.from("conciliation_ai_analyses").insert({
+        episode_id: null,
+        patient_id: data.patientId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        payload: fastPayload as any,
+        model: "deterministe_rapide",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        analysis_type: "conciliation_complete" as any,
+        run_tag: null,
+        model_label: "Mode rapide anti-timeout",
+      } as never);
+      return fastPayload;
+    }
+
     const { generateText } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
     const __aiTaskSlug = "analyze_patient_complete";
