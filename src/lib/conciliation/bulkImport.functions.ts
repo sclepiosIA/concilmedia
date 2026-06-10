@@ -315,10 +315,38 @@ export const commitBulkImport = createServerFn({ method: "POST" })
     type PendingHospi = { patientId: string; prescriptions: typeof items[number]["prescriptions_hospitalieres"]; context: { motif?: string | null; service?: string | null; date_admission?: string | null }; sourceDocumentId: string | null };
     const hospiByPatient = new Map<string, PendingHospi>();
 
+    // Cache d'identité patient pour fusionner plusieurs PDF du même patient dans un même batch
+    const resolvedPatientByIdentity = new Map<string, string>();
+    const identityKeyOf = (p: { nom?: string | null; prenom?: string | null; date_naissance?: string | null }) => {
+      const n = normalizeKey(p.nom ?? "");
+      const pr = normalizeKey(p.prenom ?? "");
+      return `${n}|${pr}|${p.date_naissance ?? ""}`;
+    };
+
     for (const item of items) {
       const displayName = `${item.patient.nom ?? "?"} ${item.patient.prenom ?? ""}`.trim();
       try {
         let patientId = item.existing_patient_id ?? null;
+        const identityKey = identityKeyOf(item.patient);
+        const hasIdentity = identityKey !== "||" && (item.patient.nom || item.patient.prenom);
+
+        // 1) Cache intra-batch
+        if (!patientId && hasIdentity && resolvedPatientByIdentity.has(identityKey)) {
+          patientId = resolvedPatientByIdentity.get(identityKey)!;
+          summary.updated++;
+        }
+
+        // 2) Recherche de sécurité en DB (au cas où extractPatientDossier ne l'aurait pas vu)
+        if (!patientId && hasIdentity && item.patient.nom && item.patient.prenom) {
+          const q = supabase.from("patients").select("id").ilike("nom", item.patient.nom).ilike("prenom", item.patient.prenom).limit(1);
+          const { data: matches } = item.patient.date_naissance ? await q.eq("date_naissance", item.patient.date_naissance) : await q;
+          if (matches && matches.length > 0) {
+            patientId = matches[0].id;
+            summary.updated++;
+          }
+        }
+
+        // 3) Création si toujours rien
         if (!patientId) {
           const { data: ins, error } = await supabase.from("patients").insert({
             nom: item.patient.nom ?? "Inconnu",
@@ -334,12 +362,13 @@ export const commitBulkImport = createServerFn({ method: "POST" })
           patientId = (ins as { id: string }).id;
           summary.created++;
         } else {
-          summary.updated++;
           // Tag existing patient with the cohort if not already tagged
           if (data.cohort_id) {
             await supabase.from("patients").update({ cohort_id: data.cohort_id } as never).eq("id", patientId).is("cohort_id", null);
           }
         }
+
+        if (hasIdentity) resolvedPatientByIdentity.set(identityKey, patientId);
 
         // ────────────── Traçabilité : upload du PDF source ──────────────
         let sourceDocumentId: string | null = null;
@@ -374,29 +403,20 @@ export const commitBulkImport = createServerFn({ method: "POST" })
           }
         }
 
-        // Dédup si patient existant
-        let existingAntecedents = new Set<string>();
-        let existingComorb = new Set<string>();
-        let existingAllergies = new Set<string>();
-        let existingTraitements = new Set<string>();
-        let existingBio = new Set<string>();
-        if (item.existing_patient_id) {
-          const [ea, ec, eal, eb] = await Promise.all([
-            supabase.from("antecedents").select("type, description").eq("patient_id", patientId!),
-            supabase.from("comorbidites").select("libelle").eq("patient_id", patientId!),
-            supabase.from("allergies").select("substance").eq("patient_id", patientId!),
-            supabase.from("biologie_resultats").select("parametre, date_prelevement").eq("patient_id", patientId!),
-          ]);
-          existingAntecedents = new Set((ea.data ?? []).map((r) => `${r.type}|${(r.description ?? "").toLowerCase().trim()}`));
-          existingComorb = new Set((ec.data ?? []).map((r) => (r.libelle ?? "").toLowerCase().trim()));
-          existingAllergies = new Set((eal.data ?? []).map((r) => (r.substance ?? "").toLowerCase().trim()));
-          existingBio = new Set((eb.data ?? []).map((r) => `${(r.parametre ?? "").toLowerCase()}|${r.date_prelevement ?? ""}`));
-        }
-        // Toujours interroger les traitements actifs pour dédupliquer même au sein d'un même batch (plusieurs PDF du même patient)
-        {
-          const et = await supabase.from("traitements_habituels").select("dci, dosage, dosage_unite").eq("patient_id", patientId!).eq("actif", true);
-          existingTraitements = new Set((et.data ?? []).map((r) => `${(r.dci ?? "").toLowerCase().trim()}|${(r.dosage ?? "").toString().toLowerCase().trim()}|${(r.dosage_unite ?? "").toLowerCase().trim()}`));
-        }
+        // Dédup systématique contre l'état actuel en DB (couvre patient existant ET fusion intra-batch)
+        const [ea, ec, eal, eb, et] = await Promise.all([
+          supabase.from("antecedents").select("type, description").eq("patient_id", patientId!),
+          supabase.from("comorbidites").select("libelle").eq("patient_id", patientId!),
+          supabase.from("allergies").select("substance").eq("patient_id", patientId!),
+          supabase.from("biologie_resultats").select("parametre, date_prelevement").eq("patient_id", patientId!),
+          supabase.from("traitements_habituels").select("dci, dosage, dosage_unite").eq("patient_id", patientId!).eq("actif", true),
+        ]);
+        const existingAntecedents = new Set((ea.data ?? []).map((r) => `${r.type}|${(r.description ?? "").toLowerCase().trim()}`));
+        const existingComorb = new Set((ec.data ?? []).map((r) => (r.libelle ?? "").toLowerCase().trim()));
+        const existingAllergies = new Set((eal.data ?? []).map((r) => (r.substance ?? "").toLowerCase().trim()));
+        const existingBio = new Set((eb.data ?? []).map((r) => `${(r.parametre ?? "").toLowerCase()}|${r.date_prelevement ?? ""}`));
+        const existingTraitements = new Set((et.data ?? []).map((r) => `${(r.dci ?? "").toLowerCase().trim()}|${(r.dosage ?? "").toString().toLowerCase().trim()}|${(r.dosage_unite ?? "").toLowerCase().trim()}`));
+
 
         const newAntecedents = item.antecedents.filter((a) => !existingAntecedents.has(`${a.type}|${a.description.toLowerCase().trim()}`));
         if (newAntecedents.length) {
