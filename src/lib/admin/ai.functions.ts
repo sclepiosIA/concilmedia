@@ -51,7 +51,7 @@ const providerInputSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(1).max(120),
   kind: z.enum(["lovable", "openai", "azure_openai", "google", "anthropic", "openai_compatible"]),
-  base_url: z.string().url().nullable().optional(),
+  base_url: z.string().trim().url().or(z.literal("")).nullable().optional(),
   extra_config: z.record(z.string(), z.unknown()).optional(),
   is_active: z.boolean().optional(),
   api_key: z.string().optional(), // plain; set if provided
