@@ -9,6 +9,7 @@ import {
   listTaskVersions,
   restoreTaskVersion,
   testTask,
+  getDefaultSystemPrompt,
 } from "@/lib/admin/ai.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ function TaskEditor() {
   const listVersionsFn = useServerFn(listTaskVersions);
   const restoreFn = useServerFn(restoreTaskVersion);
   const testFn = useServerFn(testTask);
+  const getDefaultFn = useServerFn(getDefaultSystemPrompt);
 
   const taskQ = useQuery({ queryKey: ["admin-ai-task", slug], queryFn: () => getTaskFn({ data: { slug } }) });
   const providersQ = useQuery({ queryKey: ["admin-ai-providers"], queryFn: () => listProvidersFn() });
@@ -166,13 +168,35 @@ function TaskEditor() {
           </p>
         </div>
         <div>
-          <Label>Prompt système</Label>
+          <div className="flex items-center justify-between mb-1">
+            <Label>Prompt système</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  const r = await getDefaultFn({ data: { slug } });
+                  if (!r.prompt) {
+                    toast.error("Pas de prompt par défaut pour cette tâche");
+                    return;
+                  }
+                  setSystemPrompt(r.prompt);
+                  toast.success("Prompt par défaut chargé — pense à enregistrer");
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Erreur");
+                }
+              }}
+            >
+              Charger le prompt par défaut
+            </Button>
+          </div>
           <Textarea
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
             rows={18}
             className="font-mono text-xs"
-            placeholder="(vide = utilise le prompt par défaut codé dans la fonction)"
+            placeholder="(vide = utilise le prompt par défaut codé dans la fonction — clique « Charger le prompt par défaut » pour le voir/modifier)"
           />
         </div>
         <div>

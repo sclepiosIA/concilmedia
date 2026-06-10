@@ -30,6 +30,15 @@ export const isAdmin = createServerFn({ method: "GET" })
     return { isAdmin: !!data };
   });
 
+export const getDefaultSystemPrompt = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ slug: z.string().min(1).max(100) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { DEFAULT_SYSTEM_PROMPTS } = await import("./defaultPrompts.server");
+    return { prompt: DEFAULT_SYSTEM_PROMPTS[data.slug] ?? "" };
+  });
+
 export const listProviders = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
