@@ -187,7 +187,7 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
           {
             role: "user",
             content: [
-              { type: "text", text: `Analyse IA (JSON) :\n${JSON.stringify(analysis.payload)}\n\nDocument PDF du pharmacien ci-joint.` },
+              { type: "text", text: `Analyse IA (corrigée par le pharmacien si applicable) JSON :\n${JSON.stringify(mergedPayload)}\n\nDocument PDF du pharmacien ci-joint.` },
               { type: "file", data: base64, mediaType: "application/pdf", filename: doc.file_name },
             ],
           },
