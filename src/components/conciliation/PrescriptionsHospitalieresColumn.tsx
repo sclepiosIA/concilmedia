@@ -12,7 +12,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Hospital, Pill, Plus, Trash2, Sparkles, Sunrise, Sun, Sunset, Moon, AlertTriangle, Check, X } from "lucide-react";
+import { Hospital, Pill, Plus, Trash2, Sparkles, Sunrise, Sun, Sunset, Moon, AlertTriangle, Check, X, ChevronDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -134,6 +134,16 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
   const [open, setOpen] = useState(false);
   const [justifyId, setJustifyId] = useState<string | null>(null);
   const [justifyText, setJustifyText] = useState("");
+  const [expandedPrescriptionIds, setExpandedPrescriptionIds] = useState<Set<string>>(() => new Set());
+
+  const togglePrescriptionDetails = (id: string) => {
+    setExpandedPrescriptionIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
 
   const { data = [] } = useQuery({
