@@ -28,8 +28,8 @@ export const matchPrescriptionAI = createServerFn({ method: "POST" })
 
     if (!hosp) throw new Error("Prescription introuvable");
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY manquant");
+
+
 
     const { generateText, Output } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
@@ -69,7 +69,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
     let lastError: unknown = null;
     try {
       const res = await generateText({
-        model: gateway("google/gemini-2.5-flash"),
+        model: aiModel,
         prompt,
         experimental_output: Output.object({ schema: AISchema }),
       });
@@ -78,7 +78,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
       lastError = e;
       try {
         const res = await generateText({
-          model: gateway("google/gemini-2.5-flash"),
+          model: aiModel,
           prompt:
             prompt +
             `\n\nRéponds UNIQUEMENT avec un JSON valide de la forme :\n{"status":"vert|jaune|orange|rouge","reason":"...","recommandation":"..."}`,
