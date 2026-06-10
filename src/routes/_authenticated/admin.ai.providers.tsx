@@ -93,8 +93,21 @@ function ProviderForm({ initial, onSaved, onClose }: { initial?: ProviderRow | n
           </SelectContent>
         </Select>
       </div>
-      {(kind === "openai_compatible" || kind === "openai" || kind === "google" || kind === "anthropic") && (
-        <div><Label>Base URL (optionnel)</Label><Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://…" /></div>
+      {kind !== "azure_openai" && (
+        <div>
+          <Label>Endpoint {kind === "openai_compatible" ? "(requis)" : "(optionnel)"}</Label>
+          <Input
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            placeholder={
+              kind === "openai" ? "https://api.openai.com/v1" :
+              kind === "google" ? "https://generativelanguage.googleapis.com/v1beta" :
+              kind === "anthropic" ? "https://api.anthropic.com/v1" :
+              kind === "lovable" ? "https://ai.gateway.lovable.dev/v1" :
+              "https://…"
+            }
+          />
+        </div>
       )}
       {kind === "azure_openai" && (
         <>
@@ -124,12 +137,13 @@ function ProviderForm({ initial, onSaved, onClose }: { initial?: ProviderRow | n
           </div>
         </>
       )}
-      {kind !== "lovable" && (
-        <div>
-          <Label>Clé API {initial?.has_key && <span className="text-xs text-muted-foreground">(laisser vide pour conserver)</span>}</Label>
-          <Input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-…" />
-        </div>
-      )}
+      <div>
+        <Label>
+          Clé API{kind === "lovable" ? " (optionnel — sinon LOVABLE_API_KEY)" : ""}
+          {initial?.has_key && <span className="text-xs text-muted-foreground ml-1">(laisser vide pour conserver)</span>}
+        </Label>
+        <Input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-…" autoComplete="off" />
+      </div>
       <div className="flex items-center gap-2"><Switch checked={isActive} onCheckedChange={setIsActive} /><Label>Actif</Label></div>
       <DialogFooter>
         <Button variant="ghost" onClick={onClose}>Annuler</Button>
