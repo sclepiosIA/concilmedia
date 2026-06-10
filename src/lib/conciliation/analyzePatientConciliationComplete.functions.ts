@@ -516,7 +516,7 @@ Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas d
     try {
       const { buildRagContext } = await import("@/lib/rag/buildRagContext.server");
       const rag = await Promise.race([
-        buildRagContext(dossier as AnalysisDossier, { episodeId: null }),
+        buildRagContext(dossier as AnalysisDossier, {}),
         new Promise<null>((r) => setTimeout(() => r(null), 1500)),
       ]);
       if (rag && rag.passages.length > 0) {
