@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent } from "react";
-import * as XLSX from "xlsx";
+
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -95,8 +95,9 @@ function parseFile(file: File): Promise<ParsedRow[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Lecture impossible"));
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
+        const XLSX = await import("xlsx");
         const wb = XLSX.read(reader.result, { type: "array", cellDates: true });
         const sheet = wb.Sheets[wb.SheetNames[0]];
         const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
