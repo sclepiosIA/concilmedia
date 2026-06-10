@@ -525,7 +525,7 @@ is_severe = 1 si severity ≥ 0.5, sinon 0   (seuil binaire unique)`}</pre>
         </div>
 
         <div>
-          <h4 className="font-semibold mb-2">4. Explicabilité — comment c'est restitué à l'écran</h4>
+          <h4 className="font-semibold mb-2">5. Explicabilité — comment c'est restitué à l'écran</h4>
           <ul className="list-disc pl-5 text-xs space-y-1">
             <li>Chaque <code>TriageBadge</code> P1-P5 expose une infobulle <code>TriageDetails</code> : nombre de divergences par gravité (mineur/modéré/majeur/critique), <code>worstRisk</code>, <code>hasValidation</code>, ancienneté en heures, indicateurs <code>riskComputed</code> / <code>analysisRun</code>.</li>
             <li>Chaque divergence affiche son <code>ml_severity_score</code> (badge ML) + la règle déterministe qui l'a déclenchée (rule.id STOPP ou interaction ATC).</li>
