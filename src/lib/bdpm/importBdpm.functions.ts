@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const BDPM_BASE = "https://base-donnees-publique.medicaments.gouv.fr/telechargement.php?fichier=";
+const BDPM_BASE = "https://base-donnees-publique.medicaments.gouv.fr/download/file/";
 
 const FILES = {
   cis: "CIS_bdpm.txt",
