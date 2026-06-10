@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { PrescriptionHospitaliereUploader } from "./PrescriptionHospitaliereUploader";
+import { parsePosologieText } from "@/lib/conciliation/parsePosologie";
 import { MatchStatusBadge, MatchLegend } from "./MatchStatusBadge";
 import {
   matchPrescription,
