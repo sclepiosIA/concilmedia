@@ -224,17 +224,17 @@ export function buildCallOptions(opts: {
   // Pour GPT-5 direct (OpenAI ou Azure), il faut max_completion_tokens via providerOptions;
   // sinon on garde maxOutputTokens.
   if (typeof maxTokens === "number") {
-    if (isGpt5 && (providerKind === "openai" || providerKind === "azure_openai")) {
-      out.providerOptions = { openai: { maxCompletionTokens: maxTokens, ...gpt5Inner } };
+    if (isGpt5) {
+      // GPT-5 (direct OpenAI/Azure ou via gateway Lovable openai-compatible)
+      // refuse `max_tokens` → on doit passer `max_completion_tokens` via providerOptions.
+      out.providerOptions = { [providerKey]: { maxCompletionTokens: maxTokens, ...gpt5Inner } };
     } else {
       out.maxOutputTokens = maxTokens;
-      if (isGpt5 && Object.keys(gpt5Inner).length > 0) {
-        out.providerOptions = { [providerKey]: gpt5Inner };
-      }
     }
   } else if (isGpt5 && Object.keys(gpt5Inner).length > 0) {
     out.providerOptions = { [providerKey]: gpt5Inner };
   }
+
 
   return out;
 }
