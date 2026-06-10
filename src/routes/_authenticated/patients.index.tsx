@@ -372,6 +372,26 @@ function PatientsListPage() {
           <Input placeholder="Rechercher un patient..." className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
 
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Affectation :</span>
+          <ToggleGroup type="single" value={assignFilter} onValueChange={(v) => v && setAssignFilter(v as typeof assignFilter)} size="sm">
+            <ToggleGroupItem value="all">Tous</ToggleGroupItem>
+            <ToggleGroupItem value="mine" disabled={!meId}>Mes dossiers</ToggleGroupItem>
+            <ToggleGroupItem value="unassigned">Non assignés</ToggleGroupItem>
+          </ToggleGroup>
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide ml-3">Statut :</span>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+            <SelectTrigger className="h-8 w-[200px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous</SelectItem>
+              <SelectItem value="a_faire">À faire</SelectItem>
+              <SelectItem value="en_cours">En cours</SelectItem>
+              <SelectItem value="en_attente_validation">En attente validation</SelectItem>
+              <SelectItem value="valide">Validé</SelectItem>
+              <SelectItem value="clos">Clos</SelectItem>
+            </SelectContent>
+          </Select>
+
         {filtered.length > 0 && (
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xs text-muted-foreground">{filtered.length} résultat(s)</span>
