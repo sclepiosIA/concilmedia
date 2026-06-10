@@ -253,15 +253,33 @@ function matchSwitchPairs(
 
 function buildFastConciliationPayload(dossier: AnalysisDossier, reason: string): AIAnalysisPayload {
   const ville = dossier.traitements_habituels
-    .map((t) => ({ row: t, label: drugLabel(t), key: normalizeDrugName(drugLabel(t)) }))
+    .map((t) => {
+      const label = drugLabel(t);
+      return { row: t, label, key: normalizeDrugName(label), tokens: drugTokens(label) };
+    })
     .filter((t) => t.key);
   const hopital = dossier.prescriptions_hospitalieres
-    .map((p) => ({ row: p, label: drugLabel(p), key: normalizeDrugName(drugLabel(p)) }))
+    .map((p) => {
+      const label = drugLabel(p);
+      return { row: p, label, key: normalizeDrugName(label), tokens: drugTokens(label) };
+    })
     .filter((p) => p.key);
   const hopitalKeys = new Set(hopital.map((p) => p.key));
   const villeKeys = new Set(ville.map((t) => t.key));
-  const villeUnmatched = new Set(ville.filter((t) => !hopitalKeys.has(t.key)).map((t) => t.key));
-  const hopitalUnmatched = new Set(hopital.filter((p) => !villeKeys.has(p.key)).map((p) => p.key));
+  // Matching tolérant : un traitement domicile est "couvert" si tous ses tokens
+  // significatifs (avec synonymes : vitamine D ↔ cholécalciférol, calcium…) sont
+  // présents dans au moins une prescription hôpital (gère les combos).
+  const villeUnmatched = new Set(
+    ville
+      .filter((t) => !hopitalKeys.has(t.key) && !hopital.some((p) => hospitalCovers(t.tokens, p.tokens)))
+      .map((t) => t.key),
+  );
+  const hopitalUnmatched = new Set(
+    hopital
+      .filter((p) => !villeKeys.has(p.key) && !ville.some((t) => hospitalCovers(t.tokens, p.tokens)))
+      .map((p) => p.key),
+  );
+
   // Détection des switchs thérapeutiques AVANT de produire omissions / ajouts.
   const switches = matchSwitchPairs(ville, hopital, villeUnmatched, hopitalUnmatched);
   const divergences: NonNullable<AIAnalysisPayload["divergences_conciliation"]> = [
