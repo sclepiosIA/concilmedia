@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_tasks ADD COLUMN IF NOT EXISTS extra_config jsonb NOT NULL DEFAULT '{}'::jsonb;

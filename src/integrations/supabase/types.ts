@@ -113,6 +113,7 @@ export type Database = {
           current_version: number
           description: string | null
           execution_mode: string
+          extra_config: Json
           id: string
           label: string
           max_tokens: number | null
@@ -128,6 +129,7 @@ export type Database = {
           current_version?: number
           description?: string | null
           execution_mode?: string
+          extra_config?: Json
           id?: string
           label: string
           max_tokens?: number | null
@@ -143,6 +145,7 @@ export type Database = {
           current_version?: number
           description?: string | null
           execution_mode?: string
+          extra_config?: Json
           id?: string
           label?: string
           max_tokens?: number | null
