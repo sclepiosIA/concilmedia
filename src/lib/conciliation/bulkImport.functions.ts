@@ -36,7 +36,15 @@ const AllergieSchema = z.object({
 
 const BiologieSchema = z.object({
   parametre: z.string(),
-  valeur: z.number().optional().nullable(),
+  valeur: z.preprocess((v) => {
+    if (v === null || v === undefined || v === "") return null;
+    if (typeof v === "number") return v;
+    if (typeof v === "string") {
+      const n = parseFloat(v.replace(",", ".").replace(/[^\d.\-eE]/g, ""));
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  }, z.number().nullable().optional()),
   unite: z.string().optional().nullable(),
   valeur_texte: z.string().optional().nullable(),
   date_prelevement: z.string().optional().nullable(),
