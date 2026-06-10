@@ -113,6 +113,109 @@ function doseSummary(row: Record<string, unknown>): string {
   );
 }
 
+// Classes thérapeutiques pour détection de switch hospitalier (ville ↔ hôpital).
+// Un médicament ville absent du DCI hôpital MAIS dont la classe est couverte par
+// une prescription hospitalière = SWITCH (changement de voie/relais), pas omission/ajout.
+type SwitchClass = {
+  id: string;
+  label: string;
+  severite: "moderee" | "majeure";
+  ville: RegExp;
+  hopital: RegExp;
+};
+const SWITCH_CLASSES: SwitchClass[] = [
+  {
+    id: "anticoag",
+    label: "Anticoagulant",
+    severite: "majeure",
+    ville: /\b(rivaroxaban|apixaban|dabigatran|edoxaban|warfarine|fluindione|acenocoumarol|coumadine|previscan|sintrom|xarelto|eliquis|pradaxa|lixiana)\b/i,
+    hopital: /\b(heparine|hnf|hbpm|enoxaparine|tinzaparine|nadroparine|dalteparine|fondaparinux|arixtra|lovenox|innohep|fraxiparine|fragmine|calciparine|argatroban|bivalirudine)\b/i,
+  },
+  {
+    id: "antidiab",
+    label: "Antidiabétique",
+    severite: "majeure",
+    ville: /\b(metformine|gliclazide|glimepiride|glibenclamide|sitagliptine|vildagliptine|saxagliptine|empagliflozine|dapagliflozine|canagliflozine|liraglutide|semaglutide|dulaglutide|repaglinide|insuline\s+(lente|glargine|detemir|degludec|lantus|toujeo|levemir|tresiba|abasaglar))\b/i,
+    hopital: /\b(insuline\s+(rapide|aspart|lispro|glulisine|humalog|novorapid|apidra|actrapid)|insuline\s+ivse|novomix|humalogmix)\b/i,
+  },
+  {
+    id: "antihta",
+    label: "Antihypertenseur",
+    severite: "moderee",
+    ville: /\b(amlodipine|lercanidipine|nifedipine|ramipril|perindopril|enalapril|lisinopril|captopril|losartan|valsartan|candesartan|irbesartan|olmesartan|telmisartan)\b/i,
+    hopital: /\b(nicardipine|loxen|urapidil|eupressyl|clevidipine|nitroprussiate|dinitrate\s+isosorbide|risordan\s+iv)\b/i,
+  },
+  {
+    id: "betabloq",
+    label: "Bêtabloquant",
+    severite: "moderee",
+    ville: /\b(bisoprolol|atenolol|metoprolol|carvedilol|nebivolol|propranolol|acebutolol|sotalol)\b/i,
+    hopital: /\b(esmolol|brevibloc|labetalol|trandate|metoprolol\s+iv)\b/i,
+  },
+  {
+    id: "ipp",
+    label: "IPP",
+    severite: "moderee",
+    ville: /\b(omeprazole|esomeprazole|pantoprazole|lansoprazole|rabeprazole|inexium|inipomp|mopral|eupantol)\b/i,
+    hopital: /\b((omeprazole|esomeprazole|pantoprazole)\s+iv|inipomp\s+iv|inexium\s+iv)\b/i,
+  },
+  {
+    id: "antalgique",
+    label: "Antalgique",
+    severite: "moderee",
+    ville: /\b(paracetamol|doliprane|dafalgan|efferalgan|tramadol|codeine|morphine\s+po|oxycodone|skenan|actiskenan|oxycontin)\b/i,
+    hopital: /\b(paracetamol\s+iv|perfalgan|morphine\s+iv|morphine\s+sc|morphine\s+pca|nefopam|acupan|fentanyl\s+iv|sufentanil)\b/i,
+  },
+  {
+    id: "cortico",
+    label: "Corticoïde",
+    severite: "moderee",
+    ville: /\b(prednisone|prednisolone|cortancyl|solupred|hydrocortisone\s+po|methylprednisolone\s+po|medrol)\b/i,
+    hopital: /\b(methylprednisolone\s+iv|solumedrol|hydrocortisone\s+iv|hemisuccinate|dexamethasone\s+iv|soludecadron)\b/i,
+  },
+];
+
+function matchSwitchPairs(
+  ville: Array<{ row: Record<string, unknown>; label: string; key: string }>,
+  hopital: Array<{ row: Record<string, unknown>; label: string; key: string }>,
+  villeUnmatched: Set<string>,
+  hopitalUnmatched: Set<string>,
+): NonNullable<AIAnalysisPayload["divergences_conciliation"]> {
+  const switches: NonNullable<AIAnalysisPayload["divergences_conciliation"]> = [];
+  for (const klass of SWITCH_CLASSES) {
+    const villeMatches = ville.filter(
+      (t) => villeUnmatched.has(t.key) && klass.ville.test(t.label),
+    );
+    const hopitalMatches = hopital.filter(
+      (p) => hopitalUnmatched.has(p.key) && klass.hopital.test(p.label),
+    );
+    if (villeMatches.length === 0 || hopitalMatches.length === 0) continue;
+    for (const t of villeMatches) {
+      const p = hopitalMatches[0];
+      switches.push({
+        type: "switch" as const,
+        medicament_ville: `${t.label} — ${doseSummary(t.row)}`,
+        medicament_hopital: `${p.label} — ${doseSummary(p.row)}`,
+        severite: klass.severite,
+        justification_clinique: `Switch thérapeutique probable (classe ${klass.label}) : ${t.label} (ville) relayé par ${p.label} (hôpital) en contexte aigu.`,
+        risque:
+          klass.id === "anticoag"
+            ? "Risque hémorragique ou thrombotique si le relais n'est pas tracé à la sortie."
+            : klass.id === "antidiab"
+              ? "Risque hypo/hyperglycémique si le retour au schéma habituel n'est pas planifié."
+              : "Risque de rupture de prise en charge si le switch n'est pas réévalué à la sortie.",
+        recommandation: `Tracer le switch ${t.label} → ${p.label} et planifier le relais à la sortie.`,
+        alternative: "Reprise du traitement habituel dès stabilisation clinique.",
+        confiance: 75,
+        reference: "HAS conciliation médicamenteuse / SFPC",
+      });
+      villeUnmatched.delete(t.key);
+      hopitalUnmatched.delete(p.key);
+    }
+  }
+  return switches;
+}
+
 function buildFastConciliationPayload(dossier: AnalysisDossier, reason: string): AIAnalysisPayload {
   const ville = dossier.traitements_habituels
     .map((t) => ({ row: t, label: drugLabel(t), key: normalizeDrugName(drugLabel(t)) }))
@@ -122,9 +225,14 @@ function buildFastConciliationPayload(dossier: AnalysisDossier, reason: string):
     .filter((p) => p.key);
   const hopitalKeys = new Set(hopital.map((p) => p.key));
   const villeKeys = new Set(ville.map((t) => t.key));
+  const villeUnmatched = new Set(ville.filter((t) => !hopitalKeys.has(t.key)).map((t) => t.key));
+  const hopitalUnmatched = new Set(hopital.filter((p) => !villeKeys.has(p.key)).map((p) => p.key));
+  // Détection des switchs thérapeutiques AVANT de produire omissions / ajouts.
+  const switches = matchSwitchPairs(ville, hopital, villeUnmatched, hopitalUnmatched);
   const divergences: NonNullable<AIAnalysisPayload["divergences_conciliation"]> = [
+    ...switches.slice(0, 8),
     ...ville
-      .filter((t) => !hopitalKeys.has(t.key))
+      .filter((t) => villeUnmatched.has(t.key))
       .slice(0, 12)
       .map((t) => ({
         type: "omission" as const,
@@ -139,7 +247,7 @@ function buildFastConciliationPayload(dossier: AnalysisDossier, reason: string):
         reference: "HAS conciliation médicamenteuse",
       })),
     ...hopital
-      .filter((p) => !villeKeys.has(p.key))
+      .filter((p) => hopitalUnmatched.has(p.key))
       .slice(0, 8)
       .map((p) => ({
         type: "ajout_non_justifie" as const,
