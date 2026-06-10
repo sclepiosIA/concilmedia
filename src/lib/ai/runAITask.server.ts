@@ -126,7 +126,7 @@ function buildModel(
             "api-key": apiKey,
             "Authorization": `Bearer ${apiKey}`,
           },
-          queryParams: { "api-version": apiVersion },
+          // Note: /openai/v1 does NOT accept ?api-version (causes 400). Only legacy /openai needs it.
         });
         return p(modelId);
       }
