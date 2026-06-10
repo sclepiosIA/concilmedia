@@ -22,6 +22,7 @@ import { Route as AuthenticatedPatientsPatientIdRouteImport } from './routes/_au
 import { Route as AuthenticatedEpisodesEpisodeIdRouteImport } from './routes/_authenticated/episodes.$episodeId'
 import { Route as AuthenticatedConciliationSupervisionRouteImport } from './routes/_authenticated/conciliation.supervision'
 import { Route as AuthenticatedConciliationMetriquesRouteImport } from './routes/_authenticated/conciliation.metriques'
+import { Route as AuthenticatedAdminTeamRouteImport } from './routes/_authenticated/admin.team'
 import { Route as AuthenticatedAdminSihConfigRouteImport } from './routes/_authenticated/admin.sih-config'
 import { Route as AuthenticatedAdminRagRouteImport } from './routes/_authenticated/admin.rag'
 import { Route as AuthenticatedAdminImportReelRouteImport } from './routes/_authenticated/admin.import-reel'
@@ -105,6 +106,11 @@ const AuthenticatedConciliationMetriquesRoute =
     path: '/conciliation/metriques',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminTeamRoute = AuthenticatedAdminTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminSihConfigRoute =
   AuthenticatedAdminSihConfigRouteImport.update({
     id: '/sih-config',
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/admin/rag': typeof AuthenticatedAdminRagRoute
   '/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
+  '/admin/team': typeof AuthenticatedAdminTeamRoute
   '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
   '/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
@@ -206,6 +213,7 @@ export interface FileRoutesByTo {
   '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/admin/rag': typeof AuthenticatedAdminRagRoute
   '/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
+  '/admin/team': typeof AuthenticatedAdminTeamRoute
   '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
   '/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/_authenticated/admin/rag': typeof AuthenticatedAdminRagRoute
   '/_authenticated/admin/sih-config': typeof AuthenticatedAdminSihConfigRoute
+  '/_authenticated/admin/team': typeof AuthenticatedAdminTeamRoute
   '/_authenticated/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
   '/_authenticated/conciliation/supervision': typeof AuthenticatedConciliationSupervisionRoute
   '/_authenticated/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
     | '/admin/import-reel'
     | '/admin/rag'
     | '/admin/sih-config'
+    | '/admin/team'
     | '/conciliation/metriques'
     | '/conciliation/supervision'
     | '/episodes/$episodeId'
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/admin/import-reel'
     | '/admin/rag'
     | '/admin/sih-config'
+    | '/admin/team'
     | '/conciliation/metriques'
     | '/conciliation/supervision'
     | '/episodes/$episodeId'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/import-reel'
     | '/_authenticated/admin/rag'
     | '/_authenticated/admin/sih-config'
+    | '/_authenticated/admin/team'
     | '/_authenticated/conciliation/metriques'
     | '/_authenticated/conciliation/supervision'
     | '/_authenticated/episodes/$episodeId'
@@ -422,6 +434,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedConciliationMetriquesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/team': {
+      id: '/_authenticated/admin/team'
+      path: '/team'
+      fullPath: '/admin/team'
+      preLoaderRoute: typeof AuthenticatedAdminTeamRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/sih-config': {
       id: '/_authenticated/admin/sih-config'
       path: '/sih-config'
@@ -526,6 +545,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminImportReelRoute: typeof AuthenticatedAdminImportReelRoute
   AuthenticatedAdminRagRoute: typeof AuthenticatedAdminRagRoute
   AuthenticatedAdminSihConfigRoute: typeof AuthenticatedAdminSihConfigRoute
+  AuthenticatedAdminTeamRoute: typeof AuthenticatedAdminTeamRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -535,6 +555,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminImportReelRoute: AuthenticatedAdminImportReelRoute,
   AuthenticatedAdminRagRoute: AuthenticatedAdminRagRoute,
   AuthenticatedAdminSihConfigRoute: AuthenticatedAdminSihConfigRoute,
+  AuthenticatedAdminTeamRoute: AuthenticatedAdminTeamRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
