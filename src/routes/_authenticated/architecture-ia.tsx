@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MermaidDiagram } from "@/components/architecture/MermaidDiagram";
 import { LayerCard } from "@/components/architecture/LayerCard";
 import { AVAILABLE_MODELS, LOVABLE_PROVIDER_KEY } from "@/lib/ai/availableModels";
