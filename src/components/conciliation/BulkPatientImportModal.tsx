@@ -84,7 +84,9 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
     const total = items.length;
     let done = 0;
     const updated: Item[] = [...items];
-    for (let i = 0; i < updated.length; i++) {
+    setItems([...updated]);
+
+    const processOne = async (i: number) => {
       updated[i] = { ...updated[i], status: "extracting" };
       setItems([...updated]);
       try {
@@ -97,7 +99,17 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
       done++;
       setProgress(Math.round((done / total) * 100));
       setItems([...updated]);
-    }
+    };
+
+    // Pool de concurrence simple
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(EXTRACT_CONCURRENCY, total) }, async () => {
+      while (cursor < total) {
+        const idx = cursor++;
+        await processOne(idx);
+      }
+    });
+    await Promise.all(workers);
     setPhase("review");
   };
 
