@@ -128,12 +128,9 @@ export function useMedicationReconciliation(episodeId: string) {
       const matchedPrescIds = new Set<string>();
 
       for (const t of traitements ?? []) {
-        const dci = (t.dci || t.nom_commercial || "").toLowerCase();
-        if (!dci || existingDci.has(dci)) continue;
-        const match = (prescriptions ?? []).find(
-          (p) =>
-            p.medicament?.toLowerCase().includes(dci) || dci.includes(p.medicament?.toLowerCase() ?? ""),
-        );
+        const rawDci = t.dci || t.nom_commercial || "";
+        if (!rawDci || existingDci.has(rawDci.toLowerCase())) continue;
+        const match = (prescriptions ?? []).find((p) => sameMedicament(rawDci, p.medicament));
         const domicile = {
           dci: t.dci || t.nom_commercial || "Inconnu",
           dosage: t.dosage ? `${t.dosage} ${t.dosage_unite ?? ""}`.trim() : undefined,
@@ -169,7 +166,8 @@ export function useMedicationReconciliation(episodeId: string) {
             posologie: match.posologie ?? undefined,
             prescription_id: match.id,
           };
-          const doseMismatch = t.dosage && match.dosage && !match.dosage.includes(String(t.dosage));
+          const domDoseStr = t.dosage ? `${t.dosage}${t.dosage_unite ?? ""}` : null;
+          const doseMismatch = dosesDifferent(domDoseStr, match.dosage);
           const freqMismatch =
             domicile.posologie && match.posologie &&
             domicile.posologie.replace(/\s+/g, "").toLowerCase() !==
@@ -199,11 +197,10 @@ export function useMedicationReconciliation(episodeId: string) {
       // Ajouts : médicaments prescrits à l'hôpital mais absents du domicile
       for (const p of prescriptions ?? []) {
         if (matchedPrescIds.has(p.id)) continue;
-        const med = (p.medicament ?? "").toLowerCase();
+        const med = p.medicament ?? "";
         if (!med) continue;
-        const alreadyDom = (traitements ?? []).some(
-          (t) => (t.dci || t.nom_commercial || "").toLowerCase().includes(med) ||
-                 med.includes((t.dci || t.nom_commercial || "").toLowerCase()),
+        const alreadyDom = (traitements ?? []).some((t) =>
+          sameMedicament(t.dci || t.nom_commercial, med),
         );
         if (alreadyDom) continue;
         const classe = classifyDci(p.medicament ?? "");
