@@ -89,7 +89,8 @@ export const upsertProvider = createServerFn({ method: "POST" })
     }
 
     if (data.api_key !== undefined && data.api_key.trim().length > 0) {
-      const { error: rpcErr } = await supabaseAdmin.rpc("ai_provider_set_key", {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: rpcErr } = await (supabaseAdmin.rpc as any)("ai_provider_set_key", {
         _provider_id: providerId,
         _plain_key: data.api_key,
         _master_key: masterKey,
