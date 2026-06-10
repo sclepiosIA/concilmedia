@@ -102,13 +102,16 @@ const DossierSchema = z.object({
 
 type DossierData = z.infer<typeof DossierSchema>;
 
-const normalizeKey = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+const normalizeKey = (value: string) => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
 
 const normalizeHospitalPrescriptionLines = <T extends DossierData>(dossier: T): T => {
   if (dossier.document_type !== "ordonnance_hospitaliere" || dossier.traitements.length === 0) return dossier;
-  const existing = new Set(dossier.prescriptions_hospitalieres.map((p) => normalizeKey(`${p.medicament} ${p.dosage ?? ""}`)));
+  const existing = dossier.prescriptions_hospitalieres.map((p) => normalizeKey(`${p.medicament} ${p.dosage ?? ""}`));
   const missingFromHospitalPrescription = dossier.traitements
-    .filter((t) => !existing.has(normalizeKey(`${t.dci} ${t.dosage ?? ""}${t.dosage_unite ?? ""}`)))
+    .filter((t) => {
+      const key = normalizeKey(`${t.dci} ${t.dosage ?? ""}${t.dosage_unite ?? ""}`);
+      return !existing.some((existingKey) => existingKey.includes(key) || key.includes(existingKey));
+    })
     .map((t) => ({
       medicament: [t.dci, t.dosage, t.dosage_unite].filter(Boolean).join(" "),
       dosage: [t.dosage, t.dosage_unite].filter(Boolean).join(" ") || null,
