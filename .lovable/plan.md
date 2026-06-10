@@ -1,120 +1,82 @@
 ## Objectif
 
-Transformer `/_authenticated/evaluation` en banc d'essai cohorte :
-1. Upload massif de fichiers patients (multi-patient, multi-doc) avec tag cohorte
-2. Tri IA automatique (patient, document, traitement habituel, bio, prescription hospi)
-3. Conciliation IA automatique sur chaque épisode créé
-4. Upload du PDF pharmacien (gold standard) par patient
-5. Analyse de corrélation IA vs pharmacien + stats cohorte
-6. Benchmark LLM vs ML sur 3 axes : triage patient complexe, détection DNI, sévérité
+Permettre, dans le banc d'essai cohorte, de lancer la conciliation IA **simultanément sur plusieurs modèles LLM** et de **comparer leurs performances** (Précision / Rappel / F1 vs gold standard pharmacien, triage, sévérité, vs ML).
 
-## Flux utilisateur
+Ajouter à la liste des modèles utilisables 3 nouveaux endpoints Azure AI Foundry :
+- `claude-opus-4-8` via `https://ia-interne-resource.services.ai.azure.com/anthropic/v1/messages`
+- `gpt-5.4` via `https://ia-interne-resource.services.ai.azure.com/openai/v1/responses`
+- `gpt-5-nano` via `https://ia-interne-resource.services.ai.azure.com/openai/v1/responses`
 
-```text
-[1] Saisir tag cohorte (ex. "lot-mars-cardio")
-    │
-[2] Drop N fichiers (ordo ville, lettres admission, ordo hospi, bio, CRH)
-    │   → BulkPatientImport existant (extract + commit) avec cohort_tag
-    │   → IA classe par patient + crée épisodes auto
-    │
-[3] Bouton "Lancer conciliation IA cohorte"
-    │   → boucle sur les épisodes créés
-    │   → analyzePatientConciliationComplete pour chacun
-    │
-[4] Pour chaque patient : drop du PDF pharmacien (gold standard)
-    │   → extractPharmacistGoldStandard (nouvelle serverFn)
-    │   → JSON normalisé : { divergences:[{med, type, severite}], triage_complexe:bool }
-    │
-[5] Bouton "Calculer corrélation cohorte"
-    │   → comparePharmacistVsIA (nouvelle serverFn)
-    │   → calcule TP/FP/FN par patient et global
-    │   → calcule aussi métriques ML (Layer2 triage, Layer4 severity)
-    │
-[6] Dashboard de résultats
-    │   ├── Métriques cohorte (precision/recall/F1 IA vs pharmacien)
-    │   ├── Stats par patient (table triable)
-    │   ├── Comparatif LLM vs ML (3 onglets)
-    │   └── Export CSV
+## 1. Providers & modèles (DB seed + admin)
+
+Migration SQL pour insérer (ou upsert par `name`) dans `ai_providers` :
+- `Azure Foundry — Anthropic` (kind: `anthropic`, base_url: `…/anthropic/v1/messages`, clé: secret `AZURE_OPENAI_API_KEY` existant, `extra_config: { variant: "azure_foundry_anthropic" }`)
+- `Azure Foundry — OpenAI Responses` (kind: `azure_openai`, base_url: `…/openai/v1/responses`, `extra_config: { variant: "responses_api" }`)
+
+Mise à jour de `runAITask.server.ts` :
+- Brancher la variante `anthropic` Azure Foundry : `createAnthropic({ baseURL, apiKey, headers: { "api-key": apiKey } })` quand `extra.variant === "azure_foundry_anthropic"`.
+- Brancher la variante `responses_api` : utiliser `createOpenAI({ baseURL, apiKey }).responses(modelId)` (provider OpenAI Responses) avec en-tête `api-key`.
+- Étendre `isGpt5Family` pour matcher `gpt-5.4` et `gpt-5-nano` (déjà couvert par la regex actuelle, vérifier).
+
+Registre des modèles côté UI (`src/lib/ai/availableModels.ts`, **nouveau**) :
+```
+[
+  { id: "google/gemini-3-flash-preview", label: "Gemini 3 Flash (Lovable)", providerName: "Lovable AI" },
+  { id: "openai/gpt-5", label: "GPT-5 (Lovable)", providerName: "Lovable AI" },
+  { id: "claude-opus-4-8", label: "Claude Opus 4.8 (Azure Foundry)", providerName: "Azure Foundry — Anthropic" },
+  { id: "gpt-5.4", label: "GPT-5.4 (Azure Foundry)", providerName: "Azure Foundry — OpenAI Responses" },
+  { id: "gpt-5-nano", label: "GPT-5 Nano (Azure Foundry)", providerName: "Azure Foundry — OpenAI Responses" },
+]
 ```
 
-## Détail technique
+## 2. Refactor du moteur de conciliation pour accepter un modèle
 
-### Base de données (1 migration)
+`analyzePatientConciliationComplete.functions.ts` :
+- Ajouter un input optionnel `{ patientId, modelOverride?: { providerName: string, modelId: string }, runTag?: string }`.
+- Si `modelOverride` fourni → `resolveAITask` reçoit un override (modèle + provider explicite) au lieu de la config DB du slug.
+- L'insertion dans `conciliation_ai_analyses` enregistre le `model` réel utilisé + une nouvelle colonne `run_tag` (ex. `multi-llm-2026-06-10T14h`) pour pouvoir comparer plusieurs runs sans s'écraser.
 
-- `cohorts` (nouveau) : `id`, `tag`, `label`, `created_by`, `created_at`
-- `patients.cohort_id uuid null` (nouveau) — set à l'import
-- `pharmacist_gold_standards` (nouveau) :
-  - `id`, `patient_id`, `episode_id`, `cohort_id`
-  - `storage_path`, `file_name`, `extracted_json jsonb`
-  - `triage_complexe boolean`, `nb_divergences int`
-  - `uploaded_by`, `created_at`
-- `cohort_evaluations` (nouveau) : cache des runs avec
-  - `cohort_id`, `metrics_ia jsonb`, `metrics_ml jsonb`, `per_patient jsonb`, `computed_at`
-- GRANTs + RLS scoping par `created_by` / `cohort.created_by`
+`resolveAITask` : accepter un 3e paramètre `override?: { providerName, modelId }` qui contourne le lookup `ai_tasks` et fabrique la config directement à partir du provider trouvé par nom.
 
-### Server functions (nouvelles)
+## 3. Migration DB
 
-| Fichier | Fonctions |
-|---|---|
-| `src/lib/cohort/cohort.functions.ts` | `createCohort`, `listCohorts`, `getCohortPatients` |
-| `src/lib/cohort/runCohortConciliation.functions.ts` | Boucle `analyzePatientConciliationComplete` sur épisodes d'une cohorte, retourne progression |
-| `src/lib/cohort/goldStandard.functions.ts` | `uploadPharmacistGoldPDF` (storage `ordonnances`), `extractPharmacistGoldStandard` (LLM → JSON normalisé), `listGoldStandards` |
-| `src/lib/cohort/evaluateCohort.functions.ts` | `comparePharmacistVsIA` (TP/FP/FN par patient + global, par type de divergence, par sévérité) + `computeMLBaselines` (appelle `predictLayer2Sync` + heuristique détection + `predictLayer4Sync`) |
+- `ALTER TABLE conciliation_ai_analyses ADD COLUMN run_tag text;` + index `(patient_id, run_tag)`.
+- `ALTER TABLE conciliation_medicaments ADD COLUMN run_tag text;` (les divergences IA sont taggées par run).
+- `ALTER TABLE cohort_evaluations ADD COLUMN model_label text, ADD COLUMN run_tag text;` + drop unicité existante sur `cohort_id` et remplacer par `UNIQUE(cohort_id, run_tag)`.
+- Seed providers Azure Foundry (cf §1).
+- GRANTs déjà en place sur ces tables, rien à ajouter.
 
-### Réutilisation existante
+## 4. Nouveau serverFn `runCohortMultiModel`
 
-- `BulkPatientImportModal` : ajout d'une prop `cohortId` → propage dans `commitBulkImport`
-- `extractPatientDossier` / `commitBulkImport` : reçoivent `cohort_id` optionnel, le copient sur `patients.cohort_id`
-- `analyzePatientConciliationComplete` : appelé tel quel
-- `mlConcilmed.server.ts` : `predictLayer2Sync` + `predictLayer4Sync` réutilisés sans modification
+`src/lib/cohort/runCohortMultiModel.functions.ts` :
+- Input : `{ cohortId, models: Array<{ providerName, modelId, label }> }`.
+- Génère un `runTag = "multi-" + nanoid()`.
+- Pour chaque patient × chaque modèle : appelle `analyzePatientConciliationComplete` avec `modelOverride` et `runTag` (séquentiel patient par patient, parallèle entre modèles pour un même patient via `Promise.allSettled`).
+- Retourne un récap `{ runTag, perModel: [{ label, ok, fail, durationMs }] }`.
 
-### UI — `src/routes/_authenticated/evaluation.tsx` (refonte)
+`evaluateCohort.functions.ts` : accepter `{ cohortId, runTag? }` ; quand `runTag` fourni, filtrer `conciliation_medicaments` sur ce tag. Stocker une ligne `cohort_evaluations` par `(cohortId, runTag, model_label)`.
 
-Page à onglets :
-- **Onglet "Import cohorte"** : input tag cohorte + zone drop + bouton "Importer". Table de progression par fichier.
-- **Onglet "Conciliation IA"** : liste épisodes de la cohorte, bouton "Lancer", barre progression, statut par patient.
-- **Onglet "Gold standard pharmacien"** : tableau patients × bouton upload PDF + badge "extrait" / "manquant".
-- **Onglet "Résultats"** :
-  - Cards : Precision / Recall / F1 IA vs Pharma
-  - Tableau par patient (DNI détectées IA, DNI pharma, accord %)
-  - Section "LLM vs ML" — 3 sous-cartes (Triage / Détection / Sévérité) avec métriques côte à côte
-  - Bouton "Export CSV"
+Nouveau serverFn `evaluateCohortAllModels({ cohortId, runTag })` : itère sur les `model_label` distincts de ce run, appelle `evaluateCohort` par modèle, renvoie un tableau comparatif.
 
-Composants nouveaux :
-- `src/components/cohort/CohortImportTab.tsx`
-- `src/components/cohort/CohortRunTab.tsx`
-- `src/components/cohort/GoldStandardTab.tsx`
-- `src/components/cohort/CohortResultsTab.tsx`
-- `src/components/cohort/LLMvsMLPanel.tsx`
+## 5. UI
 
-### Prompt extraction gold-standard
+`CohortRunTab.tsx` :
+- Sélecteur multi (checkbox) sur la liste de modèles dispos. Par défaut le modèle actuel coché.
+- Bouton « Lancer conciliation multi-modèles » → appelle `runCohortMultiModel`.
+- Barre de progression par modèle.
 
-Schéma strict :
-```json
-{
-  "patient": { "nom":"...", "prenom":"...", "date_naissance":"YYYY-MM-DD" },
-  "triage_complexe": true,
-  "divergences": [
-    { "medicament":"...", "type":"omission|ajout|modification|substitution",
-      "severite":"mineure|moderee|majeure|critique", "commentaire":"..." }
-  ]
-}
-```
+`CohortResultsTab.tsx` :
+- Si plusieurs runs/modèles présents pour la cohorte : tableau comparatif (Modèle | Précision | Rappel | F1 | Triage acc. | Sévérité MAE | Durée moy. | Coût relatif placeholder).
+- Graphique barres groupées (recharts déjà dispo) par métrique.
+- Conserver l'affichage existant en single-model si un seul run.
 
-### Algorithme corrélation (par patient puis agrégé)
+## 6. Hors scope
 
-- Match med par DCI normalisée (lower + sans espace) + type
-- TP = match IA ∩ pharma | FP = IA only | FN = pharma only
-- Precision, Recall, F1 + accord pondéré par sévérité
-- Pour le triage : confusion matrix IA-triage vs pharma-triage vs ML-triage
-
-## Hors scope (à confirmer plus tard)
-
-- Pas de re-training ML automatique
-- Pas de notification/email
-- Garde la page synthétique existante en lecture seule (route `/evaluation-synth` si besoin) — non prioritaire
+- Pas de gestion fine des coûts/tokens (placeholder seulement).
+- Pas de retry automatique en cas d'échec d'un modèle (le run est marqué failed et on continue).
+- Pas de re-extraction du gold standard (un seul gold par patient sert de référence).
 
 ## Fichiers touchés
 
-**Nouveaux** : 1 migration + 4 fichiers `.functions.ts` + 5 composants React + 1 route éventuelle
-**Modifiés** : `evaluation.tsx`, `BulkPatientImportModal.tsx`, `bulkImport.functions.ts` (param cohort_id)
+- **Nouveaux** : `src/lib/ai/availableModels.ts`, `src/lib/cohort/runCohortMultiModel.functions.ts`, `src/lib/cohort/evaluateCohortAllModels.functions.ts`, migration SQL.
+- **Modifiés** : `src/lib/ai/runAITask.server.ts` (variantes Foundry + override), `src/lib/conciliation/analyzePatientConciliationComplete.functions.ts` (modelOverride/runTag), `src/lib/cohort/evaluateCohort.functions.ts` (filtre runTag), `src/components/cohort/CohortRunTab.tsx`, `src/components/cohort/CohortResultsTab.tsx`, `src/integrations/supabase/types.ts` (auto régénéré après migration).
