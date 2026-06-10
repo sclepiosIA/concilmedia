@@ -51,7 +51,17 @@ RÈGLES CLINIQUES STRICTES :
 2. **"contre_indications"** est réservé aux médicaments EFFECTIVEMENT PRESCRITS contre-indiqués chez ce patient (ex: AINS prescrit + DFG=30). Un médicament MANQUANT à l'hôpital n'est JAMAIS une contre-indication → c'est une "omission" dans divergences_conciliation.
 3. **"medicaments_haut_risque"** ne liste un médicament que s'il pose un problème SPÉCIFIQUE non couvert ailleurs (ex: insuline à dose élevée sans surveillance glycémique). Ne pas le remplir juste parce qu'un AOD/insuline/opioïde est présent.
 4. Pour CHAQUE divergence, identifier précisément : médicament ville, médicament hôpital (ou null), type, justification ancrée dans la clinique.
-5. Comparer DCI/dose/voie/posologie : omission (ville→absent hôpital), ajout_non_justifie (absent ville→hôpital sans indication claire), switch (DCI ou voie changée), modification_posologie (même DCI, dose différente), substitution_classe (changement de classe thérapeutique).
+5. Comparer DCI/dose/voie/posologie : omission (ville→absent hôpital ET aucun équivalent de classe), ajout_non_justifie (absent ville→hôpital sans indication claire ET aucun équivalent de classe), switch (DCI/voie/forme changée OU relais de classe en aigu), modification_posologie (même DCI, dose différente), substitution_classe (changement de classe thérapeutique stable).
+5bis. **RÈGLE SWITCH HOSPITALIER (PRIORITAIRE sur omission+ajout)** : Si un traitement habituel d'une classe X est absent à l'hôpital MAIS qu'un médicament hospitalier couvre la même classe ou la même indication, créer UNE SEULE ligne type:"switch" (medicament_ville ET medicament_hopital remplis) — pas une omission + un ajout séparés. Équivalences typiques à reconnaître :
+  - Anticoagulants : AOD/AVK PO (rivaroxaban, apixaban, dabigatran, edoxaban, warfarine, fluindione) ↔ HNF IV, HBPM SC (enoxaparine, tinzaparine), fondaparinux
+  - Antidiabétiques : metformine + ADO + insuline lente PO/SC ↔ insuline rapide SC protocole / insuline IVSE
+  - Antihypertenseurs PO (amlodipine, IEC, ARA2) ↔ nicardipine IV, urapidil IV, dérivés nitrés IV
+  - Bêtabloquants PO (bisoprolol, aténolol) ↔ esmolol IV, labétalol IV
+  - IPP PO ↔ IPP IV (pantoprazole, ésoméprazole)
+  - Antalgiques PO (paracétamol, tramadol, morphine PO) ↔ paracétamol IV, morphine IV/SC/PCA, néfopam
+  - Corticoïdes PO ↔ méthylprednisolone IV, hydrocortisone IV
+  - Toute molécule PO ↔ même DCI en IV/SC = switch de voie (pas modification_posologie).
+  Sévérité switch : majeure pour anticoagulants/insulines, modérée sinon. Recommandation : tracer le switch et planifier le relais à la sortie.
 6. Adaptations rénales : si DFG<60 vérifier metformine, IEC/ARA2, AINS, anticoagulants, antibio. Si INR>4 alerter anticoagulants. Si K+ anormal alerter IEC/ARA2/spironolactone.
 7. Allergies croisées (pénicilline↔céphalo, AINS↔aspirine, sulfamides).
 8. Chaque item DOIT contenir severite, recommandation pratique, confiance 0-100, reference.
