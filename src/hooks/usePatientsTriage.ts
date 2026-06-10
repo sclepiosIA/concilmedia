@@ -6,6 +6,7 @@ import {
   type NiveauRisque,
   type TriageResult,
 } from "@/lib/conciliation/triageScale";
+import { computeRiskScore } from "@/lib/conciliation/riskScore";
 
 const RISK_ORDER: NiveauRisque[] = ["faible", "modere", "eleve", "critique"];
 const worseRisk = (a: NiveauRisque | null, b: NiveauRisque | null): NiveauRisque | null => {
@@ -56,7 +57,7 @@ export function usePatientsTriage(patientIds: string[]) {
           .in("id", patientIds),
         supabase
           .from("traitements_habituels")
-          .select("patient_id")
+          .select("patient_id, dci, nom_commercial")
           .eq("actif", true)
           .in("patient_id", patientIds),
         supabase
@@ -77,6 +78,7 @@ export function usePatientsTriage(patientIds: string[]) {
       const comorbs = comorbRes.data ?? [];
 
       const RENAL_RE = /renal|rein|ckd|insuffisance r[ée]nale|dfg/i;
+      const HEPAT_RE = /h[ée]pat|cirrhos|foie/i;
       const ageByPatient = new Map<string, number | null>();
       for (const p of patientsData) {
         const age = p.date_naissance
@@ -85,12 +87,24 @@ export function usePatientsTriage(patientIds: string[]) {
         ageByPatient.set(p.id, age);
       }
       const nbTraitementsByPatient = new Map<string, number>();
+      const dciByPatient = new Map<string, string[]>();
       for (const t of traitements) {
         nbTraitementsByPatient.set(t.patient_id, (nbTraitementsByPatient.get(t.patient_id) ?? 0) + 1);
+        const dci = (t.dci || t.nom_commercial || "").trim();
+        if (dci) {
+          const arr = dciByPatient.get(t.patient_id) ?? [];
+          arr.push(dci);
+          dciByPatient.set(t.patient_id, arr);
+        }
       }
       const hasRenaleByPatient = new Map<string, boolean>();
+      const hasHepatByPatient = new Map<string, boolean>();
+      const nbComorbByPatient = new Map<string, number>();
       for (const c of comorbs) {
-        if (RENAL_RE.test(c.libelle ?? "")) hasRenaleByPatient.set(c.patient_id, true);
+        nbComorbByPatient.set(c.patient_id, (nbComorbByPatient.get(c.patient_id) ?? 0) + 1);
+        const lib = c.libelle ?? "";
+        if (RENAL_RE.test(lib)) hasRenaleByPatient.set(c.patient_id, true);
+        if (HEPAT_RE.test(lib)) hasHepatByPatient.set(c.patient_id, true);
       }
 
 
@@ -146,10 +160,22 @@ export function usePatientsTriage(patientIds: string[]) {
       const result: Record<string, TriageResult> = {};
       for (const pid of patientIds) {
         const divInfo = divAgg.get(pid);
+        let worst: NiveauRisque | null = worstRiskByPatient.get(pid) ?? null;
+        if (!worst) {
+          const r = computeRiskScore({
+            age: ageByPatient.get(pid) ?? null,
+            via_urgences: false,
+            nb_comorbidites: nbComorbByPatient.get(pid) ?? 0,
+            has_insuffisance_renale: hasRenaleByPatient.get(pid) ?? false,
+            has_insuffisance_hepatique: hasHepatByPatient.get(pid) ?? false,
+            traitements_dci: dciByPatient.get(pid) ?? [],
+          });
+          worst = r.niveau;
+        }
         result[pid] = computePatientTriage({
           hasActiveEpisode: activeByPatient.get(pid) ?? false,
           hasValidation: validatedPatients.has(pid),
-          worstRisk: worstRiskByPatient.get(pid) ?? null,
+          worstRisk: worst,
           divergencesByGravity: divInfo?.byGravity ?? { mineur: 0, modere: 0, majeur: 0, critique: 0 },
           nbDivergencesNonIntentionnelles: divInfo?.nonIntentionnelles ?? 0,
           oldestPendingAnalysisAt: oldestAnalysisByPatient.get(pid) ?? null,
@@ -157,7 +183,6 @@ export function usePatientsTriage(patientIds: string[]) {
           nbTraitements: nbTraitementsByPatient.get(pid) ?? 0,
           hasInsuffisanceRenale: hasRenaleByPatient.get(pid) ?? false,
         });
-
       }
       return result;
     },
