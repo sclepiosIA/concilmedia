@@ -625,7 +625,7 @@ score = σ(z) ∈ [0, 1]`}
   + 0.05·nb_meds_hosp
   + 0.3 si durée > 10
 severity = σ(z) ∈ [0, 1]
-level = high ≥ 0.7 | mod ≥ 0.4 | low`}
+is_severe = 1 si severity ≥ 0.5, sinon 0`}
               </pre>
               <p>
                 <strong>Injection :</strong> <code>DivergenceConciliation.ml_severity_score</code>{" "}
