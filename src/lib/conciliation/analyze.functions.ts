@@ -15,6 +15,8 @@ export type DivergenceConciliation = {
   alternative?: string;
   reference?: string;
   confiance?: number;
+  ml_severity_score?: number; // 0..1 — Étage 4 (gravité oubli) si exécuté
+  ml_is_severe?: number; // 0/1
 };
 
 export type ActionPrioritaire = {
