@@ -253,27 +253,28 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
 
     // Garde-fou : on borne la durée d'appel et la longueur de sortie pour
     // éviter un "chargement infini" côté UI si le modèle traîne.
-    const TIMEOUT_MS = 24_000;
+    const TIMEOUT_MS = 45_000;
     const callOptionsWithDefaults: Record<string, unknown> = { ...callOptions };
     const { isGpt5Family } = await import("@/lib/ai/runAITask.server");
     const isGpt5 = isGpt5Family(__modelIdUsed, "lovable");
     const provOpts = (callOptionsWithDefaults.providerOptions ?? {}) as
       Record<string, Record<string, unknown> | undefined>;
-    const hasMaxCompletion = !!(
-      (provOpts.openai as { maxCompletionTokens?: number } | undefined)?.maxCompletionTokens ??
-      (provOpts.lovable as { maxCompletionTokens?: number } | undefined)?.maxCompletionTokens
-    );
-    if (callOptionsWithDefaults.maxOutputTokens === undefined && !hasMaxCompletion) {
-      if (isGpt5) {
-        // GPT-5 refuse max_tokens → max_completion_tokens via providerOptions
-        const key = provOpts.lovable !== undefined ? "lovable" : "openai";
-        callOptionsWithDefaults.providerOptions = {
-          ...provOpts,
-          [key]: { ...(provOpts[key] ?? {}), maxCompletionTokens: 1600 },
-        };
-      } else {
-        callOptionsWithDefaults.maxOutputTokens = 1600;
-      }
+
+    if (isGpt5) {
+      // Force verbosité minimale + raisonnement minimal pour latence courte.
+      const key = provOpts.lovable !== undefined ? "lovable" : "openai";
+      const existing = (provOpts[key] ?? {}) as Record<string, unknown>;
+      callOptionsWithDefaults.providerOptions = {
+        ...provOpts,
+        [key]: {
+          ...existing,
+          verbosity: "low",
+          reasoningEffort: "minimal",
+          maxCompletionTokens: (existing.maxCompletionTokens as number | undefined) ?? 1600,
+        },
+      };
+    } else if (callOptionsWithDefaults.maxOutputTokens === undefined) {
+      callOptionsWithDefaults.maxOutputTokens = 1600;
     }
 
 
