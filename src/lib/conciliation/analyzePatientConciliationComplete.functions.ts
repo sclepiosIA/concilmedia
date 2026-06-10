@@ -129,12 +129,16 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
     // éviter un "chargement infini" côté UI si le modèle traîne.
     const TIMEOUT_MS = 110_000;
     const callOptionsWithDefaults: Record<string, unknown> = { ...callOptions };
-    if (
-      callOptionsWithDefaults.maxOutputTokens === undefined &&
-      !(callOptionsWithDefaults.providerOptions as { openai?: { maxCompletionTokens?: number } } | undefined)?.openai?.maxCompletionTokens
-    ) {
+    const provOpts = callOptionsWithDefaults.providerOptions as
+      | Record<string, { maxCompletionTokens?: number } | undefined>
+      | undefined;
+    const hasMaxCompletion = !!(
+      provOpts?.openai?.maxCompletionTokens ?? provOpts?.lovable?.maxCompletionTokens
+    );
+    if (callOptionsWithDefaults.maxOutputTokens === undefined && !hasMaxCompletion) {
       callOptionsWithDefaults.maxOutputTokens = 4000;
     }
+
 
     let result;
     try {
