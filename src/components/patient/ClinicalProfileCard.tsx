@@ -17,6 +17,7 @@ import {
   type ComplexityLevel,
 } from "@/lib/clinical/complexityScore";
 import { computeBmi } from "@/lib/clinical/bmi";
+import { dedupeComorbidites } from "@/lib/conciliation/normalizeComorbidites";
 
 const TONE: Record<ComplexityLevel, string> = {
   faible: "bg-green-100 text-green-800 border-green-200",
@@ -118,7 +119,13 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
       (await supabase.from("traitements_habituels").select("*").eq("patient_id", patientId).eq("actif", true)).data ?? [],
   });
 
-  const labels = comorbidites.map((c) => c.libelle);
+  const dedupedComorb = dedupeComorbidites(
+    (comorbidites as Array<{ libelle: string | null; code_cim10: string | null }>).map((c) => ({
+      libelle: c.libelle ?? "",
+      code_cim10: c.code_cim10 ?? null,
+    })),
+  );
+  const labels = dedupedComorb.map((c) => c.libelle);
   const bmi = computeBmi(patient?.poids_kg ?? null, patient?.taille_cm ?? null);
   const baseComplexity = computeComplexity(labels);
   // Extension du score : âge, polymédication, obésité, IR
@@ -155,7 +162,7 @@ export function ClinicalProfileCard({ patientId }: { patientId: string }) {
               <span className="text-muted-foreground">Aucune comorbidité renseignée</span>
             ) : (
               <div className="flex flex-wrap gap-1.5">
-                {labels.map((l) => (
+                {labels.map((l: string) => (
                   <Badge key={l} variant="outline" className="bg-white border-red-200 text-red-800">{l}</Badge>
                 ))}
               </div>

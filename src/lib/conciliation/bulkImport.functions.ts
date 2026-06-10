@@ -138,6 +138,7 @@ Règles CRUCIALES de classification :
 - Privilégie la DCI au nom commercial dans "traitements"; dans "prescriptions_hospitalieres" garde le libellé tel qu'écrit.
 - Biologie prioritaire : DFG, créatinine, kaliémie, natrémie, INR, TP, hémoglobine, plaquettes, leucocytes, ASAT, ALAT, glycémie, HbA1c, CRP.
 - Omets les champs inconnus, n'invente rien. Renvoie [] pour les sections vides.
+- COMORBIDITÉS — règles strictes anti-doublons : UNE seule entrée par pathologie ; garde le libellé le plus précis (type, stade, sévérité, contrôle) ; ne répète JAMAIS une abréviation et sa forme développée (HTA/Hypertension artérielle, IRC/Insuffisance rénale chronique, FA/Fibrillation auriculaire, BPCO, AVC, IDM, DT2…) ; ne décompose pas une même maladie en plusieurs lignes ("Diabète", "Diabète de type 2", "Diabète déséquilibré" → 1 seule entrée la plus précise).
 - Ne renvoie QUE le JSON.`;
     const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
@@ -292,7 +293,11 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             source_document_id: sourceDocumentId,
           })) as never);
         }
-        const newComorb = item.comorbidites.filter((c) => !existingComorb.has(c.libelle.toLowerCase().trim()));
+        const { filterNewComorbidites } = await import("./normalizeComorbidites");
+        const newComorb = filterNewComorbidites(
+          item.comorbidites,
+          Array.from(existingComorb),
+        );
         if (newComorb.length) {
           await supabase.from("comorbidites").insert(newComorb.map((c) => ({
             patient_id: patientId!, libelle: c.libelle, statut: c.statut,
