@@ -542,9 +542,25 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
   const doublons = payload.doublons_therapeutiques ?? [];
   const allergies = payload.allergies_croisees ?? [];
   const hautRisque = payload.medicaments_haut_risque ?? [];
+  const regles = (payload.alertes_regles ?? []) as DeterministicAlert[];
+
+  // Couples de classes ATC déclenchés par le moteur déterministe (clé canonique triée)
+  const ruleInteractionKeys = new Set<string>(
+    regles
+      .filter((r): r is Extract<DeterministicAlert, { type: "interaction" }> => r.type === "interaction")
+      .map((r) => [r.classes[0], r.classes[1]].slice().sort().join("|")),
+  );
+
+  /** Une interaction IA est "confirmée par règle" si ses 2 DCI mappent vers un couple de classes du moteur. */
+  const interactionMatchesRule = (dci1: string, dci2: string): boolean => {
+    const c1 = classifyDci(dci1);
+    const c2 = classifyDci(dci2);
+    if (c1 === "autre" || c2 === "autre") return false;
+    return ruleInteractionKeys.has([c1, c2].slice().sort().join("|"));
+  };
 
   const hasAny =
-    divergences.length + interactions.length + ci.length + adaptations.length + doublons.length + allergies.length + hautRisque.length > 0;
+    divergences.length + interactions.length + ci.length + adaptations.length + doublons.length + allergies.length + hautRisque.length + regles.length > 0;
   if (!hasAny) return null;
 
   const valFor = (category: AlertCategory, index: number) => {
@@ -573,6 +589,9 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
     if (s === "moderee") return "moderee";
     return "mineure";
   };
+
+  const regleSeverite = (g: DeterministicAlert["severite"]): Severity =>
+    g === "critique" ? "contre_indication" : g === "majeur" ? "majeure" : g === "modere" ? "moderee" : "mineure";
 
   return (
     <div className="space-y-4">
