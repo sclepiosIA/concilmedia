@@ -344,21 +344,7 @@ Priorité: signaler surtout omissions/ajouts/switch/dose. Max 10 divergences, ma
       }
     }
 
-    try {
-      const { computeDeterministicAlerts } = await import("./deterministicAlerts");
-      const traitementsDci = [
-        ...dossier.traitements_habituels.map((t) => drugLabel(t)),
-        ...dossier.prescriptions_hospitalieres.map((p) => drugLabel(p)),
-      ].filter(Boolean);
-      const det = computeDeterministicAlerts({
-        age: (dossier.patient.age as number | undefined) ?? null,
-        comorbidites: dossier.comorbidites.map((c) => asString(c.libelle)).filter(Boolean),
-        traitements_dci: traitementsDci,
-      });
-      payload.alertes_regles = det.all;
-    } catch (e) {
-      console.warn("[conciliation_complete] deterministic alerts failed:", e);
-    }
+    payload = await attachDeterministicAlerts(payload, dossier as AnalysisDossier);
 
     await supabase.from("conciliation_ai_analyses").insert({
       episode_id: null,
