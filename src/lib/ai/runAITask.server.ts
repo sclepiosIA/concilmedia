@@ -26,18 +26,24 @@ export interface AITaskFallback {
   providerKind?: ProviderKind;
 }
 
-interface ResolvedTask {
+export interface ResolvedTask {
   systemPrompt: string;
   model: LanguageModel;
   modelId: string;
   providerKind: ProviderKind;
   temperature?: number;
   maxTokens?: number;
+  reasoningEffort?: "low" | "medium" | "high";
+  /**
+   * Ready-to-spread options to pass to `generateText({...callOptions, model, ...})`.
+   * Adapts to model family: GPT-5.x omits temperature and routes max tokens through
+   * providerOptions (max_completion_tokens + reasoning_effort).
+   */
+  callOptions: Record<string, unknown>;
 }
 
 function decryptApiKey(ciphertext: Uint8Array | string | null): string | null {
   if (!ciphertext) return null;
-  // Decrypted by Postgres-side RPC; here we expect already-decrypted text.
   return typeof ciphertext === "string" ? ciphertext : null;
 }
 
@@ -45,7 +51,7 @@ async function loadTask(slug: string) {
   const { data, error } = await supabaseAdmin
     .from("ai_tasks")
     .select(
-      "slug, model, system_prompt, temperature, max_tokens, provider:ai_providers(id, kind, base_url, extra_config, is_active)"
+      "slug, model, system_prompt, temperature, max_tokens, extra_config, provider:ai_providers(id, kind, base_url, extra_config, is_active)"
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -57,7 +63,6 @@ async function loadTask(slug: string) {
   return data as any;
 }
 
-// Decrypts an api key column via Postgres pgcrypto using the master key.
 async function decryptProviderKey(providerId: string): Promise<string | null> {
   const masterKey = process.env.AI_PROVIDERS_ENCRYPTION_KEY;
   if (!masterKey) return null;
@@ -71,6 +76,20 @@ async function decryptProviderKey(providerId: string): Promise<string | null> {
     return null;
   }
   return (data as string | null) ?? null;
+}
+
+/**
+ * Detect GPT-5 family (OpenAI direct, via Lovable gateway `openai/gpt-5*`,
+ * or as an Azure deployment name containing `gpt-5`).
+ */
+export function isGpt5Family(modelId: string, _providerKind: ProviderKind): boolean {
+  const id = modelId.toLowerCase();
+  return /(^|\/)gpt-5(\.|-|$)/.test(id) || id.includes("gpt-5");
+}
+
+function isAzureFoundryUrl(baseUrl: string | null | undefined): boolean {
+  if (!baseUrl) return false;
+  return /services\.ai\.azure\.com/i.test(baseUrl);
 }
 
 function buildModel(
@@ -94,15 +113,33 @@ function buildModel(
     }
     case "azure_openai": {
       if (!apiKey) throw new Error("Clé Azure OpenAI manquante");
+      const apiVersion = (extra.api_version as string | undefined) || "2024-10-21";
+
+      // Azure AI Foundry (services.ai.azure.com) — use OpenAI-compatible endpoint
+      // shape: <baseUrl>/openai/deployments/<deployment>/chat/completions?api-version=...
+      if (isAzureFoundryUrl(baseUrl)) {
+        const trimmed = (baseUrl as string).replace(/\/+$/, "");
+        const p = createOpenAICompatible({
+          name: "azure-foundry",
+          baseURL: `${trimmed}/openai/v1`,
+          headers: {
+            "api-key": apiKey,
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          queryParams: { "api-version": apiVersion },
+        });
+        return p(modelId);
+      }
+
+      // Classic Azure OpenAI (*.openai.azure.com)
       const resourceName = (extra.resource_name as string | undefined) || undefined;
-      const apiVersion = (extra.api_version as string | undefined) || undefined;
       const p = createAzure({
         apiKey,
         resourceName,
         apiVersion,
-        baseURL: baseUrl || undefined,
+        // Only pass baseURL if no resourceName, to avoid double-config.
+        baseURL: !resourceName && baseUrl ? baseUrl : undefined,
       });
-      // For Azure, modelId is the deployment name.
       return p(modelId);
     }
     case "google": {
@@ -127,6 +164,39 @@ function buildModel(
   }
 }
 
+/**
+ * Build per-call options tailored to the model family / provider.
+ * Spread the returned object into your `generateText({...})` call.
+ */
+export function buildCallOptions(opts: {
+  modelId: string;
+  providerKind: ProviderKind;
+  temperature?: number;
+  maxTokens?: number;
+  reasoningEffort?: "low" | "medium" | "high";
+}): Record<string, unknown> {
+  const { modelId, providerKind, temperature, maxTokens, reasoningEffort } = opts;
+
+  if (isGpt5Family(modelId, providerKind)) {
+    // GPT-5.x: no temperature, use max_completion_tokens via providerOptions,
+    // optional reasoning_effort.
+    const providerKey =
+      providerKind === "azure_openai" ? "azure" : "openai";
+    const inner: Record<string, unknown> = {};
+    if (typeof maxTokens === "number") inner.maxCompletionTokens = maxTokens;
+    if (reasoningEffort) inner.reasoningEffort = reasoningEffort;
+    return Object.keys(inner).length > 0
+      ? { providerOptions: { [providerKey]: inner } }
+      : {};
+  }
+
+  // Default: Gemini / Claude / GPT-4o-family / openai-compatible
+  const out: Record<string, unknown> = {};
+  if (typeof temperature === "number") out.temperature = temperature;
+  if (typeof maxTokens === "number") out.maxOutputTokens = maxTokens;
+  return out;
+}
+
 export async function resolveAITask(
   slug: string,
   fallback: AITaskFallback,
@@ -144,9 +214,12 @@ export async function resolveAITask(
   if (row?.provider?.id) {
     apiKey = await decryptProviderKey(row.provider.id as string);
   }
-  // Lovable provider: always allow env fallback
   if (!apiKey && providerKind === "lovable") {
     apiKey = process.env.LOVABLE_API_KEY ?? null;
+  }
+  // Azure: fallback to AZURE_OPENAI_API_KEY env if no encrypted key stored.
+  if (!apiKey && providerKind === "azure_openai") {
+    apiKey = process.env.AZURE_OPENAI_API_KEY ?? null;
   }
 
   const model = buildModel(
@@ -157,13 +230,29 @@ export async function resolveAITask(
     (row?.provider?.extra_config as Record<string, unknown> | undefined) ?? {},
   );
 
+  const temperature = (row?.temperature as number | null) ?? undefined;
+  const maxTokens = (row?.max_tokens as number | null) ?? undefined;
+  const taskExtra = (row?.extra_config as Record<string, unknown> | undefined) ?? {};
+  const reasoningEffort =
+    (taskExtra.reasoning_effort as "low" | "medium" | "high" | undefined) || undefined;
+
+  const callOptions = buildCallOptions({
+    modelId,
+    providerKind,
+    temperature,
+    maxTokens,
+    reasoningEffort,
+  });
+
   return {
     systemPrompt,
     model,
     modelId,
     providerKind,
-    temperature: (row?.temperature as number | null) ?? undefined,
-    maxTokens: (row?.max_tokens as number | null) ?? undefined,
+    temperature,
+    maxTokens,
+    reasoningEffort,
+    callOptions,
   };
 }
 
@@ -174,11 +263,10 @@ export async function runAITask(
   const resolved = await resolveAITask(slug, args.fallback);
   try {
     const result = await generateText({
+      ...resolved.callOptions,
       model: resolved.model,
       system: resolved.systemPrompt,
       prompt: args.prompt,
-      temperature: resolved.temperature,
-      // maxTokens supported via providerOptions in newer SDK; omit for compat
     });
     return { text: result.text, modelId: resolved.modelId, providerKind: resolved.providerKind };
   } catch (e: unknown) {
@@ -189,5 +277,4 @@ export async function runAITask(
   }
 }
 
-// Re-export decrypt helper for admin "test" endpoint usage
 export { decryptProviderKey, decryptApiKey };
