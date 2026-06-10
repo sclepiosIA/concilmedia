@@ -260,8 +260,10 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
                 <AccordionItem key={i.id} value={i.id} className="border rounded-md px-3">
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center gap-2 flex-1 text-left flex-wrap">
-                      {i.status === "ready" && i.dossier?.existing_patient_id && <Badge variant="outline" className="border-yellow-500 text-yellow-700"><AlertTriangle className="h-3 w-3 mr-1" />Doublon</Badge>}
-                      {i.status === "ready" && !i.dossier?.existing_patient_id && <Badge variant="outline" className="border-green-500 text-green-700"><Check className="h-3 w-3 mr-1" />Prêt</Badge>}
+                    <div className="flex items-center gap-2 flex-1 text-left flex-wrap">
+                      {i.status === "ready" && checkMismatch(i) && <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />Nom ≠ patient cible</Badge>}
+                      {i.status === "ready" && !checkMismatch(i) && i.dossier?.existing_patient_id && <Badge variant="outline" className="border-yellow-500 text-yellow-700"><AlertTriangle className="h-3 w-3 mr-1" />Doublon</Badge>}
+                      {i.status === "ready" && !checkMismatch(i) && !i.dossier?.existing_patient_id && <Badge variant="outline" className="border-green-500 text-green-700"><Check className="h-3 w-3 mr-1" />Prêt</Badge>}
                       {i.status === "error" && <Badge variant="destructive">Erreur</Badge>}
                       {i.dossier?.document_type && <Badge variant="secondary">{docTypeLabel[i.dossier.document_type] ?? i.dossier.document_type}</Badge>}
                       <span className="font-medium">
@@ -272,6 +274,15 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
                   </AccordionTrigger>
                   <AccordionContent>
                     {i.status === "error" && <div className="text-sm text-destructive p-2">{i.error}</div>}
+                    {checkMismatch(i) && targetPatient && (
+                      <div className="text-xs bg-destructive/10 text-destructive p-2 rounded mb-2 flex items-center justify-between gap-2">
+                        <span>
+                          ⚠ Ce document concerne <strong>{i.dossier?.patient.nom?.toUpperCase()} {i.dossier?.patient.prenom}</strong>,
+                          mais le patient cible est <strong>{targetPatient.nom.toUpperCase()} {targetPatient.prenom}</strong>. Il sera ignoré à l'import.
+                        </span>
+                        <Button size="sm" variant="ghost" onClick={() => removeItem(i.id)}>Retirer</Button>
+                      </div>
+                    )}
                     {i.dossier && <DossierEditor dossier={i.dossier} onChange={(p) => updateDossier(i.id, p)} />}
                   </AccordionContent>
                 </AccordionItem>
