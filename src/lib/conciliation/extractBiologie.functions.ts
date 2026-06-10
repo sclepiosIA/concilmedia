@@ -56,9 +56,10 @@ Règles :
 - Ignore les commentaires, les valeurs de référence, les en-têtes.
 - N'inclus que les résultats biologiques mesurés.
 Réponds UNIQUEMENT avec le JSON.`;
-    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
+    const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     const result = await generateText({
+      ...callOptions,
       model,
       system: __systemPrompt,
       messages: [
