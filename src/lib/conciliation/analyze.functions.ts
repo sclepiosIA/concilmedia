@@ -120,11 +120,12 @@ Règles cliniques :
 - Chaque alerte (interaction, contre-indication, adaptation, doublon, allergie croisée, haut risque) DOIT contenir severite, mecanisme/raison, risque clinique, recommandation pratique, alternative thérapeutique (si applicable), un score "confiance" entier 0-100 reflétant le niveau de preuve, ET reference de bonne pratique (ANSM, HAS, Vidal, RCP, STOPP/START, GPR, ISMP, SPILF).
 - conclusion_clinique : ton neutre, factuel, exploitable pour le dossier patient.
 Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
-    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
+    const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     let result;
     try {
       result = await generateText({
+        ...callOptions,
         model,
         system: __systemPrompt,
         prompt: `Dossier patient :\n${JSON.stringify(dossier, null, 2)}`,
