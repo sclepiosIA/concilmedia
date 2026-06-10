@@ -125,16 +125,31 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
         )
       : await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
+    // Garde-fou : on borne la durée d'appel et la longueur de sortie pour
+    // éviter un "chargement infini" côté UI si le modèle traîne.
+    const TIMEOUT_MS = 110_000;
+    const callOptionsWithDefaults: Record<string, unknown> = { ...callOptions };
+    if (
+      callOptionsWithDefaults.maxOutputTokens === undefined &&
+      !(callOptionsWithDefaults.providerOptions as { openai?: { maxCompletionTokens?: number } } | undefined)?.openai?.maxCompletionTokens
+    ) {
+      callOptionsWithDefaults.maxOutputTokens = 4000;
+    }
+
     let result;
     try {
       result = await generateText({
-        ...callOptions,
+        ...callOptionsWithDefaults,
         model,
         system: __systemPrompt,
         prompt: `Dossier patient complet :\n${JSON.stringify(dossier, null, 2)}`,
+        abortSignal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
+      if (e instanceof Error && (e.name === "AbortError" || e.name === "TimeoutError" || msg.toLowerCase().includes("abort") || msg.toLowerCase().includes("timeout"))) {
+        throw new Error("Analyse IA trop longue (timeout). Réessayez ou choisissez un modèle plus rapide dans Admin IA.");
+      }
       if (msg.includes("429")) throw new Error("Limite IA atteinte, réessayez.");
       if (msg.includes("402")) throw new Error("Crédits IA épuisés.");
       throw e;
