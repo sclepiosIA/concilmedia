@@ -882,6 +882,62 @@ export type Database = {
           },
         ]
       }
+      data_imports: {
+        Row: {
+          errors: Json | null
+          file_kind: string
+          finished_at: string | null
+          id: string
+          imported_by: string
+          organization_id: string
+          rows_inserted: number
+          rows_rejected: number
+          rows_total: number
+          source_filename: string | null
+          source_sha256: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          errors?: Json | null
+          file_kind: string
+          finished_at?: string | null
+          id?: string
+          imported_by: string
+          organization_id: string
+          rows_inserted?: number
+          rows_rejected?: number
+          rows_total?: number
+          source_filename?: string | null
+          source_sha256: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          errors?: Json | null
+          file_kind?: string
+          finished_at?: string | null
+          id?: string
+          imported_by?: string
+          organization_id?: string
+          rows_inserted?: number
+          rows_rejected?: number
+          rows_total?: number
+          source_filename?: string | null
+          source_sha256?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_imports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents_sources: {
         Row: {
           created_at: string
@@ -1103,6 +1159,65 @@ export type Database = {
           },
         ]
       }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          finess: string | null
+          hds_provider: string | null
+          id: string
+          nom: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          finess?: string | null
+          hds_provider?: string | null
+          id?: string
+          nom: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          finess?: string | null
+          hds_provider?: string | null
+          id?: string
+          nom?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patients: {
         Row: {
           archived: boolean
@@ -1110,13 +1225,18 @@ export type Database = {
           cohort_tag: string | null
           created_at: string
           created_by: string
+          data_source: string
           date_naissance: string | null
+          date_offset_days: number | null
+          external_pseudo: string | null
           external_ref: string | null
           id: string
+          imported_via: string | null
           is_synthetic: boolean
           nir: string | null
           nom: string
           notes: string | null
+          organization_id: string | null
           poids_kg: number | null
           prenom: string
           sexe: string | null
@@ -1129,13 +1249,18 @@ export type Database = {
           cohort_tag?: string | null
           created_at?: string
           created_by: string
+          data_source?: string
           date_naissance?: string | null
+          date_offset_days?: number | null
+          external_pseudo?: string | null
           external_ref?: string | null
           id?: string
+          imported_via?: string | null
           is_synthetic?: boolean
           nir?: string | null
           nom: string
           notes?: string | null
+          organization_id?: string | null
           poids_kg?: number | null
           prenom: string
           sexe?: string | null
@@ -1148,13 +1273,18 @@ export type Database = {
           cohort_tag?: string | null
           created_at?: string
           created_by?: string
+          data_source?: string
           date_naissance?: string | null
+          date_offset_days?: number | null
+          external_pseudo?: string | null
           external_ref?: string | null
           id?: string
+          imported_via?: string | null
           is_synthetic?: boolean
           nir?: string | null
           nom?: string
           notes?: string | null
+          organization_id?: string | null
           poids_kg?: number | null
           prenom?: string
           sexe?: string | null
@@ -1167,6 +1297,20 @@ export type Database = {
             columns: ["cohort_id"]
             isOneToOne: false
             referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_imported_via_fkey"
+            columns: ["imported_via"]
+            isOneToOne: false
+            referencedRelation: "data_imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1786,6 +1930,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_org_admin: { Args: { _org_id: string }; Returns: boolean }
+      is_org_member: { Args: { _org_id: string }; Returns: boolean }
       match_rag_chunks: {
         Args: {
           match_count?: number
