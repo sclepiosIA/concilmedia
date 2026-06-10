@@ -577,3 +577,48 @@ export function ConciliationCompleteCard({ patientId, autoStart = false }: { pat
     </div>
   );
 }
+
+function CorrelationBadge({
+  pct,
+  decided,
+  undecided,
+  counts,
+}: {
+  pct: number | null;
+  decided: number;
+  undecided: number;
+  counts: { accepted: number; modified: number; rejected: number };
+}) {
+  const color =
+    pct === null
+      ? "border-slate-300 bg-slate-50 text-slate-600"
+      : pct >= 80
+        ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+        : pct >= 50
+          ? "border-amber-400 bg-amber-50 text-amber-800"
+          : "border-red-400 bg-red-50 text-red-800";
+  return (
+    <div className={`rounded-md border-2 px-3 py-2 ${color}`}>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide opacity-80">
+            Corrélation IA ↔ pharmacien
+          </div>
+          <div className="text-[10px] opacity-70 leading-snug">
+            Accepté = 1 · Modifié = 0,5 · Refusé = 0
+          </div>
+        </div>
+        <div className="text-3xl font-bold tabular-nums">
+          {pct === null ? "—" : `${pct}%`}
+        </div>
+      </div>
+      <div className="mt-1 text-[11px] opacity-80">
+        {counts.accepted} accepté{counts.accepted > 1 ? "s" : ""} ·{" "}
+        {counts.modified} modifié{counts.modified > 1 ? "s" : ""} ·{" "}
+        {counts.rejected} refusé{counts.rejected > 1 ? "s" : ""}
+        {" "}sur {decided} décidé{decided > 1 ? "s" : ""}
+        {undecided > 0 && ` (${undecided} non décidé${undecided > 1 ? "s" : ""})`}
+      </div>
+    </div>
+  );
+}
