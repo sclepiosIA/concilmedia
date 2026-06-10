@@ -21,6 +21,7 @@ import { Route as AuthenticatedPatientsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedPatientsPatientIdRouteImport } from './routes/_authenticated/patients.$patientId'
 import { Route as AuthenticatedEpisodesEpisodeIdRouteImport } from './routes/_authenticated/episodes.$episodeId'
 import { Route as AuthenticatedAdminRagRouteImport } from './routes/_authenticated/admin.rag'
+import { Route as AuthenticatedAdminImportReelRouteImport } from './routes/_authenticated/admin.import-reel'
 import { Route as AuthenticatedAdminBdpmRouteImport } from './routes/_authenticated/admin.bdpm'
 import { Route as AuthenticatedAdminAiRouteImport } from './routes/_authenticated/admin.ai'
 import { Route as AuthenticatedAdminAiIndexRouteImport } from './routes/_authenticated/admin.ai.index'
@@ -92,6 +93,12 @@ const AuthenticatedAdminRagRoute = AuthenticatedAdminRagRouteImport.update({
   path: '/rag',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminImportReelRoute =
+  AuthenticatedAdminImportReelRouteImport.update({
+    id: '/import-reel',
+    path: '/import-reel',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminBdpmRoute = AuthenticatedAdminBdpmRouteImport.update({
   id: '/bdpm',
   path: '/bdpm',
@@ -137,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
+  '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/admin/rag': typeof AuthenticatedAdminRagRoute
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
@@ -155,6 +163,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
+  '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/admin/rag': typeof AuthenticatedAdminRagRoute
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
@@ -176,6 +185,7 @@ export interface FileRoutesById {
   '/_authenticated/evaluation': typeof AuthenticatedEvaluationRoute
   '/_authenticated/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/_authenticated/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
+  '/_authenticated/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/_authenticated/admin/rag': typeof AuthenticatedAdminRagRoute
   '/_authenticated/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRoute
   '/_authenticated/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/evaluation'
     | '/admin/ai'
     | '/admin/bdpm'
+    | '/admin/import-reel'
     | '/admin/rag'
     | '/episodes/$episodeId'
     | '/patients/$patientId'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/evaluation'
     | '/admin/bdpm'
+    | '/admin/import-reel'
     | '/admin/rag'
     | '/episodes/$episodeId'
     | '/patients/$patientId'
@@ -235,6 +247,7 @@ export interface FileRouteTypes {
     | '/_authenticated/evaluation'
     | '/_authenticated/admin/ai'
     | '/_authenticated/admin/bdpm'
+    | '/_authenticated/admin/import-reel'
     | '/_authenticated/admin/rag'
     | '/_authenticated/episodes/$episodeId'
     | '/_authenticated/patients/$patientId'
@@ -337,6 +350,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRagRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/import-reel': {
+      id: '/_authenticated/admin/import-reel'
+      path: '/import-reel'
+      fullPath: '/admin/import-reel'
+      preLoaderRoute: typeof AuthenticatedAdminImportReelRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/bdpm': {
       id: '/_authenticated/admin/bdpm'
       path: '/bdpm'
@@ -402,12 +422,14 @@ const AuthenticatedAdminAiRouteWithChildren =
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAiRoute: typeof AuthenticatedAdminAiRouteWithChildren
   AuthenticatedAdminBdpmRoute: typeof AuthenticatedAdminBdpmRoute
+  AuthenticatedAdminImportReelRoute: typeof AuthenticatedAdminImportReelRoute
   AuthenticatedAdminRagRoute: typeof AuthenticatedAdminRagRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAiRoute: AuthenticatedAdminAiRouteWithChildren,
   AuthenticatedAdminBdpmRoute: AuthenticatedAdminBdpmRoute,
+  AuthenticatedAdminImportReelRoute: AuthenticatedAdminImportReelRoute,
   AuthenticatedAdminRagRoute: AuthenticatedAdminRagRoute,
 }
 
