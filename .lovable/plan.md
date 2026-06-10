@@ -1,64 +1,81 @@
-## Diagnostic actuel
+# Import CSV / XLSX de patients dans une cohorte
 
-Le schéma `ai_tasks.execution_mode` supporte déjà `llm | ml | both`, et **2 endpoints** sont marqués `ml` :
+## Objectif
+Dans l'onglet **1. Import cohorte** du banc d'essai, ajouter à côté de l'upload PDF un second uploader pour charger **un fichier CSV ou Excel listant tous les patients** d'un seul coup. Chaque ligne crée un patient rattaché à la cohorte active (sans documents — les PDF restent gérés par l'uploader existant).
 
-- `ml_prioritize_patient` (Étage 2 — priorisation patient)
-- `ml_omission_severity` (Étage 4 — gravité d'un oubli)
+## Format attendu du fichier
+Colonnes reconnues (insensibles à la casse / accents, ordre libre) :
 
-Côté serveur, `prioritize.functions.ts` et `analyze.functions.ts` lancent déjà LLM + ML en parallèle quand le mode est `both`, persistent les 2 scores (`risk_scores.source = 'llm' | 'ml'`) et retournent `{ mode, ml, ml_error }`.
+| Colonne | Obligatoire | Notes |
+|---|---|---|
+| `nom` | oui | string |
+| `prenom` | oui | string |
+| `date_naissance` | non | `YYYY-MM-DD` ou `DD/MM/YYYY` |
+| `sexe` | non | `M` / `F` |
+| `poids_kg` | non | nombre |
+| `taille_cm` | non | nombre |
+| `nir` | non | string |
+| `notes` | non | string libre |
 
-**Mais** :
-- Le provider `ML ConcilMed` est `is_active = false` → aucun appel ML ne part réellement.
-- Aucune UI ne montre, par endpoint, quel mode est actif ni les 2 réponses côte-à-côte.
-- Les 10 autres endpoints sont en `llm` pur (normal : pas de jumeau ML).
-- Les system_prompts et paramètres ne sont pas persistés (lié au plan précédent).
+Un lien "Télécharger un modèle CSV" sera proposé sous l'uploader.
 
-## Plan
+## UI (CohortImportTab)
+Nouvelle `Card` placée entre "Cohortes existantes" et "Upload de fichiers patients" :
+- Zone de drop / sélection : `.csv, .xlsx, .xls`
+- Désactivée si pas de cohorte active
+- Après parsing : prévisualisation des 5 premières lignes + nombre total détecté + lignes en erreur (nom/prénom manquants)
+- Bouton **"Importer N patients"** qui appelle le serverFn
+- Toast de succès `N patients créés` + invalidation `["cohortPatients", cohortId]`
 
-### 1. Activer et configurer le provider ML interne
-- Migration : `UPDATE ai_providers SET is_active = true WHERE name = 'ML ConcilMed'` + valeurs par défaut de seuils (déjà présentes : `layer2_threshold`, `layer4_threshold`).
-- Vérifier que `mlConcilmed.server.ts` lit bien `base_url` / `extra_config` et expose `mlIsConfigured()` correctement ; sinon ajouter une variable d'env optionnelle `ML_CONCILMED_BASE_URL`.
-- Ajouter un champ `health_status` calculé (ping) dans `getProviders` pour l'afficher dans l'admin.
+## Implémentation technique
 
-### 2. Admin AI — onglet d'un endpoint
-Dans `src/routes/_authenticated/admin.ai.tasks.$slug.tsx` :
-- **Bandeau "Moteur d'exécution"** affichant l'`execution_mode` courant :
-  - `llm` → badge bleu "LLM uniquement"
-  - `ml`  → badge violet "ML interne uniquement"
-  - `both`→ badge dégradé "LLM + ML (comparaison)"
-- Sélecteur `execution_mode` (déjà supporté côté schéma `getTask`) — **désactivé** pour les 10 endpoints qui n'ont pas de jumeau ML (whitelist côté code : seuls `ml_prioritize_patient` et `ml_omission_severity` peuvent passer en `ml`/`both`).
-- Si `execution_mode ∈ {ml, both}` : afficher un sous-bloc "Paramètres ML" lisant/écrivant `extra_config.ml` (seuil, version de modèle attendue, timeout) en plus du bloc LLM.
-- État du provider ML (actif / inactif / unreachable) affiché en clair, avec lien vers l'écran providers.
+### Dépendances
+- `xlsx` (SheetJS) pour lire `.xlsx` / `.xls` et CSV avec la même API (parse côté **client** uniquement, pas dans le worker server).
 
-### 3. Affichage parallèle des 2 réponses
-Là où le résultat est rendu (prioritisation patient + analyse complète) :
-- Composant `<LlmVsMlPanel />` qui prend `{ llm: {...}, ml: {...} | null, ml_error?: string, mode }` et :
-  - en `llm` → une seule colonne ;
-  - en `ml`  → une seule colonne (badge "ML") ;
-  - en `both`→ 2 colonnes côte-à-côte avec score, niveau, écart Δ et temps d'exécution.
-- Branché dans :
-  - `CohortResultsTab.tsx` (colonne supplémentaire `ml_score` / différence) ;
-  - la fiche patient (résultat de `computePrioritization` + `analyzePatientConciliationComplete`).
-- La table `risk_scores` contient déjà `source` → on lit les 2 dernières lignes par épisode pour comparer.
+### Parsing client
+Nouveau composant `src/components/cohort/CohortPatientsRosterUploader.tsx` :
+- lit le fichier via `FileReader`, parse avec `XLSX.read` → `sheet_to_json`
+- normalise les headers (lowercase, sans accents)
+- valide chaque ligne avec un schéma Zod (`nom` + `prenom` requis)
+- normalise `date_naissance` (FR → ISO), `sexe` (`m`/`f` → `M`/`F`)
+- affiche preview + erreurs, puis appelle la mutation
 
-### 4. Cohorte multi-modèles
-`runCohortMultiModel.functions.ts` boucle actuellement sur des modèles LLM ; ajouter le pseudo-modèle `internal-ml` (clé `internal-ml-concilmed`) dans `availableModels.ts`, traité spécialement : pas d'appel SDK, appel direct à `predictLayer2` / `predictLayer4`. Cela permettra de comparer `gpt-5.4` vs `claude-opus-4.8` vs `internal-ml` dans le même tableau de résultats.
+### ServerFn
+Nouveau fichier `src/lib/cohort/importPatientsRoster.functions.ts` :
 
-### 5. Vérification
-- Test manuel : passer `ml_prioritize_patient` en `both`, lancer la priorisation sur 1 patient → `risk_scores` doit contenir 2 lignes (`source = 'llm'` et `'ml'`) et l'UI doit afficher les 2 scores.
-- Cohorte : lancer sur 3 patients avec `[gpt-5.4, internal-ml]` cochés → tableau avec 6 résultats (2 modèles × 3 patients).
+```ts
+export const importPatientsRoster = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(d => z.object({
+    cohortId: z.string().uuid(),
+    patients: z.array(z.object({
+      nom: z.string().trim().min(1).max(120),
+      prenom: z.string().trim().min(1).max(120),
+      date_naissance: z.string().date().nullable().optional(),
+      sexe: z.enum(["M","F"]).nullable().optional(),
+      poids_kg: z.number().positive().max(400).nullable().optional(),
+      taille_cm: z.number().positive().max(260).nullable().optional(),
+      nir: z.string().max(20).nullable().optional(),
+      notes: z.string().max(2000).nullable().optional(),
+    })).min(1).max(2000),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    // vérifie cohorte appartient au user, puis insert bulk
+    // récupère cohort.tag pour remplir cohort_tag
+    // is_synthetic: false (vrais patients d'évaluation)
+  });
+```
+Retour : `{ inserted: number }`.
 
-## Détails techniques
+### Aucune migration nécessaire
+La table `patients` a déjà toutes les colonnes nécessaires (`cohort_id`, `cohort_tag`, `archived`, etc.).
 
-| Fichier | Modification |
-|---|---|
-| `supabase/migrations/<ts>_activate_ml_provider.sql` | activer `ML ConcilMed`, défaut seuils si `NULL` |
-| `src/lib/admin/ai.functions.ts` | retourner `execution_mode` + `ml_provider_status` + `extra_config.ml` |
-| `src/routes/_authenticated/admin.ai.tasks.$slug.tsx` | bandeau mode + sélecteur + bloc ML conditionnel |
-| `src/components/conciliation/LlmVsMlPanel.tsx` (nouveau) | rendu 1 ou 2 colonnes |
-| `src/components/cohort/CohortResultsTab.tsx` | colonnes ML + Δ |
-| `src/lib/ai/availableModels.ts` | ajouter entrée `internal-ml-concilmed` |
-| `src/lib/cohort/runCohortMultiModel.functions.ts` | brancher la branche ML |
-| (pas de modif) `prioritize.functions.ts`, `analyze.functions.ts`, `mlConcilmed.server.ts` | déjà OK |
+## Fichiers touchés
+- **Créé** `src/components/cohort/CohortPatientsRosterUploader.tsx`
+- **Créé** `src/lib/cohort/importPatientsRoster.functions.ts`
+- **Édité** `src/components/cohort/CohortImportTab.tsx` (intégration de la nouvelle Card)
+- **Dépendance** : `bun add xlsx`
 
-Aucune nouvelle table. Aucun secret nouveau (l'URL du service ML interne sera ajoutée à `ai_providers.base_url` via l'admin).
+## Hors scope
+- Pas d'upload des PDF associés (l'uploader PDF existant reste pour ça).
+- Pas de mise à jour de patients existants (insert only). Doublons potentiels — on pourra ajouter un dédoublonnage `nom+prenom+date_naissance` dans un second temps si besoin.
