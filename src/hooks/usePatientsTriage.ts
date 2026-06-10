@@ -29,7 +29,7 @@ export function usePatientsTriage(patientIds: string[]) {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     queryFn: async (): Promise<Record<string, TriageResult>> => {
-      const [episodesRes, divsRes, validationsRes, analysesRes, risksRes] = await Promise.all([
+      const [episodesRes, divsRes, validationsRes, analysesRes, risksRes, patientsRes, traitementsRes, comorbRes] = await Promise.all([
         supabase
           .from("episodes")
           .select("id, patient_id, statut")
@@ -50,13 +50,49 @@ export function usePatientsTriage(patientIds: string[]) {
           .from("risk_scores")
           .select("episode_id, niveau, computed_at")
           .order("computed_at", { ascending: false }),
+        supabase
+          .from("patients")
+          .select("id, date_naissance")
+          .in("id", patientIds),
+        supabase
+          .from("traitements_habituels")
+          .select("patient_id")
+          .eq("actif", true)
+          .in("patient_id", patientIds),
+        supabase
+          .from("comorbidites")
+          .select("patient_id, libelle")
+          .eq("statut", "actif")
+          .in("patient_id", patientIds),
       ]);
+
 
       const episodes = episodesRes.data ?? [];
       const divs = divsRes.data ?? [];
       const validations = validationsRes.data ?? [];
       const analyses = analysesRes.data ?? [];
       const risks = risksRes.data ?? [];
+      const patientsData = patientsRes.data ?? [];
+      const traitements = traitementsRes.data ?? [];
+      const comorbs = comorbRes.data ?? [];
+
+      const RENAL_RE = /renal|rein|ckd|insuffisance r[ée]nale|dfg/i;
+      const ageByPatient = new Map<string, number | null>();
+      for (const p of patientsData) {
+        const age = p.date_naissance
+          ? Math.floor((Date.now() - new Date(p.date_naissance).getTime()) / 31557600000)
+          : null;
+        ageByPatient.set(p.id, age);
+      }
+      const nbTraitementsByPatient = new Map<string, number>();
+      for (const t of traitements) {
+        nbTraitementsByPatient.set(t.patient_id, (nbTraitementsByPatient.get(t.patient_id) ?? 0) + 1);
+      }
+      const hasRenaleByPatient = new Map<string, boolean>();
+      for (const c of comorbs) {
+        if (RENAL_RE.test(c.libelle ?? "")) hasRenaleByPatient.set(c.patient_id, true);
+      }
+
 
       // épisode → patient + actif?
       const episodeToPatient = new Map<string, string>();
@@ -117,7 +153,11 @@ export function usePatientsTriage(patientIds: string[]) {
           divergencesByGravity: divInfo?.byGravity ?? { mineur: 0, modere: 0, majeur: 0, critique: 0 },
           nbDivergencesNonIntentionnelles: divInfo?.nonIntentionnelles ?? 0,
           oldestPendingAnalysisAt: oldestAnalysisByPatient.get(pid) ?? null,
+          age: ageByPatient.get(pid) ?? null,
+          nbTraitements: nbTraitementsByPatient.get(pid) ?? 0,
+          hasInsuffisanceRenale: hasRenaleByPatient.get(pid) ?? false,
         });
+
       }
       return result;
     },

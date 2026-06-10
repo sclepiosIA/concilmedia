@@ -44,15 +44,16 @@ function TriageDetailsBlock({ details, reason }: { details?: TriageDetails; reas
         <span className="opacity-70">Validation pharmacien</span>
         <span className="font-medium">{hasValidation ? "✔ Oui" : "✘ Non"}</span>
 
-        {worstRisk && (
-          <>
-            <span className="opacity-70">Score de risque</span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className={`inline-block w-1.5 h-1.5 rounded-full ${RISK_DOT[worstRisk]}`} />
-              <span className="font-medium">{RISK_LABEL[worstRisk]}</span>
-            </span>
-          </>
+        <span className="opacity-70">Score de risque</span>
+        {worstRisk ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${RISK_DOT[worstRisk]}`} />
+            <span className="font-medium">{RISK_LABEL[worstRisk]}</span>
+          </span>
+        ) : (
+          <span className="italic opacity-70">non calculé</span>
         )}
+
 
         {pendingSinceHours != null && (
           <>

@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useRef } from "react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,9 +65,22 @@ function EpisodeConciliationPage() {
     onSuccess: (r: RiskResult) => {
       toast.success(`Score calculé : ${r.score}/100 (${r.niveau})`);
       qc.invalidateQueries({ queryKey: ["risk_score", episodeId] });
+      qc.invalidateQueries({ queryKey: ["patients-triage"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur calcul score"),
   });
+
+  // Auto-déclenchement du calcul de priorisation si aucun score n'existe encore
+  const autoTriggered = useRef(false);
+  useEffect(() => {
+    if (autoTriggered.current) return;
+    if (latestRisk === undefined) return; // query pas encore résolue
+    if (latestRisk === null && !riskMut.isPending) {
+      autoTriggered.current = true;
+      riskMut.mutate();
+    }
+  }, [latestRisk, riskMut]);
+
 
   const { data: episode } = useQuery({
     queryKey: ["episode", episodeId],
