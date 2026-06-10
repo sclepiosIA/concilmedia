@@ -1,7 +1,10 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, LogOut, LayoutDashboard } from "lucide-react";
+import { Users, LogOut, LayoutDashboard, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isAdmin } from "@/lib/admin/ai.functions";
 import logoAsset from "@/assets/concilmed-logo.png.asset.json";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -16,6 +19,8 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthLayout() {
   const router = useRouter();
+  const isAdminFn = useServerFn(isAdmin);
+  const adminQ = useQuery({ queryKey: ["is-admin"], queryFn: () => isAdminFn(), staleTime: 5 * 60 * 1000 });
   const signOut = async () => {
     await supabase.auth.signOut();
     router.navigate({ to: "/auth" });
@@ -52,6 +57,15 @@ function AuthLayout() {
             >
               <Users className="h-4 w-4" /> Patients
             </Link>
+            {adminQ.data?.isAdmin && (
+              <Link
+                to="/admin/ai"
+                className="text-sm font-medium px-3 py-2 rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1.5"
+                activeProps={{ className: "text-sm font-medium px-3 py-2 rounded-full bg-accent text-accent-foreground flex items-center gap-1.5" }}
+              >
+                <Settings className="h-4 w-4" /> Admin IA
+              </Link>
+            )}
             <Button variant="ghost" size="sm" onClick={signOut} aria-label="Se déconnecter">
               <LogOut className="h-4 w-4" />
             </Button>
