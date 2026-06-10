@@ -138,6 +138,20 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
       console.warn("[analyze] feedback exemplars unavailable:", e);
     }
 
+    // RAG — injection de passages issus des thésaurus opposables (STOPP, Laroche, BDPM, …).
+    let __ragPassages: Array<{ ref: string; source: string; titre: string; version: string | null; similarity: number }> = [];
+    try {
+      const { buildRagContext } = await import("@/lib/rag/buildRagContext.server");
+      const rag = await buildRagContext(dossier, { episodeId: data.episodeId });
+      if (rag.passages.length > 0) {
+        __finalSystemPrompt = rag.asPromptSection + "\n" + __finalSystemPrompt + `\n\nIMPORTANT — sourcing : pour chaque alerte produite, mets dans \"reference\" le code [Sn] correspondant à un passage ci-dessus ; si aucune source ne couvre, mets \"reference\": \"non couvert RAG\" et baisse \"confiance\" ≤ 60.`;
+        __ragPassages = rag.passages.map((p) => ({ ref: p.ref, source: p.source, titre: p.titre, version: p.version, similarity: p.similarity }));
+      }
+    } catch (e) {
+      console.warn("[analyze] RAG context unavailable:", e);
+    }
+
+
     let result;
     try {
       result = await generateText({
