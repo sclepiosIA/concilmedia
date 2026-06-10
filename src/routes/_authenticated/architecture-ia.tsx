@@ -355,9 +355,9 @@ function PrioritizationSimple() {
           <h4 className="text-sm font-semibold mb-1">Ce qui fait monter la priorité</h4>
           <ul className="list-disc pl-5 space-y-1">
             <li>Une <strong>divergence critique</strong> non résolue (ex. anticoagulant oublié) → P1.</li>
-            <li>Une divergence <strong>majeure</strong>, ou ≥ 3 divergences non intentionnelles → P2.</li>
+            <li>Une divergence <strong>majeure</strong>, ou un <strong>score de risque élevé</strong> non validé, ou ≥ 3 divergences non intentionnelles → P2.</li>
             <li>Une divergence <strong>modérée</strong> ou un score de risque modéré → P3.</li>
-            <li>Patient <strong>âgé (≥ 75 ans) polymédiqué ou insuffisant rénal</strong> tant que la conciliation n'a pas tourné → plafond P3.</li>
+            <li>Patient <strong>âgé (≥ 75 ans) polymédiqué (≥ 5 traitements habituels) ou insuffisant rénal</strong> tant que la conciliation n'a pas tourné → plafond P3.</li>
             <li>Dossier <strong>en attente depuis &gt; 48 h</strong> → on remonte d'un palier.</li>
           </ul>
         </div>
