@@ -22,6 +22,14 @@ export interface ExtractedMedication {
   posologie_texte?: string;
   indication?: string;
   duree?: string;
+  // v1 OCR avancé
+  agreement?: "both" | "single";
+  match_status?: "exact" | "fuzzy" | "inconnu";
+  bdpm_confidence?: number;
+  bdpm_cis?: number | null;
+  bdpm_code_atc?: string | null;
+  bdpm_canonical_dci?: string | null;
+  bdpm_suggestions?: { dci: string; nom: string; cis: number; code_atc: string | null; score: number }[];
 }
 
 export interface ExtractOrdonnanceResult {
@@ -29,6 +37,7 @@ export interface ExtractOrdonnanceResult {
   date_prescription?: string;
   medications: ExtractedMedication[];
   storage_path?: string;
+  models_used?: string[];
 }
 
 export const extractOrdonnance = createServerFn({ method: "POST" })
