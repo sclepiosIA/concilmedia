@@ -325,6 +325,11 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
           )}
           {phase === "review" && (
             <>
+              {mismatchCount > 0 && (
+                <div className="text-xs text-destructive mr-auto flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" /> {mismatchCount} document(s) ignoré(s) (nom différent)
+                </div>
+              )}
               <Button variant="outline" onClick={reset}>Recommencer</Button>
               <Button onClick={() => importMut.mutate()} disabled={readyCount === 0 || importMut.isPending}>
                 {importMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
