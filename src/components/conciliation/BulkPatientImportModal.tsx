@@ -62,6 +62,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
   const [phase, setPhase] = useState<"upload" | "extracting" | "review" | "done">("upload");
   const [progress, setProgress] = useState(0);
   const [summary, setSummary] = useState<{ created: number; updated: number; failed: { name: string; error: string }[]; created_episode_ids: string[] } | null>(null);
+  const [targetPatient, setTargetPatient] = useState<{ nom: string; prenom: string } | null>(null);
 
   useEffect(() => {
     if (open && initialFiles && initialFiles.length > 0) {
@@ -70,6 +71,23 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !targetPatientId) { setTargetPatient(null); return; }
+    let cancelled = false;
+    supabase.from("patients").select("nom,prenom").eq("id", targetPatientId).maybeSingle().then(({ data }) => {
+      if (!cancelled && data) setTargetPatient({ nom: data.nom ?? "", prenom: data.prenom ?? "" });
+    });
+    return () => { cancelled = true; };
+  }, [open, targetPatientId]);
+
+  const checkMismatch = (i: Item): boolean => {
+    if (!targetPatient || !i.dossier) return false;
+    const dN = normName(i.dossier.patient.nom);
+    const dP = normName(i.dossier.patient.prenom);
+    if (!dN && !dP) return false; // pas de nom extrait → ne bloque pas
+    return normName(targetPatient.nom) !== dN || normName(targetPatient.prenom) !== dP;
+  };
 
   const onFiles = (e: ChangeEvent<HTMLInputElement>) => {
     const fs = Array.from(e.target.files ?? []);
