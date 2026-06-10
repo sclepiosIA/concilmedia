@@ -391,6 +391,9 @@ function PatientsListPage() {
               <SelectItem value="clos">Clos</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+
 
         {filtered.length > 0 && (
           <div className="flex items-center gap-2 mb-3">
