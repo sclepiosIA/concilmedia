@@ -58,7 +58,7 @@ interface Piste {
   benefices: string[];
   miseEnOeuvre: string[];
   prerequis: string[];
-  statut?: "Livré v1" | "En cours" | "Roadmap";
+  statut?: "Livré v1" | "Livré v2" | "En cours" | "Roadmap";
 }
 
 
