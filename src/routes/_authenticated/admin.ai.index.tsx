@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/admin/ai")({
+export const Route = createFileRoute("/_authenticated/admin/ai/")({
   component: AdminAiIndex,
 });
 
