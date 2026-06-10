@@ -141,12 +141,22 @@ export const getTask = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: task, error } = await supabaseAdmin
       .from("ai_tasks")
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .select("id, slug, label, description, model, system_prompt, temperature, max_tokens, current_version, provider_id, execution_mode, extra_config, provider:ai_providers(id, name, kind)" as any)
+      .select("id, slug, label, description, model, system_prompt, temperature, max_tokens, current_version, provider_id, execution_mode, provider:ai_providers(id, name, kind)")
       .eq("slug", data.slug)
       .single();
     if (error) throw new Error(error.message);
-    return task;
+    // Read extra_config separately (column added in later migration, may be absent in generated types)
+    const { data: extraRow } = await supabaseAdmin
+      .from("ai_tasks")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .select("extra_config" as any)
+      .eq("slug", data.slug)
+      .single();
+    return {
+      ...task,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      extra_config: ((extraRow as any)?.extra_config ?? {}) as Record<string, unknown>,
+    };
   });
 
 const updateTaskSchema = z.object({
