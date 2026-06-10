@@ -448,7 +448,8 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
