@@ -58,6 +58,20 @@ function AuthLayout() {
               <Users className="h-4 w-4" /> Patients
             </Link>
             <Link
+              to="/conciliation/supervision"
+              className="text-sm font-medium px-3 py-2 rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1.5"
+              activeProps={{ className: "text-sm font-medium px-3 py-2 rounded-full bg-accent text-accent-foreground flex items-center gap-1.5" }}
+            >
+              <GitBranch className="h-4 w-4" /> Supervision
+            </Link>
+            <Link
+              to="/equipe"
+              className="text-sm font-medium px-3 py-2 rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1.5"
+              activeProps={{ className: "text-sm font-medium px-3 py-2 rounded-full bg-accent text-accent-foreground flex items-center gap-1.5" }}
+            >
+              <UsersRound className="h-4 w-4" /> Équipe
+            </Link>
+            <Link
               to="/architecture-ia"
               className="text-sm font-medium px-3 py-2 rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1.5"
               activeProps={{ className: "text-sm font-medium px-3 py-2 rounded-full bg-accent text-accent-foreground flex items-center gap-1.5" }}
