@@ -595,6 +595,37 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
 
   return (
     <div className="space-y-4">
+      {regles.length > 0 && (
+        <Section title="Règles vérifiées (moteur déterministe)" count={regles.length} icon={ShieldAlert}>
+          {regles.map((r, k) => {
+            if (r.type === "interaction") {
+              return (
+                <AlertItem
+                  key={`rg-int-${k}`}
+                  title={r.libelle}
+                  medicaments={r.dci_concernes.join(", ")}
+                  severite={regleSeverite(r.severite)}
+                  mecanisme={r.mecanisme}
+                  reference={r.reference}
+                  provenance="regle"
+                />
+              );
+            }
+            return (
+              <AlertItem
+                key={`rg-stopp-${k}`}
+                title={`${r.id} — ${r.libelle}`}
+                medicaments={r.dci}
+                severite={regleSeverite(r.severite)}
+                mecanisme={`Critère ${r.id} déclenché pour ${r.dci} (classe ${r.classe})`}
+                reference={r.reference}
+                provenance="regle"
+              />
+            );
+          })}
+        </Section>
+      )}
+
       {divergences.length > 0 && (
         <Section title="Divergences de conciliation (ville ↔ hôpital)" count={divergences.length} icon={ArrowLeftRight}>
           {divergences.map((d, k) => {
@@ -645,6 +676,7 @@ export function ClinicalAlertsPanel({ payload, validation }: { payload: AIAnalys
               alternative={i.alternative}
               reference={i.reference}
               confiance={i.confiance}
+              provenance={interactionMatchesRule(i.dci_1, i.dci_2) ? "ia_confirmee" : "ia"}
               validation={valFor("interactions", k)}
             />
           ))}
