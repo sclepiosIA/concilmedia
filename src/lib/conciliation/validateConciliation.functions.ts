@@ -13,7 +13,7 @@ export type ItemOverrides = Partial<{
 }>;
 
 export type ItemDecision = {
-  category: "interactions" | "contre_indications" | "adaptations_posologiques" | "doublons_therapeutiques" | "allergies_croisees" | "medicaments_haut_risque" | "divergences_conciliation";
+  category: "interactions" | "contre_indications" | "adaptations_posologiques" | "doublons_therapeutiques" | "allergies_croisees" | "medicaments_haut_risque" | "divergences_conciliation" | "alertes_regles";
   index: number;
   status: "accepted" | "rejected" | "modified";
   comment?: string;
@@ -40,6 +40,7 @@ const ItemDecisionSchema: z.ZodType<ItemDecision> = z.object({
     "allergies_croisees",
     "medicaments_haut_risque",
     "divergences_conciliation",
+    "alertes_regles",
   ]),
   index: z.number().int().min(0),
   status: z.enum(["accepted", "rejected", "modified"]),
@@ -47,6 +48,7 @@ const ItemDecisionSchema: z.ZodType<ItemDecision> = z.object({
   modification: z.string().max(2000).optional(),
   overrides: ItemOverridesSchema.optional(),
 });
+
 
 const SaveInput = z.object({
   analysisId: z.string().uuid(),
