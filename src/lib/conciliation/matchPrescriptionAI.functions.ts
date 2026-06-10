@@ -33,7 +33,7 @@ export const matchPrescriptionAI = createServerFn({ method: "POST" })
 
     const { generateText, Output } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
-    const { model: aiModel } = await resolveAITask("match_prescription", {
+    const { model: aiModel, callOptions } = await resolveAITask("match_prescription", {
       systemPrompt: "",
       model: "google/gemini-2.5-flash",
     });
