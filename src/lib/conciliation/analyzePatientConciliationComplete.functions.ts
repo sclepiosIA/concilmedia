@@ -193,7 +193,10 @@ function isRealtimeSafeModel(modelId: string): boolean {
   return id.includes("flash") || id.includes("nano");
 }
 
-async function attachDeterministicAlerts(payload: AIAnalysisPayload, dossier: AnalysisDossier): Promise<AIAnalysisPayload> {
+async function attachDeterministicAlerts(
+  payload: AIAnalysisPayload,
+  dossier: AnalysisDossier,
+): Promise<AIAnalysisPayload> {
   try {
     const { computeDeterministicAlerts } = await import("./deterministicAlerts");
     const traitementsDci = [
@@ -254,7 +257,16 @@ export const analyzePatientConciliationComplete = createServerFn({ method: "POST
         : Promise.resolve({ data: [] as never[] }),
     ]);
 
-    const bioLatest = new Map<string, { parametre: string; valeur: number | null; unite: string | null; valeur_texte: string | null; date_prelevement: string | null }>();
+    const bioLatest = new Map<
+      string,
+      {
+        parametre: string;
+        valeur: number | null;
+        unite: string | null;
+        valeur_texte: string | null;
+        date_prelevement: string | null;
+      }
+    >();
     for (const b of biologie.data ?? []) {
       const k = b.parametre.toLowerCase();
       if (!bioLatest.has(k)) bioLatest.set(k, b);
@@ -352,13 +364,15 @@ Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas d
           ...existing,
           verbosity: "low",
           reasoningEffort: "low",
-          maxCompletionTokens: Math.min((existing.maxCompletionTokens as number | undefined) ?? 650, 650),
+          maxCompletionTokens: Math.min(
+            (existing.maxCompletionTokens as number | undefined) ?? 650,
+            650,
+          ),
         },
       };
     } else if (callOptionsWithDefaults.maxOutputTokens === undefined) {
       callOptionsWithDefaults.maxOutputTokens = 650;
     }
-
 
     let payload: AIAnalysisPayload;
     try {
@@ -376,7 +390,13 @@ Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas d
       payload = parseLlmJson<AIAnalysisPayload>(result.text);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      if (e instanceof Error && (e.name === "AbortError" || e.name === "TimeoutError" || msg.toLowerCase().includes("abort") || msg.toLowerCase().includes("timeout"))) {
+      if (
+        e instanceof Error &&
+        (e.name === "AbortError" ||
+          e.name === "TimeoutError" ||
+          msg.toLowerCase().includes("abort") ||
+          msg.toLowerCase().includes("timeout"))
+      ) {
         payload = buildFastConciliationPayload(dossier as AnalysisDossier, "l'analyse IA a dépassé le délai disponible");
       } else if (msg.includes("429")) {
         throw new Error("Limite IA atteinte, réessayez.");
