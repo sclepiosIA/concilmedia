@@ -1,49 +1,45 @@
 ## Problème
 
-Sur la liste patients, M. Moreau (97 ans, 11 traitements, IRC, 6 comorbidités) apparaît en **P4 — "Conciliation à relire (risque faible)"**.
+Quand on importe 6 PDF du même patient via "Import PDF", la fonction `commitBulkImport` (`src/lib/conciliation/bulkImport.functions.ts`) crée **6 patients en doublon**, et duplique tous les antécédents / comorbidités / allergies / biologie.
 
-En base, son épisode n'a :
-- aucune ligne dans `risk_scores` (le score de priorisation n'a jamais été calculé),
-- aucune divergence dans `conciliation_medicaments` (l'analyse IA n'a pas tourné),
-- aucune validation pharmacien.
+Cause :
+1. `extractPatientDossier` détecte `existing_patient_id` au moment de l'extraction. Pour 6 PDF d'un patient encore inconnu en base, les 6 items reçoivent `existing_patient_id = null`.
+2. Dans la boucle de commit (l. 318-501), chaque item à `existing_patient_id = null` exécute `INSERT INTO patients` (l. 322-335) → 6 patients distincts.
+3. La déduplication des antécédents/comorbidités/allergies/biologie n'est exécutée que `if (item.existing_patient_id)` (l. 383) → pour les nouveaux items, aucun dédup intra-batch → tout est dupliqué.
+4. Seul le bloc `traitements` (l. 396-399) ré-interroge la DB systématiquement, c'est pourquoi les médicaments sont déjà dédupliqués mais pas le reste.
 
-Le label "faible" vient donc uniquement du **texte par défaut** dans `src/lib/conciliation/triageScale.ts` (l. 85-87) :
+## Correctif (un seul fichier : `src/lib/conciliation/bulkImport.functions.ts`)
 
-```ts
-level = 4;
-reason = "Conciliation à relire (risque faible)";
-```
+### 1. Résolution d'identité patient avec cache intra-batch
 
-C'est trompeur : on n'a pas mesuré le risque, on a juste fixé un placeholder.
+Avant la boucle d'items, créer une map `resolvedPatientByIdentity = Map<string, string>` où la clé est `normalize(nom)|normalize(prenom)|date_naissance ?? ""`.
 
-## Correctifs proposés
+Dans la boucle, avant la branche "insert patient" :
+- Construire `identityKey` à partir de `item.patient.nom/prenom/date_naissance`.
+- Si `item.existing_patient_id` est fourni → l'utiliser et l'enregistrer dans la map sous `identityKey`.
+- Sinon, si la map contient déjà `identityKey` → réutiliser ce `patientId` (et compter en `updated`, pas `created`).
+- Sinon, faire une recherche de sécurité en DB par `nom + prenom (ilike)` + `date_naissance` (même logique que `extractPatientDossier`) ; si trouvé, réutiliser ; sinon `INSERT` puis enregistrer dans la map.
 
-### 1. `src/lib/conciliation/triageScale.ts`
-- Quand `hasActiveEpisode === true` mais qu'**aucune analyse n'a tourné** (`worstRisk === null` ET total divergences === 0 ET `oldestPendingAnalysisAt === null`), ne plus dire "risque faible". Remplacer par : `"Conciliation à initier — risque non évalué"`.
-- Ajouter, en plus, une **garde de sécurité gériatrique** appliquée *avant* le calcul : si `age ≥ 75` ET (`nb_traitements ≥ 5` OU IRC connue), forcer le niveau minimum à **P3** avec la raison `"Patient âgé polymédiqué — priorisation à calculer"`. Cela évite qu'un Moreau passe en P4 "faible" simplement parce que le moteur de score n'a pas encore tourné.
-- Pour faire ce calcul, `computePatientTriage` doit recevoir 3 nouveaux champs optionnels : `age`, `nbTraitements`, `hasInsuffisanceRenale`.
+Cela règle le doublon patient même quand plusieurs PDF du même patient arrivent ensemble.
 
-### 2. `src/hooks/usePatientsTriage.ts`
-- Récupérer en plus, en parallèle :
-  - `patients.date_naissance` → calcul de l'âge,
-  - `count` sur `traitements_habituels` (actif=true) par patient,
-  - `comorbidites` actives par patient → détecter IRC via le même regex que `prioritize.functions.ts` (`/renal|rein|ckd|insuffisance r[ée]nale|dfg/i`).
-- Passer ces 3 champs à `computePatientTriage`.
+### 2. Déduplication systématique des sections cliniques
 
-### 3. `src/components/conciliation/TriageBadge.tsx`
-- Dans le tooltip, quand `worstRisk === null`, afficher explicitement `Score de risque : non calculé` (au lieu de masquer la ligne) pour lever toute ambiguïté.
+Retirer la garde `if (item.existing_patient_id)` (l. 383) : **toujours** charger les `Set` d'antécédents / comorbidités / allergies / biologie déjà présents en DB pour ce `patientId` avant chaque item. C'est déjà ce qui est fait pour `traitements_habituels` (l. 396-399), on étend la même logique aux 4 autres tables. Coût négligeable (1 select par section par PDF).
 
-### 4. Déclenchement automatique du score (optionnel mais recommandé)
-- Dans `src/routes/_authenticated/episodes.$episodeId.tsx`, si l'épisode n'a aucun `risk_score`, appeler `computePrioritization` au montage (déjà importé ailleurs). Comme ça, dès qu'on ouvre Moreau, le score se calcule et le triage devient réel.
+### 3. Documents sources : pas de changement
+
+Chaque PDF doit rester tracé dans `documents_sources` (l. 344-375) — c'est correct, on garde une ligne par PDF, juste rattachée au bon `patient_id` mutualisé.
+
+### 4. Épisodes hospi : déjà groupés par `patientId`
+
+La map `hospiByPatient` (l. 316) groupe déjà par `patientId`. Une fois le point 1 corrigé, les 6 PDF du même patient produiront **un seul** épisode agrégé, sans changement supplémentaire.
 
 ## Vérification
 
-1. Ouvrir `/patients` : Moreau doit passer en **P3** avec tooltip "Patient âgé polymédiqué — priorisation à calculer", plus de mention "faible".
-2. Ouvrir la fiche Moreau → `computePrioritization` se déclenche → la ligne se met à jour avec le vrai niveau (probablement *élevé* / *critique* vu l'âge + IRC + polymédication).
-3. Pour un patient jeune sans antécédents et sans analyse : on doit voir "Conciliation à initier — risque non évalué" en P4 (comportement attendu).
+1. Importer 6 PDF du même patient (mélange ordonnance ville, ordo hospi, lettre admission, bilan bio) → un seul patient créé, un seul épisode, antécédents/comorbidités/allergies/bio sans doublons.
+2. Réimporter le même lot une 2ᵉ fois → toujours un seul patient (réutilisé), aucune ligne dupliquée ajoutée.
+3. Importer 2 patients différents en même temps (3 PDF chacun) → 2 patients créés, chacun avec ses données fusionnées.
 
-## Fichiers modifiés
-- `src/lib/conciliation/triageScale.ts`
-- `src/hooks/usePatientsTriage.ts`
-- `src/components/conciliation/TriageBadge.tsx`
-- `src/routes/_authenticated/episodes.$episodeId.tsx`
+## Fichier modifié
+
+- `src/lib/conciliation/bulkImport.functions.ts`
