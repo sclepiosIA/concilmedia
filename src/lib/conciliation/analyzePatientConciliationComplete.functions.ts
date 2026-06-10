@@ -15,6 +15,132 @@ const Input = z.object({
   modelLabel: z.string().min(1).max(120).optional(),
 });
 
+type AnalysisDossier = {
+  patient: Record<string, unknown>;
+  allergies: Array<Record<string, unknown>>;
+  antecedents: Array<Record<string, unknown>>;
+  comorbidites: Array<Record<string, unknown>>;
+  biologie_recente: Array<Record<string, unknown>>;
+  traitements_habituels: Array<Record<string, unknown>>;
+  prescriptions_hospitalieres: Array<Record<string, unknown>>;
+};
+
+function asString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function drugLabel(row: Record<string, unknown>): string {
+  return (
+    asString(row.dci) ||
+    asString(row.medicament) ||
+    asString(row.nom_commercial) ||
+    "Traitement non précisé"
+  );
+}
+
+function normalizeDrugName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(cp|comprime|gelule|g|mg|ml|ui|iu|lp|xr|solution|injectable)\b/g, " ")
+    .replace(/\d+[,.]?\d*/g, " ")
+    .replace(/[^a-z]+/g, " ")
+    .trim();
+}
+
+function doseSummary(row: Record<string, unknown>): string {
+  const slots = [
+    ["matin", row.posologie_matin],
+    ["midi", row.posologie_midi],
+    ["soir", row.posologie_soir],
+    ["coucher", row.posologie_coucher],
+  ]
+    .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "")
+    .map(([k, v]) => `${k}: ${String(v).trim()}`);
+  return (
+    slots.join(", ") ||
+    asString(row.posologie_texte) ||
+    asString(row.posologie) ||
+    "posologie non précisée"
+  );
+}
+
+function buildFastConciliationPayload(dossier: AnalysisDossier, reason: string): AIAnalysisPayload {
+  const ville = dossier.traitements_habituels
+    .map((t) => ({ row: t, label: drugLabel(t), key: normalizeDrugName(drugLabel(t)) }))
+    .filter((t) => t.key);
+  const hopital = dossier.prescriptions_hospitalieres
+    .map((p) => ({ row: p, label: drugLabel(p), key: normalizeDrugName(drugLabel(p)) }))
+    .filter((p) => p.key);
+  const hopitalKeys = new Set(hopital.map((p) => p.key));
+  const villeKeys = new Set(ville.map((t) => t.key));
+  const divergences: NonNullable<AIAnalysisPayload["divergences_conciliation"]> = [
+    ...ville
+      .filter((t) => !hopitalKeys.has(t.key))
+      .slice(0, 12)
+      .map((t) => ({
+        type: "omission" as const,
+        medicament_ville: `${t.label} — ${doseSummary(t.row)}`,
+        medicament_hopital: null,
+        severite: "moderee" as const,
+        justification_clinique: "Traitement habituel absent des prescriptions hospitalières actives.",
+        risque: "Risque de rupture thérapeutique si le traitement est toujours indiqué.",
+        recommandation: `Vérifier l'indication et statuer sur la reprise ou l'arrêt documenté de ${t.label}.`,
+        alternative: "Documenter la décision médicale si arrêt volontaire.",
+        confiance: 82,
+        reference: "HAS conciliation médicamenteuse",
+      })),
+    ...hopital
+      .filter((p) => !villeKeys.has(p.key))
+      .slice(0, 8)
+      .map((p) => ({
+        type: "ajout_non_justifie" as const,
+        medicament_ville: null,
+        medicament_hopital: `${p.label} — ${doseSummary(p.row)}`,
+        severite: "mineure" as const,
+        justification_clinique:
+          "Prescription hospitalière sans correspondance dans le traitement habituel importé.",
+        risque: "Ajout potentiellement justifié par l'hospitalisation, à confirmer dans le dossier.",
+        recommandation: `Confirmer l'indication hospitalière de ${p.label} et la durée prévue.`,
+        alternative: "Arrêter ou tracer l'indication si non justifié.",
+        confiance: 70,
+        reference: "HAS conciliation médicamenteuse",
+      })),
+  ];
+  const score = Math.min(
+    100,
+    20 + divergences.length * 6 + dossier.allergies.length * 4 + dossier.comorbidites.length * 2,
+  );
+  return {
+    synthese: `Conciliation générée en mode rapide car ${reason}. ${ville.length} traitement(s) habituel(s) et ${hopital.length} prescription(s) hospitalière(s) ont été comparés. Les divergences listées doivent être vérifiées et validées par le pharmacien dans le contexte clinique du patient.`,
+    score_risque: score,
+    divergences_conciliation: divergences,
+    actions_prioritaires: divergences.slice(0, 6).map((d) => ({
+      action: d.recommandation,
+      urgence: d.severite === "majeure" || d.severite === "critique" ? "immediate" : "24h",
+      destinataire: "prescripteur",
+      justification: d.justification_clinique,
+    })),
+    interactions: [],
+    doublons_therapeutiques: [],
+    contre_indications: [],
+    redondances_classe: [],
+    adaptations_posologiques: [],
+    medicaments_haut_risque: [],
+    allergies_croisees: [],
+    surveillance: [
+      {
+        parametre: "Validation pharmaceutique",
+        frequence: "Avant dispensation ou sortie",
+        justification: "Résultat rapide basé sur rapprochement ville/hôpital à confirmer cliniquement.",
+      },
+    ],
+    conclusion_clinique:
+      "Prioriser la revue des omissions et des ajouts non justifiés, puis tracer les décisions de reprise, arrêt ou modification.",
+  };
+}
+
 export const analyzePatientConciliationComplete = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
@@ -127,7 +253,7 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
 
     // Garde-fou : on borne la durée d'appel et la longueur de sortie pour
     // éviter un "chargement infini" côté UI si le modèle traîne.
-    const TIMEOUT_MS = 110_000;
+    const TIMEOUT_MS = 24_000;
     const callOptionsWithDefaults: Record<string, unknown> = { ...callOptions };
     const { isGpt5Family } = await import("@/lib/ai/runAITask.server");
     const isGpt5 = isGpt5Family(__modelIdUsed, "lovable");
@@ -143,39 +269,37 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
         const key = provOpts.lovable !== undefined ? "lovable" : "openai";
         callOptionsWithDefaults.providerOptions = {
           ...provOpts,
-          [key]: { ...(provOpts[key] ?? {}), maxCompletionTokens: 4000 },
+          [key]: { ...(provOpts[key] ?? {}), maxCompletionTokens: 1600 },
         };
       } else {
-        callOptionsWithDefaults.maxOutputTokens = 4000;
+        callOptionsWithDefaults.maxOutputTokens = 1600;
       }
     }
 
 
-    let result;
+    let payload: AIAnalysisPayload;
     try {
-      result = await generateText({
+      const result = await generateText({
         ...callOptionsWithDefaults,
         model,
         system: __systemPrompt,
-        prompt: `Dossier patient complet :\n${JSON.stringify(dossier, null, 2)}`,
+        prompt: `Dossier patient complet :\n${JSON.stringify(dossier)}`,
         abortSignal: AbortSignal.timeout(TIMEOUT_MS),
       });
+      const { parseLlmJson } = await import("@/lib/llm/parseLlmJson");
+      payload = parseLlmJson<AIAnalysisPayload>(result.text);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       if (e instanceof Error && (e.name === "AbortError" || e.name === "TimeoutError" || msg.toLowerCase().includes("abort") || msg.toLowerCase().includes("timeout"))) {
-        throw new Error("Analyse IA trop longue (timeout). Réessayez ou choisissez un modèle plus rapide dans Admin IA.");
+        payload = buildFastConciliationPayload(dossier as AnalysisDossier, "l'analyse IA a dépassé le délai disponible");
+      } else if (msg.includes("429")) {
+        throw new Error("Limite IA atteinte, réessayez.");
+      } else if (msg.includes("402")) {
+        throw new Error("Crédits IA épuisés.");
+      } else {
+        console.warn("[conciliation_complete] IA indisponible, fallback rapide:", msg);
+        payload = buildFastConciliationPayload(dossier as AnalysisDossier, "l'analyse IA complète est momentanément indisponible");
       }
-      if (msg.includes("429")) throw new Error("Limite IA atteinte, réessayez.");
-      if (msg.includes("402")) throw new Error("Crédits IA épuisés.");
-      throw e;
-    }
-
-    const { parseLlmJson } = await import("@/lib/llm/parseLlmJson");
-    let payload: AIAnalysisPayload;
-    try {
-      payload = parseLlmJson<AIAnalysisPayload>(result.text);
-    } catch {
-      throw new Error("Réponse IA non parsable");
     }
 
     await supabase.from("conciliation_ai_analyses").insert({
