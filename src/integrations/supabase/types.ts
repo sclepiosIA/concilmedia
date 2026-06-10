@@ -690,12 +690,14 @@ export type Database = {
           bilan_entree_completed_at: string | null
           bmo_notes: string | null
           bmo_sources: string[] | null
+          cohort_id: string | null
           contexte_social: string | null
           created_at: string
           date_entree: string
           date_sortie: string | null
           etat_general: string | null
           eva_douleur: number | null
+          external_ref: string | null
           fc: number | null
           fr: number | null
           id: string
@@ -720,12 +722,14 @@ export type Database = {
           bilan_entree_completed_at?: string | null
           bmo_notes?: string | null
           bmo_sources?: string[] | null
+          cohort_id?: string | null
           contexte_social?: string | null
           created_at?: string
           date_entree?: string
           date_sortie?: string | null
           etat_general?: string | null
           eva_douleur?: number | null
+          external_ref?: string | null
           fc?: number | null
           fr?: number | null
           id?: string
@@ -750,12 +754,14 @@ export type Database = {
           bilan_entree_completed_at?: string | null
           bmo_notes?: string | null
           bmo_sources?: string[] | null
+          cohort_id?: string | null
           contexte_social?: string | null
           created_at?: string
           date_entree?: string
           date_sortie?: string | null
           etat_general?: string | null
           eva_douleur?: number | null
+          external_ref?: string | null
           fc?: number | null
           fr?: number | null
           id?: string
@@ -776,6 +782,13 @@ export type Database = {
           via_urgences?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "episodes_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "cohorts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "episodes_patient_id_fkey"
             columns: ["patient_id"]
@@ -834,6 +847,7 @@ export type Database = {
           created_at: string
           created_by: string
           date_naissance: string | null
+          external_ref: string | null
           id: string
           is_synthetic: boolean
           nir: string | null
@@ -852,6 +866,7 @@ export type Database = {
           created_at?: string
           created_by: string
           date_naissance?: string | null
+          external_ref?: string | null
           id?: string
           is_synthetic?: boolean
           nir?: string | null
@@ -870,6 +885,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           date_naissance?: string | null
+          external_ref?: string | null
           id?: string
           is_synthetic?: boolean
           nir?: string | null

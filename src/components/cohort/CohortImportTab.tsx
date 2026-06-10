@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { createCohort, listCohorts } from "@/lib/cohort/cohort.functions";
 import { BulkPatientImportModal } from "@/components/conciliation/BulkPatientImportModal";
 import { CohortPatientsRosterUploader } from "@/components/cohort/CohortPatientsRosterUploader";
+import { CohortDatasetUploader } from "@/components/cohort/CohortDatasetUploader";
 
 export function CohortImportTab({ activeCohortId, onCohortSelected }: { activeCohortId: string | null; onCohortSelected: (id: string) => void }) {
   const qc = useQueryClient();
@@ -85,6 +86,8 @@ export function CohortImportTab({ activeCohortId, onCohortSelected }: { activeCo
           ))}
         </div>
       </Card>
+
+      <CohortDatasetUploader cohortId={activeCohortId} />
 
       <CohortPatientsRosterUploader cohortId={activeCohortId} />
 
