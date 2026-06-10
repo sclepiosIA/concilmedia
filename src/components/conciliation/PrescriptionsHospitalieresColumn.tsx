@@ -12,7 +12,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Hospital, Pill, Plus, Trash2, Sparkles, Sunrise, Sun, Sunset, Moon, AlertTriangle, Check, X } from "lucide-react";
+import { Hospital, Pill, Plus, Trash2, Sparkles, Sunrise, Sun, Sunset, Moon, AlertTriangle, Check, X, ChevronDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -134,6 +134,16 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
   const [open, setOpen] = useState(false);
   const [justifyId, setJustifyId] = useState<string | null>(null);
   const [justifyText, setJustifyText] = useState("");
+  const [expandedPrescriptionIds, setExpandedPrescriptionIds] = useState<Set<string>>(() => new Set());
+
+  const togglePrescriptionDetails = (id: string) => {
+    setExpandedPrescriptionIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
 
   const { data = [] } = useQuery({
@@ -538,22 +548,22 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
             <div className="px-3 py-1.5 bg-muted/40 border-b">
               <MatchLegend />
             </div>
-            <div className="hidden md:grid grid-cols-[auto_1fr_auto_auto_auto] gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted/40">
+            <div className="hidden md:grid grid-cols-[auto_1fr_auto_auto] gap-2 px-3 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted/40">
               <div></div>
               <div>Médicament</div>
               <div className="text-center">M • Mi • S • Co</div>
-              <div>Indication / Source</div>
               <div></div>
             </div>
             {data.map((p) => {
               const [m, mi, s, c] = resolvePrises(p);
-              const hasPrises = m || mi || s || c;
               const status = (p.match_status as MatchStatus) ?? "en_cours";
               const meta = STATUS_META[status] ?? STATUS_META.en_cours;
+              const isExpanded = expandedPrescriptionIds.has(p.id);
+              const hasDetails = Boolean(p.posologie || p.indication || p.prescripteur || p.source || p.nom_commercial);
               return (
               <div
                 key={p.id}
-                className={`grid grid-cols-1 md:grid-cols-[auto_1fr_auto_auto_auto] gap-2 px-3 py-2 items-center hover:bg-muted/30 transition-colors text-xs ${meta.bg} ${meta.border}`}
+                className={`grid grid-cols-1 md:grid-cols-[auto_1fr_auto_auto] gap-2 px-3 py-2 items-center hover:bg-muted/30 transition-colors text-xs ${meta.bg} ${meta.border}`}
               >
                 <MatchStatusBadge
                   status={status}
@@ -575,10 +585,15 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
                     )}
                   </div>
                   {p.nom_commercial && p.nom_commercial !== p.medicament && (
-                    <div className="text-[11px] text-muted-foreground ml-4 mt-0.5">{p.nom_commercial}</div>
+                    <div className={isExpanded ? "text-[11px] text-muted-foreground ml-4 mt-0.5" : "sr-only"}>{p.nom_commercial}</div>
                   )}
-                  {p.posologie && !hasPrises && (
-                    <div className="text-[11px] text-muted-foreground ml-4 mt-0.5">{p.posologie}</div>
+                  {isExpanded && hasDetails && (
+                    <div className="mt-2 ml-4 space-y-1 text-[11px] leading-snug text-muted-foreground">
+                      {p.posologie && <div className="text-foreground/80">{p.posologie}</div>}
+                      {p.indication && <div>Indication : {p.indication}</div>}
+                      {p.prescripteur && <div>Prescripteur : {p.prescripteur}</div>}
+                      {p.source && <div>Source : {SOURCE_LABEL[p.source] ?? p.source}</div>}
+                    </div>
                   )}
                 </div>
 
@@ -589,19 +604,19 @@ export function PrescriptionsHospitalieresColumn({ episodeId, patientId }: { epi
                   <PriseCell value={c} icon={Moon} label="Coucher" shortLabel="Co" />
                 </div>
 
-                <div className="flex flex-col gap-0.5 text-[11px] min-w-[120px]">
-                  {p.indication && <span className="text-foreground/80">{p.indication}</span>}
-                  {p.prescripteur && (
-                    <span className="text-muted-foreground">Prescripteur : {p.prescripteur}</span>
+                <div className="flex justify-end gap-1">
+                  {hasDetails && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground"
+                      aria-label={isExpanded ? "Masquer les détails" : "Afficher les détails"}
+                      aria-expanded={isExpanded}
+                      onClick={() => togglePrescriptionDetails(p.id)}
+                    >
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                    </Button>
                   )}
-                  {p.source && (
-                    <span className="text-muted-foreground">
-                      Source : {SOURCE_LABEL[p.source] ?? p.source}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex justify-end">
                   <Button
                     size="icon"
                     variant="ghost"
