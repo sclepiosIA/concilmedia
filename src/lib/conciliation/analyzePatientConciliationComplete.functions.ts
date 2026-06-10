@@ -3,7 +3,17 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import type { AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 
-const Input = z.object({ patientId: z.string().uuid() });
+const Input = z.object({
+  patientId: z.string().uuid(),
+  modelOverride: z
+    .object({
+      providerName: z.string().min(1),
+      modelId: z.string().min(1),
+    })
+    .optional(),
+  runTag: z.string().min(1).max(120).optional(),
+  modelLabel: z.string().min(1).max(120).optional(),
+});
 
 export const analyzePatientConciliationComplete = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
