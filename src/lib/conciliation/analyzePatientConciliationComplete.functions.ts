@@ -188,6 +188,25 @@ function buildFastConciliationPayload(dossier: AnalysisDossier, reason: string):
   };
 }
 
+async function attachDeterministicAlerts(payload: AIAnalysisPayload, dossier: AnalysisDossier): Promise<AIAnalysisPayload> {
+  try {
+    const { computeDeterministicAlerts } = await import("./deterministicAlerts");
+    const traitementsDci = [
+      ...dossier.traitements_habituels.map((t) => drugLabel(t)),
+      ...dossier.prescriptions_hospitalieres.map((p) => drugLabel(p)),
+    ].filter(Boolean);
+    const det = computeDeterministicAlerts({
+      age: (dossier.patient.age as number | undefined) ?? null,
+      comorbidites: dossier.comorbidites.map((c) => asString(c.libelle)).filter(Boolean),
+      traitements_dci: traitementsDci,
+    });
+    payload.alertes_regles = det.all;
+  } catch (e) {
+    console.warn("[conciliation_complete] deterministic alerts failed:", e);
+  }
+  return payload;
+}
+
 export const analyzePatientConciliationComplete = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
