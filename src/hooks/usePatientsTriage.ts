@@ -72,6 +72,27 @@ export function usePatientsTriage(patientIds: string[]) {
       const validations = validationsRes.data ?? [];
       const analyses = analysesRes.data ?? [];
       const risks = risksRes.data ?? [];
+      const patientsData = patientsRes.data ?? [];
+      const traitements = traitementsRes.data ?? [];
+      const comorbs = comorbRes.data ?? [];
+
+      const RENAL_RE = /renal|rein|ckd|insuffisance r[ée]nale|dfg/i;
+      const ageByPatient = new Map<string, number | null>();
+      for (const p of patientsData) {
+        const age = p.date_naissance
+          ? Math.floor((Date.now() - new Date(p.date_naissance).getTime()) / 31557600000)
+          : null;
+        ageByPatient.set(p.id, age);
+      }
+      const nbTraitementsByPatient = new Map<string, number>();
+      for (const t of traitements) {
+        nbTraitementsByPatient.set(t.patient_id, (nbTraitementsByPatient.get(t.patient_id) ?? 0) + 1);
+      }
+      const hasRenaleByPatient = new Map<string, boolean>();
+      for (const c of comorbs) {
+        if (RENAL_RE.test(c.libelle ?? "")) hasRenaleByPatient.set(c.patient_id, true);
+      }
+
 
       // épisode → patient + actif?
       const episodeToPatient = new Map<string, string>();
