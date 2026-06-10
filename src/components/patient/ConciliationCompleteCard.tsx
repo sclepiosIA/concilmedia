@@ -251,6 +251,7 @@ export function ConciliationCompleteCard({ patientId, autoStart = false }: { pat
             <><Sparkles className="h-4 w-4 mr-1" /> {payload ? "Relancer l'IA" : "Lancer la conciliation complète"}</>
           )}
         </Button>
+        </div>
       </div>
 
       {!payload && !mut.isPending && (
