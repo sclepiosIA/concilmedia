@@ -555,8 +555,9 @@ function ArchitectureIAPage() {
             ne couvre tous ses tokens significatifs.
           </li>
           <li>
-            <code className="text-xs bg-muted px-1 rounded">deterministicAlerts.ts</code> — règles
-            STOPP/START + interactions de classe ATC, dédupliquées par <code>rule.id</code>.
+            <code className="text-xs bg-muted px-1 rounded">deterministicAlerts.ts</code> — 7 règles
+            STOPP v2 (A1, B1, B2, C1, D1, E1, F1) + interactions de classe ATC, dédupliquées par <code>rule.id</code>.
+            <span className="text-xs text-muted-foreground"> (Les règles START ne sont pas encore codées.)</span>
           </li>
           <li>Sert de garde-fou aux sorties LLM (alertes vérifiables affichées en parallèle).</li>
         </ul>
