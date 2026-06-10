@@ -108,11 +108,12 @@ RÈGLES CLINIQUES STRICTES :
 9. "actions_prioritaires" : déduire les 3-8 interventions pharmaceutiques les plus utiles (appel prescripteur, modification ordonnance, éducation patient), triées par urgence.
 
 Réponds UNIQUEMENT avec le JSON, sans markdown.`;
-    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
+    const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     let result;
     try {
       result = await generateText({
+        ...callOptions,
         model,
         system: __systemPrompt,
         prompt: `Dossier patient complet :\n${JSON.stringify(dossier, null, 2)}`,
