@@ -318,7 +318,178 @@ function SimplifiedView() {
           </ul>
         </CardContent>
       </Card>
+
+      <PrioritizationSimple />
     </div>
+  );
+}
+
+function PrioritizationSimple() {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Stethoscope className="h-4 w-4 text-primary" /> Comment les patients sont priorisés
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <p>
+          Chaque patient reçoit un <strong>niveau de priorité P1 à P5</strong> (inspiré de l'échelle
+          FRENCH des urgences). C'est ce niveau qui ordonne la file du pharmacien.
+        </p>
+        <div className="grid sm:grid-cols-5 gap-2 text-xs">
+          {[
+            { code: "P1", label: "Immédiat", delay: "Maintenant", color: "bg-red-100 border-red-300 text-red-900" },
+            { code: "P2", label: "Très urgent", delay: "< 1 h", color: "bg-orange-100 border-orange-300 text-orange-900" },
+            { code: "P3", label: "Urgent", delay: "< 6 h", color: "bg-amber-100 border-amber-300 text-amber-900" },
+            { code: "P4", label: "Standard", delay: "< 24 h", color: "bg-sky-100 border-sky-300 text-sky-900" },
+            { code: "P5", label: "Non urgent", delay: "Programmée", color: "bg-emerald-100 border-emerald-300 text-emerald-900" },
+          ].map((t) => (
+            <div key={t.code} className={`border-2 rounded-md p-2 ${t.color}`}>
+              <div className="font-bold">{t.code} — {t.label}</div>
+              <div className="opacity-80">{t.delay}</div>
+            </div>
+          ))}
+        </div>
+        <div>
+          <h4 className="text-sm font-semibold mb-1">Ce qui fait monter la priorité</h4>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Une <strong>divergence critique</strong> non résolue (ex. anticoagulant oublié) → P1.</li>
+            <li>Une divergence <strong>majeure</strong>, ou ≥ 3 divergences non intentionnelles → P2.</li>
+            <li>Une divergence <strong>modérée</strong> ou un score de risque modéré → P3.</li>
+            <li>Patient <strong>âgé (≥ 75 ans) polymédiqué ou insuffisant rénal</strong> tant que la conciliation n'a pas tourné → plafond P3.</li>
+            <li>Dossier <strong>en attente depuis &gt; 48 h</strong> → on remonte d'un palier.</li>
+          </ul>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Chaque badge P1-P5 affiche une <strong>infobulle "pourquoi ce niveau ?"</strong> avec le
+          nombre de divergences par gravité, le score de risque retenu, et l'ancienneté — pour que
+          le pharmacien puisse vérifier la décision en un coup d'œil.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PrioritizationDetailed() {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Workflow className="h-4 w-4 text-primary" /> Scores de priorisation — calcul & explicabilité
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5 text-sm">
+        <div>
+          <h4 className="font-semibold mb-2">1. Score ML "patient complexe" — <code>predictLayer2Sync</code></h4>
+          <p className="text-xs text-muted-foreground mb-2">
+            Régression logistique calibrée (intercept tuné pour qu'un patient 65 ans / 2 comorbidités
+            / 6 médicaments tombe à ~0,45). Variables et coefficients :
+          </p>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Variable</TableHead>
+                  <TableHead>Coefficient</TableHead>
+                  <TableHead>Effet</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[
+                  ["intercept", "-3.2", "base"],
+                  ["max(0, age-40)", "+0.022 / an", "âge ↑ → risque ↑"],
+                  ["nb_comorbidités", "+0.45 / item", "polypathologie"],
+                  ["insuffisance rénale", "+0.85", "binaire"],
+                  ["insuffisance hépatique", "+0.65", "binaire"],
+                  ["nb_meds_hospitalier", "+0.09 / med", "polymédication"],
+                  ["via_urgences", "+0.55", "entrée non programmée"],
+                  ["min(30, durée séjour)", "+0.035 / jour", "plafonné à 30 j"],
+                  ["créatinine > 130", "+0.6", "binaire"],
+                  ["kaliémie hors [3.3 ; 5.2]", "+0.4", "binaire"],
+                  ["HbA1c > 8", "+0.35", "binaire"],
+                ].map(([v, c, e]) => (
+                  <TableRow key={v}>
+                    <TableCell className="font-mono text-xs">{v}</TableCell>
+                    <TableCell className="font-mono text-xs">{c}</TableCell>
+                    <TableCell className="text-xs">{e}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <pre className="bg-muted p-2 rounded text-[10px] mt-2 overflow-x-auto">{`score = σ(z) ∈ [0, 1]    seuil "complexe" : score ≥ 0.5`}</pre>
+        </div>
+
+        <div>
+          <h4 className="font-semibold mb-2">2. Score ML "gravité d'une omission" — <code>predictLayer4Sync</code></h4>
+          <p className="text-xs text-muted-foreground mb-2">
+            Appliqué à chaque médicament omis ; alimente <code>DivergenceConciliation.ml_severity_score</code>.
+          </p>
+          <pre className="bg-muted p-2 rounded text-[10px] overflow-x-auto">{`z = -2.0
+  + 1.6  si mot-clé haut risque (AVK, AOD, insulines, lévothyrox, MTX, opioïdes…)
+  + 1.2  si classe ATC haut risque (B01, A10, C01, N03, L04, N05A, N02A)
+  + 0.015·max(0, age-50)
+  + 0.05 ·nb_meds_hospitalier
+  + 0.3  si durée séjour > 10 j
+severity = σ(z)
+level    = high ≥ 0.7 · moderate ≥ 0.4 · low sinon`}</pre>
+        </div>
+
+        <div>
+          <h4 className="font-semibold mb-2">3. Niveau de tri patient P1-P5 — <code>computePatientTriage</code></h4>
+          <p className="text-xs text-muted-foreground mb-2">
+            Règles métier déterministes (<code>src/lib/conciliation/triageScale.ts</code>), inspirées
+            de l'échelle FRENCH (SFMU). Calculées dans l'ordre suivant, le pire l'emporte :
+          </p>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Niveau</TableHead>
+                  <TableHead>Délai</TableHead>
+                  <TableHead>Déclencheur</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[
+                  ["P1 — Immédiat", "Maintenant", "≥ 1 divergence critique OU worstRisk=critique non validé"],
+                  ["P2 — Très urgent", "< 1 h", "≥ 1 divergence majeure OU worstRisk=eleve non validé OU ≥ 3 divergences non intentionnelles"],
+                  ["P3 — Urgent", "< 6 h", "≥ 1 divergence modérée OU worstRisk=modere"],
+                  ["P4 — Standard", "< 24 h", "Épisode actif sans validation, divergences mineures ou non encore analysées"],
+                  ["P5 — Non urgent", "Programmée", "Aucun épisode actif OU validation pharmacien avec 0 divergence non intentionnelle"],
+                ].map(([n, d, t]) => (
+                  <TableRow key={n}>
+                    <TableCell className="text-xs font-semibold">{n}</TableCell>
+                    <TableCell className="text-xs">{d}</TableCell>
+                    <TableCell className="text-xs">{t}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="mt-3 space-y-1 text-xs">
+            <p><strong>Garde-fous additionnels :</strong></p>
+            <ul className="list-disc pl-5 space-y-0.5">
+              <li><strong>Sécurité gériatrique</strong> : âge ≥ 75 + (≥ 5 traitements OU IR) sans analyse → plafonné à P3.</li>
+              <li><strong>Ancienneté</strong> : analyse en attente &gt; 48 h → on remonte d'un palier (sauf si déjà P1).</li>
+              <li><strong>Validation pharmacien</strong> : n'écrase plus le niveau P (le patient est archivé via <code>saveConciliationValidation</code> et sort du flux actif tout en gardant son classement clinique).</li>
+            </ul>
+          </div>
+        </div>
+
+        <div>
+          <h4 className="font-semibold mb-2">4. Explicabilité — comment c'est restitué à l'écran</h4>
+          <ul className="list-disc pl-5 text-xs space-y-1">
+            <li>Chaque <code>TriageBadge</code> P1-P5 expose une infobulle <code>TriageDetails</code> : nombre de divergences par gravité (mineur/modéré/majeur/critique), <code>worstRisk</code>, <code>hasValidation</code>, ancienneté en heures, indicateurs <code>riskComputed</code> / <code>analysisRun</code>.</li>
+            <li>Chaque divergence affiche son <code>ml_severity_score</code> (badge ML) + la règle déterministe qui l'a déclenchée (rule.id STOPP/START ou interaction ATC).</li>
+            <li>Le <code>reason</code> retourné par <code>computePatientTriage</code> est une phrase humaine ("3 divergences majeures non résolues · en attente depuis 52 h") affichée sous le badge.</li>
+            <li>Les coefficients ML sont versionnés (<code>model_version = "inline-1.0.0"</code>) — toute calibration future bumpe la version pour traçabilité.</li>
+            <li>100 % reproductible : aucun appel LLM dans la chaîne de priorisation — un même dossier renvoie toujours le même P et le même score.</li>
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
