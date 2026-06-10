@@ -6,6 +6,7 @@ import {
   type NiveauRisque,
   type TriageResult,
 } from "@/lib/conciliation/triageScale";
+import { computeRiskScore } from "@/lib/conciliation/riskScore";
 
 const RISK_ORDER: NiveauRisque[] = ["faible", "modere", "eleve", "critique"];
 const worseRisk = (a: NiveauRisque | null, b: NiveauRisque | null): NiveauRisque | null => {
