@@ -131,7 +131,7 @@ export const listTasks = createServerFn({ method: "GET" })
       .select("id, slug, label, description, model, current_version, updated_at, execution_mode, provider:ai_providers(id, name, kind)" as any)
       .order("label", { ascending: true });
     if (error) throw new Error(error.message);
-    return (data || []) as Array<{
+    return ((data || []) as unknown) as Array<{
       id: string; slug: string; label: string; description: string | null;
       model: string; current_version: number; updated_at: string;
       execution_mode?: "llm" | "ml" | "both";
