@@ -272,7 +272,7 @@ Règles CRUCIALES de classification :
     } catch {
       throw new Error("Réponse IA non valide. Réessayez avec un document plus net.");
     }
-    const dossier = normalizeHospitalPrescriptionLines(DossierSchema.parse(parsedJson));
+    const dossier = normalizeHospitalPrescriptionLines(DossierSchema.parse(sanitizeDossierInput(parsedJson)));
 
     // Détection de doublon
     let existingId: string | null = null;
