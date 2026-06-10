@@ -198,6 +198,75 @@ export const updateTask = createServerFn({ method: "POST" })
     return { ok: true, version: nextVersion };
   });
 
+const bulkUpdateSchema = z
+  .object({
+    slugs: z.array(z.string().min(1)).min(1).max(50),
+    provider_id: z.string().uuid().nullable().optional(),
+    model: z.string().min(1).max(255).optional(),
+    note: z.string().max(500).optional(),
+  })
+  .refine((d) => d.provider_id !== undefined || d.model !== undefined, {
+    message: "Au moins un champ doit être modifié",
+  });
+
+export const bulkUpdateTasks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => bulkUpdateSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: tasks, error: fetchErr } = await supabaseAdmin
+      .from("ai_tasks")
+      .select("id, slug, current_version, provider_id, model, system_prompt, temperature, max_tokens")
+      .in("slug", data.slugs);
+    if (fetchErr) throw new Error(fetchErr.message);
+
+    const errors: Array<{ slug: string; error: string }> = [];
+    let updated = 0;
+
+    for (const t of tasks ?? []) {
+      try {
+        const nextVersion = (t.current_version || 1) + 1;
+        const nextProviderId =
+          data.provider_id !== undefined ? data.provider_id : t.provider_id;
+        const nextModel = data.model !== undefined ? data.model : t.model;
+
+        const { error: upErr } = await supabaseAdmin
+          .from("ai_tasks")
+          .update({
+            provider_id: nextProviderId,
+            model: nextModel,
+            current_version: nextVersion,
+          })
+          .eq("id", t.id);
+        if (upErr) throw new Error(upErr.message);
+
+        const { error: verErr } = await supabaseAdmin.from("ai_prompt_versions").insert({
+          task_id: t.id,
+          version: nextVersion,
+          system_prompt: t.system_prompt,
+          model: nextModel,
+          provider_id: nextProviderId,
+          temperature: t.temperature ?? null,
+          max_tokens: t.max_tokens ?? null,
+          note: data.note ?? "bulk update",
+          created_by: context.userId,
+        });
+        if (verErr) throw new Error(verErr.message);
+
+        updated += 1;
+      } catch (e) {
+        errors.push({
+          slug: t.slug,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+
+    return { updated, errors, total: data.slugs.length };
+  });
+
 export const listTaskVersions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ slug: z.string() }).parse(d))
