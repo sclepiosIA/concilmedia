@@ -803,7 +803,7 @@ is_severe = 1 si severity ≥ 0.5, sinon 0`}
             <ul className="list-disc pl-5 text-xs space-y-1">
               <li>Toutes les server fn IA passent par <code>requireSupabaseAuth</code> (middleware) — RLS appliqué comme l'utilisateur.</li>
               <li><code>attachSupabaseAuth</code> côté client attache le bearer à chaque RPC.</li>
-              <li>Tables <code>patients</code> / <code>episodes</code> protégées par <code>owns_patient()</code> / <code>owns_episode()</code> (SECURITY DEFINER).</li>
+              <li>Tables <code>patients</code> / <code>episodes</code> accessibles à tout utilisateur authentifié via <code>owns_patient()</code> / <code>owns_episode()</code> (SECURITY DEFINER) — <strong>partage global de la cohorte</strong> (tout pharmacien voit tous les patients).</li>
               <li>Rôles via table <code>user_roles</code> + <code>has_role()</code>, jamais sur <code>profiles</code>.</li>
             </ul>
           </div>
