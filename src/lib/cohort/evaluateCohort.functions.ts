@@ -71,16 +71,36 @@ export const evaluateCohort = createServerFn({ method: "POST" })
       supabase.from("biologie_resultats").select("patient_id, parametre, valeur, date_prelevement").in("patient_id", patientIds),
     ]);
 
+    // Lecture des divergences IA depuis le payload stocké dans conciliation_ai_analyses,
+    // filtré sur le run_tag + model_label si fournis. On garde la plus récente analyse par patient.
+    let aiQuery = supabase
+      .from("conciliation_ai_analyses")
+      .select("patient_id, payload, run_tag, model_label, created_at, model")
+      .in("patient_id", patientIds)
+      .order("created_at", { ascending: false });
+    if (data.runTag) aiQuery = aiQuery.eq("run_tag", data.runTag);
+    if (data.modelLabel) aiQuery = aiQuery.eq("model_label", data.modelLabel);
+    const { data: aiAnalyses } = await aiQuery;
+
+    const [{ data: gold }, { data: episodes }, { data: comorb }, { data: bio }] = await Promise.all([
+      supabase.from("pharmacist_gold_standards").select("*").eq("cohort_id", data.cohortId),
+      supabase.from("episodes").select("id, patient_id, motif, service, date_entree").in("patient_id", patientIds),
+      supabase.from("comorbidites").select("patient_id, libelle, statut").in("patient_id", patientIds),
+      supabase.from("biologie_resultats").select("patient_id, parametre, valeur, date_prelevement").in("patient_id", patientIds),
+    ]);
+
     type GoldRow = NonNullable<typeof gold>[number];
     const goldByPatient = new Map<string, GoldRow>();
     for (const g of gold ?? []) goldByPatient.set((g as { patient_id: string }).patient_id, g);
 
-    type DivRow = NonNullable<typeof divsIA>[number];
-    const divsByPatient = new Map<string, DivRow[]>();
-    for (const d of divsIA ?? []) {
-      const pid = (d as { patient_id: string }).patient_id;
-      if (!divsByPatient.has(pid)) divsByPatient.set(pid, []);
-      divsByPatient.get(pid)!.push(d);
+    // Plus récente analyse IA par patient (déjà triée desc)
+    const divsByPatient = new Map<string, AIDivergence[]>();
+    for (const a of aiAnalyses ?? []) {
+      const pid = (a as { patient_id: string }).patient_id;
+      if (divsByPatient.has(pid)) continue;
+      const pl = (a as { payload: unknown }).payload as { divergences_conciliation?: AIDivergence[] } | null;
+      const arr = Array.isArray(pl?.divergences_conciliation) ? pl!.divergences_conciliation! : [];
+      divsByPatient.set(pid, arr);
     }
 
     const comorbByPatient = new Map<string, number>();
