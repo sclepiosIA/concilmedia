@@ -186,6 +186,7 @@ const CommitInput = z.object({
     file_size: z.number().optional(),
   })).min(1).max(1000),
   auto_create_episode: z.boolean().optional().default(true),
+  cohort_id: z.string().uuid().nullable().optional(),
 });
 
 export const commitBulkImport = createServerFn({ method: "POST" })
@@ -217,12 +218,17 @@ export const commitBulkImport = createServerFn({ method: "POST" })
             poids_kg: item.patient.poids_kg ?? null,
             taille_cm: item.patient.taille_cm ?? null,
             created_by: userId,
+            cohort_id: data.cohort_id ?? null,
           } as never).select("id").single();
           if (error || !ins) throw new Error(error?.message ?? "Création patient échouée");
           patientId = (ins as { id: string }).id;
           summary.created++;
         } else {
           summary.updated++;
+          // Tag existing patient with the cohort if not already tagged
+          if (data.cohort_id) {
+            await supabase.from("patients").update({ cohort_id: data.cohort_id } as never).eq("id", patientId).is("cohort_id", null);
+          }
         }
 
         // ────────────── Traçabilité : upload du PDF source ──────────────
