@@ -46,6 +46,7 @@ function TaskEditor() {
   const [temperature, setTemperature] = useState<string>("");
   const [maxTokens, setMaxTokens] = useState<string>("");
   const [executionMode, setExecutionMode] = useState<"llm" | "ml" | "both">("llm");
+  const [reasoningEffort, setReasoningEffort] = useState<"low" | "medium" | "high" | "">("");
   const [note, setNote] = useState<string>("");
   const [initialized, setInitialized] = useState(false);
 
@@ -60,8 +61,11 @@ function TaskEditor() {
     setMaxTokens(taskQ.data.max_tokens?.toString() ?? "");
     const m = (taskQ.data as { execution_mode?: string }).execution_mode;
     setExecutionMode(m === "ml" || m === "both" ? m : "llm");
+    setReasoningEffort((taskQ.data.reasoning_effort as "low" | "medium" | "high" | null) ?? "");
     setInitialized(true);
   }
+
+  const isGpt5 = /gpt-5/i.test(model);
 
   const save = useMutation({
     mutationFn: () =>
@@ -71,9 +75,10 @@ function TaskEditor() {
           provider_id: providerId || null,
           model,
           system_prompt: systemPrompt,
-          temperature: temperature ? Number(temperature) : null,
+          temperature: isGpt5 ? null : (temperature ? Number(temperature) : null),
           max_tokens: maxTokens ? Number(maxTokens) : null,
           execution_mode: executionMode,
+          reasoning_effort: isGpt5 ? (reasoningEffort || null) : null,
           note: note || undefined,
         },
       }),
@@ -135,13 +140,32 @@ function TaskEditor() {
             <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder="ex: gpt-4o-mini" />
           </div>
           <div>
-            <Label>Température</Label>
-            <Input value={temperature} onChange={(e) => setTemperature(e.target.value)} placeholder="ex: 0.2" inputMode="decimal" />
+            <Label>Température {isGpt5 && <span className="text-xs text-muted-foreground">(non supporté par GPT-5.x)</span>}</Label>
+            <Input
+              value={isGpt5 ? "" : temperature}
+              onChange={(e) => setTemperature(e.target.value)}
+              placeholder={isGpt5 ? "—" : "ex: 0.2"}
+              inputMode="decimal"
+              disabled={isGpt5}
+            />
           </div>
           <div>
-            <Label>Max tokens</Label>
+            <Label>{isGpt5 ? "Max completion tokens" : "Max tokens"}</Label>
             <Input value={maxTokens} onChange={(e) => setMaxTokens(e.target.value)} placeholder="ex: 4000" inputMode="numeric" />
           </div>
+          {isGpt5 && (
+            <div>
+              <Label>Reasoning effort</Label>
+              <Select value={reasoningEffort || "medium"} onValueChange={(v) => setReasoningEffort(v as "low" | "medium" | "high")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">low (rapide, peu profond)</SelectItem>
+                  <SelectItem value="medium">medium (équilibré)</SelectItem>
+                  <SelectItem value="high">high (raisonnement étendu)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <div>
           <Label>Mode d'exécution</Label>

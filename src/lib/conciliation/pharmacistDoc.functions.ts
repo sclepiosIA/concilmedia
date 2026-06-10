@@ -162,11 +162,12 @@ Tâche : comparer les deux sources et produire STRICTEMENT un JSON valide avec c
   "conclusion": "1-2 phrases — recommandation finale"
 }
 Réponds UNIQUEMENT avec le JSON, sans markdown.`;
-    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
+    const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     let result;
     try {
       result = await generateText({
+        ...callOptions,
         model,
         system: __systemPrompt,
         messages: [

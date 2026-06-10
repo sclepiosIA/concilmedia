@@ -33,7 +33,7 @@ export const matchPrescriptionAI = createServerFn({ method: "POST" })
 
     const { generateText, Output } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
-    const { model: aiModel } = await resolveAITask("match_prescription", {
+    const { model: aiModel, callOptions } = await resolveAITask("match_prescription", {
       systemPrompt: "",
       model: "google/gemini-2.5-flash",
     });
@@ -69,6 +69,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
     let lastError: unknown = null;
     try {
       const res = await generateText({
+        ...callOptions,
         model: aiModel,
         prompt,
         experimental_output: Output.object({ schema: AISchema }),
@@ -78,6 +79,7 @@ Réponds en français, raison courte (<200 caractères), recommandation seulemen
       lastError = e;
       try {
         const res = await generateText({
+          ...callOptions,
           model: aiModel,
           prompt:
             prompt +

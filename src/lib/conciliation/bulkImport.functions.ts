@@ -139,9 +139,10 @@ Règles CRUCIALES de classification :
 - Biologie prioritaire : DFG, créatinine, kaliémie, natrémie, INR, TP, hémoglobine, plaquettes, leucocytes, ASAT, ALAT, glycémie, HbA1c, CRP.
 - Omets les champs inconnus, n'invente rien. Renvoie [] pour les sections vides.
 - Ne renvoie QUE le JSON.`;
-    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
+    const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     const result = await generateText({
+      ...callOptions,
       model,
       system: __systemPrompt,
       messages: [

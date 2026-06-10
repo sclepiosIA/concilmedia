@@ -91,9 +91,10 @@ Règles :
 - Ignore les annotations administratives, en-têtes d'ordonnancier, signatures.
 - N'inclus que les médicaments réellement prescrits.
 Réponds UNIQUEMENT avec le JSON.`;
-    const { model, systemPrompt: __systemPrompt } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
+    const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
 
     const result = await generateText({
+      ...callOptions,
       model,
       system: __systemPrompt,
       messages: [

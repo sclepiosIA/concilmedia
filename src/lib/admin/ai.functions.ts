@@ -145,7 +145,19 @@ export const getTask = createServerFn({ method: "GET" })
       .eq("slug", data.slug)
       .single();
     if (error) throw new Error(error.message);
-    return task;
+    // Read extra_config separately (column added in later migration, may be absent in generated types)
+    const { data: extraRow } = await supabaseAdmin
+      .from("ai_tasks")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .select("extra_config" as any)
+      .eq("slug", data.slug)
+      .single();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const extra = ((extraRow as any)?.extra_config ?? {}) as Record<string, unknown>;
+    return {
+      ...task,
+      reasoning_effort: (extra.reasoning_effort as "low" | "medium" | "high" | null) ?? null,
+    };
   });
 
 const updateTaskSchema = z.object({
@@ -156,6 +168,7 @@ const updateTaskSchema = z.object({
   temperature: z.number().nullable().optional(),
   max_tokens: z.number().int().positive().nullable().optional(),
   execution_mode: z.enum(["llm", "ml", "both"]).optional(),
+  reasoning_effort: z.enum(["low", "medium", "high"]).nullable().optional(),
   note: z.string().optional(),
 });
 
@@ -181,6 +194,7 @@ export const updateTask = createServerFn({ method: "POST" })
       temperature: data.temperature ?? null,
       max_tokens: data.max_tokens ?? null,
       current_version: nextVersion,
+      extra_config: { reasoning_effort: data.reasoning_effort ?? null },
     };
     if (data.execution_mode) update.execution_mode = data.execution_mode;
 
