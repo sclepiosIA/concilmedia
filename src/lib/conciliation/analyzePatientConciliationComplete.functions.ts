@@ -130,7 +130,7 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
     const TIMEOUT_MS = 110_000;
     const callOptionsWithDefaults: Record<string, unknown> = { ...callOptions };
     const { isGpt5Family } = await import("@/lib/ai/runAITask.server");
-    const isGpt5 = isGpt5Family(__modelIdUsed);
+    const isGpt5 = isGpt5Family(__modelIdUsed, "lovable");
     const provOpts = (callOptionsWithDefaults.providerOptions ?? {}) as
       Record<string, Record<string, unknown> | undefined>;
     const hasMaxCompletion = !!(
