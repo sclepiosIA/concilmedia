@@ -333,7 +333,7 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
               <Button variant="outline" onClick={reset}>Recommencer</Button>
               <Button onClick={() => importMut.mutate()} disabled={readyCount === 0 || importMut.isPending}>
                 {importMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
-                Importer {readyCount} patient(s)
+                Importer {readyCount} document(s)
               </Button>
             </>
           )}
