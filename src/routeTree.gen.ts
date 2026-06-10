@@ -23,6 +23,7 @@ import { Route as AuthenticatedEpisodesEpisodeIdRouteImport } from './routes/_au
 import { Route as AuthenticatedConciliationMetriquesRouteImport } from './routes/_authenticated/conciliation.metriques'
 import { Route as AuthenticatedAdminRagRouteImport } from './routes/_authenticated/admin.rag'
 import { Route as AuthenticatedAdminImportReelRouteImport } from './routes/_authenticated/admin.import-reel'
+import { Route as AuthenticatedAdminImportFhirRouteImport } from './routes/_authenticated/admin.import-fhir'
 import { Route as AuthenticatedAdminBdpmRouteImport } from './routes/_authenticated/admin.bdpm'
 import { Route as AuthenticatedAdminAiRouteImport } from './routes/_authenticated/admin.ai'
 import { Route as AuthenticatedAdminAiIndexRouteImport } from './routes/_authenticated/admin.ai.index'
@@ -106,6 +107,12 @@ const AuthenticatedAdminImportReelRoute =
     path: '/import-reel',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminImportFhirRoute =
+  AuthenticatedAdminImportFhirRouteImport.update({
+    id: '/import-fhir',
+    path: '/import-fhir',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminBdpmRoute = AuthenticatedAdminBdpmRouteImport.update({
   id: '/bdpm',
   path: '/bdpm',
@@ -151,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
+  '/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
   '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/admin/rag': typeof AuthenticatedAdminRagRoute
   '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
@@ -171,6 +179,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
+  '/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
   '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/admin/rag': typeof AuthenticatedAdminRagRoute
   '/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
@@ -194,6 +203,7 @@ export interface FileRoutesById {
   '/_authenticated/evaluation': typeof AuthenticatedEvaluationRoute
   '/_authenticated/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/_authenticated/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
+  '/_authenticated/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
   '/_authenticated/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
   '/_authenticated/admin/rag': typeof AuthenticatedAdminRagRoute
   '/_authenticated/conciliation/metriques': typeof AuthenticatedConciliationMetriquesRoute
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/evaluation'
     | '/admin/ai'
     | '/admin/bdpm'
+    | '/admin/import-fhir'
     | '/admin/import-reel'
     | '/admin/rag'
     | '/conciliation/metriques'
@@ -237,6 +248,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/evaluation'
     | '/admin/bdpm'
+    | '/admin/import-fhir'
     | '/admin/import-reel'
     | '/admin/rag'
     | '/conciliation/metriques'
@@ -259,6 +271,7 @@ export interface FileRouteTypes {
     | '/_authenticated/evaluation'
     | '/_authenticated/admin/ai'
     | '/_authenticated/admin/bdpm'
+    | '/_authenticated/admin/import-fhir'
     | '/_authenticated/admin/import-reel'
     | '/_authenticated/admin/rag'
     | '/_authenticated/conciliation/metriques'
@@ -377,6 +390,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminImportReelRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/import-fhir': {
+      id: '/_authenticated/admin/import-fhir'
+      path: '/import-fhir'
+      fullPath: '/admin/import-fhir'
+      preLoaderRoute: typeof AuthenticatedAdminImportFhirRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/bdpm': {
       id: '/_authenticated/admin/bdpm'
       path: '/bdpm'
@@ -442,6 +462,7 @@ const AuthenticatedAdminAiRouteWithChildren =
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAiRoute: typeof AuthenticatedAdminAiRouteWithChildren
   AuthenticatedAdminBdpmRoute: typeof AuthenticatedAdminBdpmRoute
+  AuthenticatedAdminImportFhirRoute: typeof AuthenticatedAdminImportFhirRoute
   AuthenticatedAdminImportReelRoute: typeof AuthenticatedAdminImportReelRoute
   AuthenticatedAdminRagRoute: typeof AuthenticatedAdminRagRoute
 }
@@ -449,6 +470,7 @@ interface AuthenticatedAdminRouteChildren {
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAiRoute: AuthenticatedAdminAiRouteWithChildren,
   AuthenticatedAdminBdpmRoute: AuthenticatedAdminBdpmRoute,
+  AuthenticatedAdminImportFhirRoute: AuthenticatedAdminImportFhirRoute,
   AuthenticatedAdminImportReelRoute: AuthenticatedAdminImportReelRoute,
   AuthenticatedAdminRagRoute: AuthenticatedAdminRagRoute,
 }
