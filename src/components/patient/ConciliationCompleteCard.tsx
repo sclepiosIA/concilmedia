@@ -18,6 +18,7 @@ import {
   type ItemDecision,
 } from "@/lib/conciliation/validateConciliation.functions";
 import { uploadPharmacistDoc } from "@/lib/conciliation/pharmacistDoc.functions";
+import { ExportFhirButtons } from "@/components/conciliation/ExportFhirButtons";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import { fr } from "date-fns/locale";
