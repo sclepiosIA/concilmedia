@@ -9,7 +9,7 @@ type RiskRow = {
   niveau: string;
   source: string;
   variables: Record<string, unknown> | null;
-  created_at: string;
+  computed_at: string;
 };
 
 function variantFor(score: number) {
@@ -24,11 +24,11 @@ export function RiskScoreCompare({ episodeId }: { episodeId: string }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("risk_scores")
-        .select("id, score, niveau, source, variables, created_at")
+        .select("id, score, niveau, source, variables, computed_at")
         .eq("episode_id", episodeId)
-        .order("created_at", { ascending: false })
+        .order("computed_at", { ascending: false })
         .limit(10);
-      return (data ?? []) as RiskRow[];
+      return (data ?? []) as unknown as RiskRow[];
     },
   });
 
