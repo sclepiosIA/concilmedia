@@ -1,82 +1,30 @@
 ## Objectif
+Faire en sorte que l’écran Admin IA affiche immédiatement un prompt système éditable et des paramètres utiles pour chaque endpoint/tâche, au lieu de laisser les champs vides.
 
-Permettre, dans le banc d'essai cohorte, de lancer la conciliation IA **simultanément sur plusieurs modèles LLM** et de **comparer leurs performances** (Précision / Rappel / F1 vs gold standard pharmacien, triage, sévérité, vs ML).
+## Constat
+- Les prompts système existent déjà dans le code pour les tâches comme `analyze_patient_complete`.
+- En base, les `system_prompt` sont vides pour tous les endpoints IA, donc l’éditeur affiche un champ vide et utilise seulement un fallback à l’exécution.
+- Les paramètres (`temperature`, `max_tokens`, `reasoning_effort`) sont aussi vides, donc l’admin ne permet pas vraiment de piloter les appels par endpoint.
 
-Ajouter à la liste des modèles utilisables 3 nouveaux endpoints Azure AI Foundry :
-- `claude-opus-4-8` via `https://ia-interne-resource.services.ai.azure.com/anthropic/v1/messages`
-- `gpt-5.4` via `https://ia-interne-resource.services.ai.azure.com/openai/v1/responses`
-- `gpt-5-nano` via `https://ia-interne-resource.services.ai.azure.com/openai/v1/responses`
+## Plan d’implémentation
+1. **Préremplir les prompts système en base**
+   - Ajouter une migration qui remplit `ai_tasks.system_prompt` avec les prompts par défaut existants pour chaque slug.
+   - Mettre à jour la version initiale dans `ai_prompt_versions` quand elle est vide, pour que l’historique reflète le vrai prompt.
 
-## 1. Providers & modèles (DB seed + admin)
+2. **Afficher le prompt effectif dans l’éditeur**
+   - Modifier `getTask` pour retourner `effective_system_prompt` : prompt DB si présent, sinon prompt par défaut codé.
+   - Modifier l’écran `/admin/ai/tasks/$slug` pour initialiser le textarea avec ce prompt effectif.
+   - Garder le bouton “Charger le prompt par défaut”, mais il deviendra un moyen de réinitialiser au prompt d’origine.
 
-Migration SQL pour insérer (ou upsert par `name`) dans `ai_providers` :
-- `Azure Foundry — Anthropic` (kind: `anthropic`, base_url: `…/anthropic/v1/messages`, clé: secret `AZURE_OPENAI_API_KEY` existant, `extra_config: { variant: "azure_foundry_anthropic" }`)
-- `Azure Foundry — OpenAI Responses` (kind: `azure_openai`, base_url: `…/openai/v1/responses`, `extra_config: { variant: "responses_api" }`)
+3. **Ajouter des paramètres éditables par endpoint**
+   - Étendre l’admin pour sauvegarder les réglages dans `ai_tasks.extra_config` sans écraser les autres options.
+   - Pour GPT-5.x : `reasoning_effort`, `verbosity` si pertinent, et tokens de sortie.
+   - Pour modèles non GPT-5 : température + tokens de sortie.
 
-Mise à jour de `runAITask.server.ts` :
-- Brancher la variante `anthropic` Azure Foundry : `createAnthropic({ baseURL, apiKey, headers: { "api-key": apiKey } })` quand `extra.variant === "azure_foundry_anthropic"`.
-- Brancher la variante `responses_api` : utiliser `createOpenAI({ baseURL, apiKey }).responses(modelId)` (provider OpenAI Responses) avec en-tête `api-key`.
-- Étendre `isGpt5Family` pour matcher `gpt-5.4` et `gpt-5-nano` (déjà couvert par la regex actuelle, vérifier).
+4. **Utiliser ces paramètres à l’exécution**
+   - Ajuster `runAITask.server.ts` pour lire les paramètres depuis `extra_config` et les passer au provider selon le type de modèle.
+   - Ne pas envoyer `temperature` aux GPT-5.x pour éviter les erreurs d’API.
 
-Registre des modèles côté UI (`src/lib/ai/availableModels.ts`, **nouveau**) :
-```
-[
-  { id: "google/gemini-3-flash-preview", label: "Gemini 3 Flash (Lovable)", providerName: "Lovable AI" },
-  { id: "openai/gpt-5", label: "GPT-5 (Lovable)", providerName: "Lovable AI" },
-  { id: "claude-opus-4-8", label: "Claude Opus 4.8 (Azure Foundry)", providerName: "Azure Foundry — Anthropic" },
-  { id: "gpt-5.4", label: "GPT-5.4 (Azure Foundry)", providerName: "Azure Foundry — OpenAI Responses" },
-  { id: "gpt-5-nano", label: "GPT-5 Nano (Azure Foundry)", providerName: "Azure Foundry — OpenAI Responses" },
-]
-```
-
-## 2. Refactor du moteur de conciliation pour accepter un modèle
-
-`analyzePatientConciliationComplete.functions.ts` :
-- Ajouter un input optionnel `{ patientId, modelOverride?: { providerName: string, modelId: string }, runTag?: string }`.
-- Si `modelOverride` fourni → `resolveAITask` reçoit un override (modèle + provider explicite) au lieu de la config DB du slug.
-- L'insertion dans `conciliation_ai_analyses` enregistre le `model` réel utilisé + une nouvelle colonne `run_tag` (ex. `multi-llm-2026-06-10T14h`) pour pouvoir comparer plusieurs runs sans s'écraser.
-
-`resolveAITask` : accepter un 3e paramètre `override?: { providerName, modelId }` qui contourne le lookup `ai_tasks` et fabrique la config directement à partir du provider trouvé par nom.
-
-## 3. Migration DB
-
-- `ALTER TABLE conciliation_ai_analyses ADD COLUMN run_tag text;` + index `(patient_id, run_tag)`.
-- `ALTER TABLE conciliation_medicaments ADD COLUMN run_tag text;` (les divergences IA sont taggées par run).
-- `ALTER TABLE cohort_evaluations ADD COLUMN model_label text, ADD COLUMN run_tag text;` + drop unicité existante sur `cohort_id` et remplacer par `UNIQUE(cohort_id, run_tag)`.
-- Seed providers Azure Foundry (cf §1).
-- GRANTs déjà en place sur ces tables, rien à ajouter.
-
-## 4. Nouveau serverFn `runCohortMultiModel`
-
-`src/lib/cohort/runCohortMultiModel.functions.ts` :
-- Input : `{ cohortId, models: Array<{ providerName, modelId, label }> }`.
-- Génère un `runTag = "multi-" + nanoid()`.
-- Pour chaque patient × chaque modèle : appelle `analyzePatientConciliationComplete` avec `modelOverride` et `runTag` (séquentiel patient par patient, parallèle entre modèles pour un même patient via `Promise.allSettled`).
-- Retourne un récap `{ runTag, perModel: [{ label, ok, fail, durationMs }] }`.
-
-`evaluateCohort.functions.ts` : accepter `{ cohortId, runTag? }` ; quand `runTag` fourni, filtrer `conciliation_medicaments` sur ce tag. Stocker une ligne `cohort_evaluations` par `(cohortId, runTag, model_label)`.
-
-Nouveau serverFn `evaluateCohortAllModels({ cohortId, runTag })` : itère sur les `model_label` distincts de ce run, appelle `evaluateCohort` par modèle, renvoie un tableau comparatif.
-
-## 5. UI
-
-`CohortRunTab.tsx` :
-- Sélecteur multi (checkbox) sur la liste de modèles dispos. Par défaut le modèle actuel coché.
-- Bouton « Lancer conciliation multi-modèles » → appelle `runCohortMultiModel`.
-- Barre de progression par modèle.
-
-`CohortResultsTab.tsx` :
-- Si plusieurs runs/modèles présents pour la cohorte : tableau comparatif (Modèle | Précision | Rappel | F1 | Triage acc. | Sévérité MAE | Durée moy. | Coût relatif placeholder).
-- Graphique barres groupées (recharts déjà dispo) par métrique.
-- Conserver l'affichage existant en single-model si un seul run.
-
-## 6. Hors scope
-
-- Pas de gestion fine des coûts/tokens (placeholder seulement).
-- Pas de retry automatique en cas d'échec d'un modèle (le run est marqué failed et on continue).
-- Pas de re-extraction du gold standard (un seul gold par patient sert de référence).
-
-## Fichiers touchés
-
-- **Nouveaux** : `src/lib/ai/availableModels.ts`, `src/lib/cohort/runCohortMultiModel.functions.ts`, `src/lib/cohort/evaluateCohortAllModels.functions.ts`, migration SQL.
-- **Modifiés** : `src/lib/ai/runAITask.server.ts` (variantes Foundry + override), `src/lib/conciliation/analyzePatientConciliationComplete.functions.ts` (modelOverride/runTag), `src/lib/cohort/evaluateCohort.functions.ts` (filtre runTag), `src/components/cohort/CohortRunTab.tsx`, `src/components/cohort/CohortResultsTab.tsx`, `src/integrations/supabase/types.ts` (auto régénéré après migration).
+5. **Validation**
+   - Vérifier en base que `analyze_patient_complete` et les autres endpoints ont bien un prompt non vide.
+   - Vérifier que la page admin affiche directement le prompt et que l’enregistrement crée une nouvelle version.
