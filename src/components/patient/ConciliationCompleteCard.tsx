@@ -70,6 +70,18 @@ export function ConciliationCompleteCard({ patientId, autoStart = false }: { pat
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur IA"),
   });
 
+  useEffect(() => {
+    if (!autoStart) return;
+    if (didAutoStartRef.current) return;
+    if (latestLoading) return;
+    if (latest) return;
+    if (mut.isPending) return;
+    didAutoStartRef.current = true;
+    mut.mutate();
+  }, [autoStart, latestLoading, latest, mut]);
+
+
+
   const payload = latest?.payload as unknown as AIAnalysisPayload | undefined;
 
   // ---- local validation state ----
