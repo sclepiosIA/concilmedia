@@ -154,9 +154,12 @@ export const evaluateCohort = createServerFn({ method: "POST" })
       let tp = 0, fp = 0;
       const matchedGold = new Set<number>();
       for (const d of iaDivs) {
-        const dom = ((d as { medication_domicile: { dci?: string } | null }).medication_domicile ?? {}) as { dci?: string };
-        const iaName = norm(dom.dci);
-        const iaType = (d as { type_divergence: string }).type_divergence;
+        // Payload IA: peut contenir `medication_domicile.dci` (analyse complète),
+        // ou `medicament`/`dci` à plat selon le prompt. On essaye tout.
+        const iaName = norm(
+          d.medication_domicile?.dci ?? d.dci ?? d.medicament ?? null,
+        );
+        const iaType = (d.type_divergence ?? d.type ?? "autre").toString();
         const idx = goldDivs.findIndex((gd, i) => {
           if (matchedGold.has(i)) return false;
           const gn = norm(gd.medicament);
@@ -165,9 +168,8 @@ export const evaluateCohort = createServerFn({ method: "POST" })
         });
         if (idx >= 0) {
           tp++; matchedGold.add(idx); bumpType(iaType, "tp");
-          // Severity comparison if both have severity
           const goldSev = goldDivs[idx].severite;
-          const iaSev = (d as { severite?: string | null }).severite;
+          const iaSev = d.severite ?? null;
           if (goldSev && iaSev) {
             sevPairs++;
             if (norm(goldSev) === norm(iaSev)) sevLLMcorrect++;
