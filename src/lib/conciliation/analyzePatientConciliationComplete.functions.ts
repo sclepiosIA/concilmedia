@@ -25,6 +25,8 @@ type AnalysisDossier = {
   prescriptions_hospitalieres: Array<Record<string, unknown>>;
 };
 
+type TimeoutError = Error & { name: "TimeoutError" };
+
 function asString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -47,6 +49,51 @@ function normalizeDrugName(value: string): string {
     .replace(/\d+[,.]?\d*/g, " ")
     .replace(/[^a-z]+/g, " ")
     .trim();
+}
+
+function compactText(value: unknown, maxLength = 180): string | null {
+  const text = asString(value).replace(/\s+/g, " ");
+  if (!text) return null;
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+}
+
+function compactRow(row: Record<string, unknown>, keys: string[]): Record<string, unknown> {
+  return Object.fromEntries(
+    keys
+      .map((key) => [key, compactText(row[key]) ?? row[key]] as const)
+      .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== ""),
+  );
+}
+
+function buildCompactAiDossier(dossier: AnalysisDossier) {
+  return {
+    patient: dossier.patient,
+    allergies: dossier.allergies.slice(0, 8).map((r) => compactRow(r, ["substance", "reaction", "severite"])),
+    antecedents: dossier.antecedents.slice(0, 10).map((r) => compactRow(r, ["libelle", "date_diagnostic", "commentaire"])),
+    comorbidites: dossier.comorbidites.slice(0, 10).map((r) => compactRow(r, ["libelle", "severite"])),
+    biologie_recente: dossier.biologie_recente.slice(0, 18).map((r) => compactRow(r, ["parametre", "valeur", "unite", "valeur_texte", "date_prelevement"])),
+    traitements_habituels: dossier.traitements_habituels.slice(0, 24).map((r) => compactRow(r, ["dci", "nom_commercial", "dosage", "dosage_unite", "voie_administration", "posologie_matin", "posologie_midi", "posologie_soir", "posologie_coucher", "posologie_texte", "indication"])),
+    prescriptions_hospitalieres: dossier.prescriptions_hospitalieres.slice(0, 24).map((r) => compactRow(r, ["medicament", "nom_commercial", "dosage", "dosage_unite", "voie_administration", "posologie_matin", "posologie_midi", "posologie_soir", "posologie_coucher", "posologie", "indication"])),
+  };
+}
+
+async function withHardTimeout<T>(task: (signal: AbortSignal) => Promise<T>, timeoutMs: number): Promise<T> {
+  const controller = new AbortController();
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+      const error = new Error("timeout") as TimeoutError;
+      error.name = "TimeoutError";
+      reject(error);
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([task(controller.signal), timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 function doseSummary(row: Record<string, unknown>): string {
@@ -141,6 +188,25 @@ function buildFastConciliationPayload(dossier: AnalysisDossier, reason: string):
   };
 }
 
+async function attachDeterministicAlerts(payload: AIAnalysisPayload, dossier: AnalysisDossier): Promise<AIAnalysisPayload> {
+  try {
+    const { computeDeterministicAlerts } = await import("./deterministicAlerts");
+    const traitementsDci = [
+      ...dossier.traitements_habituels.map((t) => drugLabel(t)),
+      ...dossier.prescriptions_hospitalieres.map((p) => drugLabel(p)),
+    ].filter(Boolean);
+    const det = computeDeterministicAlerts({
+      age: (dossier.patient.age as number | undefined) ?? null,
+      comorbidites: dossier.comorbidites.map((c) => asString(c.libelle)).filter(Boolean),
+      traitements_dci: traitementsDci,
+    });
+    payload.alertes_regles = det.all;
+  } catch (e) {
+    console.warn("[conciliation_complete] deterministic alerts failed:", e);
+  }
+  return payload;
+}
+
 export const analyzePatientConciliationComplete = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
@@ -208,42 +274,33 @@ export const analyzePatientConciliationComplete = createServerFn({ method: "POST
       prescriptions_hospitalieres: prescriptions.data ?? [],
     };
 
+    if (!data.modelOverride && !data.runTag && !data.modelLabel) {
+      const fastPayload = await attachDeterministicAlerts(
+        buildFastConciliationPayload(dossier as AnalysisDossier, "le mode anti-timeout est activé"),
+        dossier as AnalysisDossier,
+      );
+      await supabase.from("conciliation_ai_analyses").insert({
+        episode_id: null,
+        patient_id: data.patientId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        payload: fastPayload as any,
+        model: "deterministe_rapide",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        analysis_type: "conciliation_complete" as any,
+        run_tag: null,
+        model_label: "Mode rapide anti-timeout",
+      } as never);
+      return fastPayload;
+    }
+
     const { generateText } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
     const __aiTaskSlug = "analyze_patient_complete";
     const __aiDefaultModel = "google/gemini-3-flash-preview";
 
-    const systemPrompt = `Tu es un pharmacien clinicien hospitalier expert en CONCILIATION MÉDICAMENTEUSE. Ta mission : comparer ligne à ligne traitements habituels (ville/domicile) ↔ prescriptions hospitalières en cours, dans le contexte clinique (comorbidités, biologie, allergies, antécédents), et produire une aide à la décision opérationnelle pour le pharmacien hospitalier.
-
-Produis STRICTEMENT un JSON :
-{
-  "synthese":"4-6 phrases — profil patient, divergences ville/hôpital majeures, biologie pertinente",
-  "score_risque":0-100,
-  "divergences_conciliation":[{"type":"omission|ajout_non_justifie|switch|modification_posologie|substitution_classe","medicament_ville":"DCI ville ou null","medicament_hopital":"DCI hôpital ou null","severite":"mineure|moderee|majeure|critique","justification_clinique":"pourquoi c'est un problème (citer CHA2DS2, DFG, INR, indication...)","risque":"conséquence clinique","recommandation":"action pharmaceutique concrète (ex: 'Reprendre Apixaban 5 mg x2/j')","alternative":"","confiance":0-100,"reference":"HAS conciliation / SFPC / STOPP-START / ANSM"}],
-  "actions_prioritaires":[{"action":"intervention pharmaceutique concrète","urgence":"immediate|24h|differee","destinataire":"prescripteur|IDE|patient","justification":"lien avec la divergence ou l'alerte"}],
-  "interactions":[{"dci_1":"","dci_2":"","severite":"mineure|moderee|majeure|contre_indication","mecanisme":"","risque":"","recommandation":"","alternative":"","confiance":0-100,"reference":"ANSM Thésaurus"}],
-  "doublons_therapeutiques":[{"medicaments":[""],"classe":"","severite":"","mecanisme":"","risque":"","recommandation":"","alternative":"","confiance":0-100,"reference":""}],
-  "contre_indications":[{"medicament":"","raison":"","severite":"majeure|contre_indication","mecanisme":"","risque":"","recommandation":"","alternative":"","confiance":0-100,"reference":""}],
-  "redondances_classe":[{"classe":"","medicaments":[""]}],
-  "adaptations_posologiques":[{"medicament":"","raison":"","severite":"","mecanisme":"","risque":"","recommandation":"posologie cible","alternative":"","confiance":0-100,"reference":"GPR / RCP"}],
-  "medicaments_haut_risque":[{"medicament":"","classe":"","raison":"","severite":"majeure","risque":"","recommandation":"","alternative":"","confiance":0-100,"reference":"ISMP / HAS Never Events"}],
-  "allergies_croisees":[{"allergene":"","medicament":"","risque":"","severite":"majeure|contre_indication","recommandation":"","alternative":"","confiance":0-100,"reference":"RCP / ANSM"}],
-  "surveillance":[{"parametre":"","frequence":"","justification":""}],
-  "conclusion_clinique":"2-3 phrases — conduite prioritaire pour le pharmacien"
-}
-
-RÈGLES CLINIQUES STRICTES :
-1. **Une molécule (DCI) ne doit apparaître QUE DANS UNE SEULE catégorie**. Ordre de priorité : divergences_conciliation > contre_indications > interactions > adaptations_posologiques > allergies_croisees > doublons_therapeutiques > medicaments_haut_risque. Si tu listes Apixaban dans "divergences_conciliation", tu NE le remets PAS dans "medicaments_haut_risque" ni ailleurs.
-2. **"contre_indications"** est réservé aux médicaments EFFECTIVEMENT PRESCRITS contre-indiqués chez ce patient (ex: AINS prescrit + DFG=30). Un médicament MANQUANT à l'hôpital n'est JAMAIS une contre-indication → c'est une "omission" dans divergences_conciliation.
-3. **"medicaments_haut_risque"** ne liste un médicament que s'il pose un problème SPÉCIFIQUE non couvert ailleurs (ex: insuline à dose élevée sans surveillance glycémique). Ne pas le remplir juste parce qu'un AOD/insuline/opioïde est présent.
-4. Pour CHAQUE divergence, identifier précisément : médicament ville, médicament hôpital (ou null), type, justification ancrée dans la clinique.
-5. Comparer DCI/dose/voie/posologie : omission (ville→absent hôpital), ajout_non_justifie (absent ville→hôpital sans indication claire), switch (DCI ou voie changée), modification_posologie (même DCI, dose différente), substitution_classe (changement de classe thérapeutique).
-6. Adaptations rénales : si DFG<60 vérifier metformine, IEC/ARA2, AINS, anticoagulants, antibio. Si INR>4 alerter anticoagulants. Si K+ anormal alerter IEC/ARA2/spironolactone.
-7. Allergies croisées (pénicilline↔céphalo, AINS↔aspirine, sulfamides).
-8. Chaque item DOIT contenir severite, recommandation pratique, confiance 0-100, reference.
-9. "actions_prioritaires" : déduire les 3-8 interventions pharmaceutiques les plus utiles (appel prescripteur, modification ordonnance, éducation patient), triées par urgence.
-
-Réponds UNIQUEMENT avec le JSON, sans markdown.`;
+    const systemPrompt = `Tu es pharmacien clinicien. Produis UNIQUEMENT un JSON court et valide de conciliation ville ↔ hôpital.
+Schéma obligatoire: {"synthese":"2-3 phrases","score_risque":0-100,"divergences_conciliation":[{"type":"omission|ajout_non_justifie|switch|modification_posologie|substitution_classe","medicament_ville":null,"medicament_hopital":null,"severite":"mineure|moderee|majeure|critique","justification_clinique":"court","risque":"court","recommandation":"action concrète","alternative":"","confiance":0-100,"reference":"HAS/SFPC/ANSM"}],"actions_prioritaires":[{"action":"court","urgence":"immediate|24h|differee","destinataire":"prescripteur|IDE|patient","justification":"court"}],"interactions":[],"doublons_therapeutiques":[],"contre_indications":[],"redondances_classe":[],"adaptations_posologiques":[],"medicaments_haut_risque":[],"allergies_croisees":[],"surveillance":[{"parametre":"","frequence":"","justification":""}],"conclusion_clinique":"1 phrase"}.
+Priorité: signaler surtout omissions/ajouts/switch/dose. Max 10 divergences, max 5 actions. Pas de doublons entre catégories. Réponses très concises.`;
     const { model, systemPrompt: __systemPrompt, callOptions, modelId: __modelIdUsed } = data.modelOverride
       ? await (await import("@/lib/ai/runAITask.server")).resolveAITaskWithOverride(
           { systemPrompt, model: __aiDefaultModel },
@@ -253,7 +310,7 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
 
     // Garde-fou : on borne la durée d'appel et la longueur de sortie pour
     // éviter un "chargement infini" côté UI si le modèle traîne.
-    const TIMEOUT_MS = 45_000;
+    const TIMEOUT_MS = 18_000;
     const callOptionsWithDefaults: Record<string, unknown> = { ...callOptions };
     const { isGpt5Family } = await import("@/lib/ai/runAITask.server");
     const isGpt5 = isGpt5Family(__modelIdUsed, "lovable");
@@ -270,23 +327,26 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
           ...existing,
           verbosity: "low",
           reasoningEffort: "minimal",
-          maxCompletionTokens: (existing.maxCompletionTokens as number | undefined) ?? 1600,
+          maxCompletionTokens: (existing.maxCompletionTokens as number | undefined) ?? 900,
         },
       };
     } else if (callOptionsWithDefaults.maxOutputTokens === undefined) {
-      callOptionsWithDefaults.maxOutputTokens = 1600;
+      callOptionsWithDefaults.maxOutputTokens = 900;
     }
 
 
     let payload: AIAnalysisPayload;
     try {
-      const result = await generateText({
-        ...callOptionsWithDefaults,
-        model,
-        system: __systemPrompt,
-        prompt: `Dossier patient complet :\n${JSON.stringify(dossier)}`,
-        abortSignal: AbortSignal.timeout(TIMEOUT_MS),
-      });
+      const result = await withHardTimeout(
+        (signal) => generateText({
+          ...callOptionsWithDefaults,
+          model,
+          system: __systemPrompt,
+          prompt: `Dossier patient compact :\n${JSON.stringify(buildCompactAiDossier(dossier as AnalysisDossier))}`,
+          abortSignal: signal,
+        }),
+        TIMEOUT_MS,
+      );
       const { parseLlmJson } = await import("@/lib/llm/parseLlmJson");
       payload = parseLlmJson<AIAnalysisPayload>(result.text);
     } catch (e: unknown) {
@@ -302,6 +362,8 @@ Réponds UNIQUEMENT avec le JSON, sans markdown.`;
         payload = buildFastConciliationPayload(dossier as AnalysisDossier, "l'analyse IA complète est momentanément indisponible");
       }
     }
+
+    payload = await attachDeterministicAlerts(payload, dossier as AnalysisDossier);
 
     await supabase.from("conciliation_ai_analyses").insert({
       episode_id: null,
