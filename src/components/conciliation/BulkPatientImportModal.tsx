@@ -199,7 +199,8 @@ export function BulkPatientImportModal({ open, onOpenChange, targetPatientId, in
   const reset = () => { setItems([]); setPhase("upload"); setProgress(0); setSummary(null); };
   const close = () => { reset(); onOpenChange(false); };
 
-  const readyCount = items.filter((i) => i.status === "ready").length;
+  const readyCount = items.filter((i) => i.status === "ready" && !checkMismatch(i)).length;
+  const mismatchCount = items.filter((i) => i.status === "ready" && checkMismatch(i)).length;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
