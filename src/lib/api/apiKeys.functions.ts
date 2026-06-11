@@ -5,8 +5,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const SCOPES = ["bdpm:read", "analyze:write", "*"] as const;
 type Scope = (typeof SCOPES)[number];
 
-async function assertAdmin(supabase: ReturnType<typeof Object>, userId: string) {
-  // @ts-expect-error supabase has rpc
+type SupabaseLike = { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }> };
+async function assertAdmin(supabase: SupabaseLike, userId: string) {
   const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
   if (!isAdmin) throw new Error("Forbidden: admin role required");
 }
