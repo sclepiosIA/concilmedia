@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { ShortagesAdminCard } from "@/components/admin/ShortagesAdminCard";
 
 export const Route = createFileRoute("/_authenticated/admin/ai/")({
   component: AdminAiIndex,
@@ -150,6 +151,10 @@ function AdminAiIndex() {
           Banc d'essai LLM →
         </Link>
       </div>
+
+      <ShortagesAdminCard />
+
+
 
       {tasks.length > 0 && (
         <div className="flex items-center gap-3 mb-3 text-sm">
