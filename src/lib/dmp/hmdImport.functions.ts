@@ -217,7 +217,7 @@ export const importHmdManual = createServerFn({ method: "POST" })
         imported_by: userId,
         period_start: dates[0]?.slice(0, 10) ?? null,
         period_end: dates[dates.length - 1]?.slice(0, 10) ?? null,
-        lines: data.lines: lines as unknown as any,
+        lines: data.lines as unknown as any,
         reconciliation: recon as unknown as any,
         status: "a_rapprocher",
       })
