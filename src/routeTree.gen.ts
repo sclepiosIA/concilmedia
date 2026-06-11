@@ -36,6 +36,7 @@ import { Route as AuthenticatedAdminAiIndexRouteImport } from './routes/_authent
 import { Route as ApiPublicV1OpenapiRouteImport } from './routes/api/public/v1/openapi'
 import { Route as ApiPublicV1HealthRouteImport } from './routes/api/public/v1/health'
 import { Route as ApiPublicV1AnalyzeRouteImport } from './routes/api/public/v1/analyze'
+import { Route as ApiPublicHooksSyncAnsmShortagesRouteImport } from './routes/api/public/hooks/sync-ansm-shortages'
 import { Route as ApiPublicFhirSplatRouteImport } from './routes/api/public/fhir/$'
 import { Route as AuthenticatedEpisodesEpisodeIdSortieRouteImport } from './routes/_authenticated/episodes.$episodeId.sortie'
 import { Route as AuthenticatedAdminAiRlhfRouteImport } from './routes/_authenticated/admin.ai.rlhf'
@@ -191,6 +192,12 @@ const ApiPublicV1AnalyzeRoute = ApiPublicV1AnalyzeRouteImport.update({
   path: '/api/public/v1/analyze',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksSyncAnsmShortagesRoute =
+  ApiPublicHooksSyncAnsmShortagesRouteImport.update({
+    id: '/api/public/hooks/sync-ansm-shortages',
+    path: '/api/public/hooks/sync-ansm-shortages',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicFhirSplatRoute = ApiPublicFhirSplatRouteImport.update({
   id: '/api/public/fhir/$',
   path: '/api/public/fhir/$',
@@ -260,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
+  '/api/public/hooks/sync-ansm-shortages': typeof ApiPublicHooksSyncAnsmShortagesRoute
   '/api/public/v1/analyze': typeof ApiPublicV1AnalyzeRoute
   '/api/public/v1/health': typeof ApiPublicV1HealthRoute
   '/api/public/v1/openapi': typeof ApiPublicV1OpenapiRoute
@@ -294,6 +302,7 @@ export interface FileRoutesByTo {
   '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
+  '/api/public/hooks/sync-ansm-shortages': typeof ApiPublicHooksSyncAnsmShortagesRoute
   '/api/public/v1/analyze': typeof ApiPublicV1AnalyzeRoute
   '/api/public/v1/health': typeof ApiPublicV1HealthRoute
   '/api/public/v1/openapi': typeof ApiPublicV1OpenapiRoute
@@ -331,6 +340,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/_authenticated/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
+  '/api/public/hooks/sync-ansm-shortages': typeof ApiPublicHooksSyncAnsmShortagesRoute
   '/api/public/v1/analyze': typeof ApiPublicV1AnalyzeRoute
   '/api/public/v1/health': typeof ApiPublicV1HealthRoute
   '/api/public/v1/openapi': typeof ApiPublicV1OpenapiRoute
@@ -368,6 +378,7 @@ export interface FileRouteTypes {
     | '/admin/ai/rlhf'
     | '/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
+    | '/api/public/hooks/sync-ansm-shortages'
     | '/api/public/v1/analyze'
     | '/api/public/v1/health'
     | '/api/public/v1/openapi'
@@ -402,6 +413,7 @@ export interface FileRouteTypes {
     | '/admin/ai/rlhf'
     | '/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
+    | '/api/public/hooks/sync-ansm-shortages'
     | '/api/public/v1/analyze'
     | '/api/public/v1/health'
     | '/api/public/v1/openapi'
@@ -438,6 +450,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/ai/rlhf'
     | '/_authenticated/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
+    | '/api/public/hooks/sync-ansm-shortages'
     | '/api/public/v1/analyze'
     | '/api/public/v1/health'
     | '/api/public/v1/openapi'
@@ -451,6 +464,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicFhirSplatRoute: typeof ApiPublicFhirSplatRoute
+  ApiPublicHooksSyncAnsmShortagesRoute: typeof ApiPublicHooksSyncAnsmShortagesRoute
   ApiPublicV1AnalyzeRoute: typeof ApiPublicV1AnalyzeRoute
   ApiPublicV1HealthRoute: typeof ApiPublicV1HealthRoute
   ApiPublicV1OpenapiRoute: typeof ApiPublicV1OpenapiRoute
@@ -648,6 +662,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicV1AnalyzeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/sync-ansm-shortages': {
+      id: '/api/public/hooks/sync-ansm-shortages'
+      path: '/api/public/hooks/sync-ansm-shortages'
+      fullPath: '/api/public/hooks/sync-ansm-shortages'
+      preLoaderRoute: typeof ApiPublicHooksSyncAnsmShortagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/fhir/$': {
       id: '/api/public/fhir/$'
       path: '/api/public/fhir/$'
@@ -800,6 +821,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicFhirSplatRoute: ApiPublicFhirSplatRoute,
+  ApiPublicHooksSyncAnsmShortagesRoute: ApiPublicHooksSyncAnsmShortagesRoute,
   ApiPublicV1AnalyzeRoute: ApiPublicV1AnalyzeRoute,
   ApiPublicV1HealthRoute: ApiPublicV1HealthRoute,
   ApiPublicV1OpenapiRoute: ApiPublicV1OpenapiRoute,
@@ -808,13 +830,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

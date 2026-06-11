@@ -46,6 +46,39 @@ export type AIAnalysisPayload = {
    * alertes LLM. Voir `computeDeterministicAlerts`.
    */
   alertes_regles?: import("./deterministicAlerts").DeterministicAlert[];
+  /** Tensions/ruptures d'approvisionnement (alerte LLM enrichie). */
+  tensions_approvisionnement?: Array<{
+    medicament: string;
+    statut: string;
+    raison?: string;
+    alternative: string;
+    recommandation: string;
+    severite?: string;
+    confiance?: number;
+    reference?: string;
+  }>;
+  /** Suggestions de relais IV → PO validées par le LLM. */
+  relais_iv_po?: Array<{
+    medicament: string;
+    voie_actuelle: string;
+    posologie_po_proposee: string;
+    biodisponibilite_po: number;
+    critere_clinique?: string;
+    economie_eur_jour?: number;
+    confiance?: number;
+    reference?: string;
+  }>;
+  /** Volet médico-économique. */
+  economie?: {
+    cout_journalier_total_eur: number;
+    substitutions_generiques: Array<{
+      medicament: string;
+      generique_propose: string;
+      economie_eur_par_jour: number;
+      confiance?: number;
+    }>;
+    synthese_medicoeconomique?: string;
+  };
 };
 
 export const analyzeConciliation = createServerFn({ method: "POST" })
@@ -115,6 +148,9 @@ Analyse le dossier patient (incluant biologie_recente : DFG, créatinine, kalié
   "medicaments_haut_risque": [{"medicament":"...","classe":"anticoagulant|insuline|opioïde|antiépileptique|chimio|...","raison":"...","severite":"majeure","risque":"...","recommandation":"surveillance spécifique","alternative":"...","confiance":0-100,"reference":"ISMP / HAS Never Events"}],
   "allergies_croisees": [{"allergene":"...","medicament":"...","risque":"...","severite":"majeure|contre_indication","recommandation":"...","alternative":"alternative thérapeutique","confiance":0-100,"reference":"RCP / ANSM / SPILF"}],
   "surveillance": [{"parametre":"DFG|K+|INR|glycémie|TA|...","frequence":"...","justification":"..."}],
+  "tensions_approvisionnement": [{"medicament":"...","statut":"tension|rupture|arret","raison":"...","alternative":"DCI alternative documentée","recommandation":"action concrète","severite":"mineure|moderee|majeure","confiance":0-100,"reference":"ANSM"}],
+  "relais_iv_po": [{"medicament":"...","voie_actuelle":"IV","posologie_po_proposee":"...","biodisponibilite_po":0.0-1.0,"critere_clinique":"patient stable, tolérance digestive...","economie_eur_jour":number,"confiance":0-100,"reference":"SPILF / SFAR"}],
+  "economie": {"cout_journalier_total_eur":number,"substitutions_generiques":[{"medicament":"princeps","generique_propose":"DCI/marque","economie_eur_par_jour":number,"confiance":0-100}],"synthese_medicoeconomique":"1-2 phrases sur le coût et les leviers d'économie"},
   "conclusion_clinique": "1-2 phrases — style compte-rendu hospitalier"
 }
 Règles cliniques :
@@ -124,6 +160,9 @@ Règles cliniques :
 - Cite la valeur biologique précise dans "raison" et "risque".
 - Pour chaque allergie documentée, vérifier les allergies croisées (pénicilline ↔ céphalosporines, AINS ↔ aspirine, sulfamides).
 - Chaque alerte (interaction, contre-indication, adaptation, doublon, allergie croisée, haut risque) DOIT contenir severite, mecanisme/raison, risque clinique, recommandation pratique, alternative thérapeutique (si applicable), un score "confiance" entier 0-100 reflétant le niveau de preuve, ET reference de bonne pratique (ANSM, HAS, Vidal, RCP, STOPP/START, GPR, ISMP, SPILF).
+- tensions_approvisionnement : tu reçois la liste shortages_context. Pour chaque entrée, valide la pertinence et propose une alternative thérapeutique vérifiée (même classe ATC ou substitut documenté).
+- relais_iv_po : tu reçois iv_po_candidates. Pour chaque candidat, valide ou écarte le relais PO en citant la biodisponibilité et le critère clinique limitant (sepsis sévère, troubles digestifs, jeûne, etc.).
+- economie : tu reçois economics_context (prix BDPM + générique le moins cher). Recopie cout_journalier_total_eur, propose les substitutions génériques pertinentes (DCI identique), confiance 90+ si la substitution est directe.
 - conclusion_clinique : ton neutre, factuel, exploitable pour le dossier patient.
 Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
     const { model, systemPrompt: __systemPrompt, callOptions } = await resolveAITask(__aiTaskSlug, { systemPrompt, model: __aiDefaultModel });
@@ -152,13 +191,35 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
     }
 
 
+    // Enrichissement clinique : ruptures, candidats IV→PO, contexte économique.
+    const allMeds = [...dossier.traitements_habituels, ...dossier.prescriptions_hospitalieres];
+    const [shortagesCtx, ivPoCtx, economicsCtx] = await Promise.all([
+      import("@/lib/clinical/shortages.server").then((m) => m.lookupShortagesForDossier(supabase, allMeds)).catch((e) => {
+        console.warn("[analyze] shortages lookup failed:", e);
+        return [];
+      }),
+      import("@/lib/clinical/ivPoCandidates").then((m) => m.detectIvPoCandidates(dossier.prescriptions_hospitalieres)).catch((e) => {
+        console.warn("[analyze] iv→po detection failed:", e);
+        return [];
+      }),
+      import("@/lib/clinical/economics.server").then((m) => m.buildEconomicsContext(supabase, allMeds)).catch((e) => {
+        console.warn("[analyze] economics context failed:", e);
+        return null;
+      }),
+    ]);
+    const enrichedPrompt = JSON.stringify(
+      { dossier, shortages_context: shortagesCtx, iv_po_candidates: ivPoCtx, economics_context: economicsCtx },
+      null,
+      2,
+    );
+
     let result;
     try {
       result = await generateText({
         ...callOptions,
         model,
         system: __finalSystemPrompt,
-        prompt: `Dossier patient :\n${JSON.stringify(dossier, null, 2)}`,
+        prompt: `Dossier patient et contexte d'enrichissement :\n${enrichedPrompt}`,
       });
 
     } catch (e: unknown) {
@@ -182,7 +243,7 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
             model,
             system: __finalSystemPrompt + "\n\nIMPORTANT: Réponds uniquement par un objet JSON valide, sans aucun texte avant ou après.",
 
-            prompt: `Dossier patient :\n${JSON.stringify(dossier, null, 2)}`,
+            prompt: `Dossier patient et contexte d'enrichissement :\n${enrichedPrompt}`,
           });
           payload = parseLlmJson<AIAnalysisPayload>(retry.text);
         } catch {

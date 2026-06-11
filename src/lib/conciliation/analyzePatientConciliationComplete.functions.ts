@@ -509,8 +509,8 @@ export const analyzePatientConciliationComplete = createServerFn({ method: "POST
     const __aiDefaultModel = "google/gemini-3-flash-preview";
 
     const systemPrompt = `Tu es pharmacien clinicien. Produis UNIQUEMENT un JSON très court et valide de conciliation ville ↔ hôpital.
-Schéma obligatoire: {"synthese":"2-3 phrases","score_risque":0-100,"divergences_conciliation":[{"type":"omission|ajout_non_justifie|switch|modification_posologie|substitution_classe","medicament_ville":null,"medicament_hopital":null,"severite":"mineure|moderee|majeure|critique","justification_clinique":"court","risque":"court","recommandation":"action concrète","alternative":"","confiance":0-100,"reference":"HAS/SFPC/ANSM"}],"actions_prioritaires":[{"action":"court","urgence":"immediate|24h|differee","destinataire":"prescripteur|IDE|patient","justification":"court"}],"interactions":[],"doublons_therapeutiques":[],"contre_indications":[],"redondances_classe":[],"adaptations_posologiques":[],"medicaments_haut_risque":[],"allergies_croisees":[],"surveillance":[{"parametre":"","frequence":"","justification":""}],"conclusion_clinique":"1 phrase"}.
-Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas de doublons entre catégories. Réponses télégraphiques.`;
+Schéma obligatoire: {"synthese":"2-3 phrases","score_risque":0-100,"divergences_conciliation":[{"type":"omission|ajout_non_justifie|switch|modification_posologie|substitution_classe","medicament_ville":null,"medicament_hopital":null,"severite":"mineure|moderee|majeure|critique","justification_clinique":"court","risque":"court","recommandation":"action concrète","alternative":"","confiance":0-100,"reference":"HAS/SFPC/ANSM"}],"actions_prioritaires":[{"action":"court","urgence":"immediate|24h|differee","destinataire":"prescripteur|IDE|patient","justification":"court"}],"interactions":[],"doublons_therapeutiques":[],"contre_indications":[],"redondances_classe":[],"adaptations_posologiques":[],"medicaments_haut_risque":[],"allergies_croisees":[],"surveillance":[{"parametre":"","frequence":"","justification":""}],"tensions_approvisionnement":[{"medicament":"","statut":"tension|rupture|arret","alternative":"","recommandation":"","confiance":0-100,"reference":"ANSM"}],"relais_iv_po":[{"medicament":"","voie_actuelle":"IV","posologie_po_proposee":"","biodisponibilite_po":0.8,"critere_clinique":"","confiance":0-100,"reference":"SPILF"}],"economie":{"cout_journalier_total_eur":0,"substitutions_generiques":[{"medicament":"","generique_propose":"","economie_eur_par_jour":0,"confiance":0-100}],"synthese_medicoeconomique":"1 phrase"},"conclusion_clinique":"1 phrase"}.
+Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas de doublons entre catégories. Pour tensions_approvisionnement / relais_iv_po / economie : utilise EXCLUSIVEMENT les éléments du contexte d'enrichissement fourni (shortages_context, iv_po_candidates, economics_context) — n'en invente pas. Réponses télégraphiques.`;
     // RAG: enrichit le system prompt avec passages thésaurus (best-effort, non bloquant)
     let __ragPassages: unknown[] = [];
     let __finalSystemPrompt = systemPrompt;
@@ -567,6 +567,30 @@ Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas d
       );
     }
 
+    // Enrichissement clinique (best-effort, bornes à 1500ms pour ne pas casser le SLO global).
+    const enrichmentPromise = Promise.all([
+      import("@/lib/clinical/shortages.server").then((m) =>
+        m.lookupShortagesForDossier(supabase, [
+          ...(dossier as AnalysisDossier).traitements_habituels,
+          ...(dossier as AnalysisDossier).prescriptions_hospitalieres,
+        ]),
+      ).catch(() => []),
+      import("@/lib/clinical/ivPoCandidates").then((m) =>
+        m.detectIvPoCandidates((dossier as AnalysisDossier).prescriptions_hospitalieres),
+      ).catch(() => []),
+      import("@/lib/clinical/economics.server").then((m) =>
+        m.buildEconomicsContext(supabase, [
+          ...(dossier as AnalysisDossier).traitements_habituels,
+          ...(dossier as AnalysisDossier).prescriptions_hospitalieres,
+        ]),
+      ).catch(() => null),
+    ]);
+    const enrichment = await Promise.race([
+      enrichmentPromise,
+      new Promise<[unknown[], unknown[], unknown]>((r) => setTimeout(() => r([[], [], null]), 2500)),
+    ]);
+    const [shortagesCtx, ivPoCtx, economicsCtx] = enrichment as [unknown[], unknown[], unknown];
+
     let payload: AIAnalysisPayload;
     try {
       const result = await withHardTimeout(
@@ -574,7 +598,12 @@ Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas d
           ...callOptionsWithDefaults,
           model,
           system: __systemPrompt,
-          prompt: `Dossier patient compact :\n${JSON.stringify(buildCompactAiDossier(dossier as AnalysisDossier))}`,
+          prompt: `Dossier patient compact :\n${JSON.stringify({
+            dossier: buildCompactAiDossier(dossier as AnalysisDossier),
+            shortages_context: shortagesCtx,
+            iv_po_candidates: ivPoCtx,
+            economics_context: economicsCtx,
+          })}`,
           abortSignal: signal,
         }),
         TIMEOUT_MS,

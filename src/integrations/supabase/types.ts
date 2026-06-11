@@ -489,6 +489,20 @@ export type Database = {
             referencedRelation: "bdpm_specialites"
             referencedColumns: ["cis"]
           },
+          {
+            foreignKeyName: "bdpm_atc_cis_fkey"
+            columns: ["cis"]
+            isOneToOne: true
+            referencedRelation: "v_drug_cheapest_generic"
+            referencedColumns: ["cis_generique"]
+          },
+          {
+            foreignKeyName: "bdpm_atc_cis_fkey"
+            columns: ["cis"]
+            isOneToOne: true
+            referencedRelation: "v_drug_cheapest_generic"
+            referencedColumns: ["cis"]
+          },
         ]
       }
       bdpm_compositions: {
@@ -528,6 +542,20 @@ export type Database = {
             columns: ["cis"]
             isOneToOne: false
             referencedRelation: "bdpm_specialites"
+            referencedColumns: ["cis"]
+          },
+          {
+            foreignKeyName: "bdpm_compositions_cis_fkey"
+            columns: ["cis"]
+            isOneToOne: false
+            referencedRelation: "v_drug_cheapest_generic"
+            referencedColumns: ["cis_generique"]
+          },
+          {
+            foreignKeyName: "bdpm_compositions_cis_fkey"
+            columns: ["cis"]
+            isOneToOne: false
+            referencedRelation: "v_drug_cheapest_generic"
             referencedColumns: ["cis"]
           },
         ]
@@ -608,6 +636,20 @@ export type Database = {
             columns: ["cis"]
             isOneToOne: false
             referencedRelation: "bdpm_specialites"
+            referencedColumns: ["cis"]
+          },
+          {
+            foreignKeyName: "bdpm_presentations_cis_fkey"
+            columns: ["cis"]
+            isOneToOne: false
+            referencedRelation: "v_drug_cheapest_generic"
+            referencedColumns: ["cis_generique"]
+          },
+          {
+            foreignKeyName: "bdpm_presentations_cis_fkey"
+            columns: ["cis"]
+            isOneToOne: false
+            referencedRelation: "v_drug_cheapest_generic"
             referencedColumns: ["cis"]
           },
         ]
@@ -1454,6 +1496,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      drug_shortages: {
+        Row: {
+          alternative: string | null
+          cis: string
+          date_debut: string | null
+          date_fin_prevue: string | null
+          denomination: string | null
+          id: string
+          imported_at: string
+          raison: string | null
+          source_url: string | null
+          statut: string
+        }
+        Insert: {
+          alternative?: string | null
+          cis: string
+          date_debut?: string | null
+          date_fin_prevue?: string | null
+          denomination?: string | null
+          id?: string
+          imported_at?: string
+          raison?: string | null
+          source_url?: string | null
+          statut: string
+        }
+        Update: {
+          alternative?: string | null
+          cis?: string
+          date_debut?: string | null
+          date_fin_prevue?: string | null
+          denomination?: string | null
+          id?: string
+          imported_at?: string
+          raison?: string | null
+          source_url?: string | null
+          statut?: string
+        }
+        Relationships: []
       }
       episodes: {
         Row: {
@@ -2823,7 +2904,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_drug_cheapest_generic: {
+        Row: {
+          cis: number | null
+          cis_generique: number | null
+          denomination: string | null
+          denomination_generique: string | null
+          economie_eur: number | null
+          prix_actuel: number | null
+          prix_generique: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       ai_provider_decrypt_key: {
