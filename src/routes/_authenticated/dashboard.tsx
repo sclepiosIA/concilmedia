@@ -461,9 +461,9 @@ function DashboardPage() {
                 <YAxis fontSize={11} allowDecimals={false} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="conciliations" fill="#3b82f6" name="Concil." />
-                <Bar dataKey="divergences" fill="#f97316" name="Diverg." />
-                <Bar dataKey="critiques" fill="#dc2626" name="Critiques" />
+                <Bar dataKey="conciliations" fill={colors.primary} name="Concil." />
+                <Bar dataKey="divergences" fill={colors.chart3} name="Diverg." />
+                <Bar dataKey="critiques" fill={colors.destructive} name="Critiques" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
