@@ -87,3 +87,9 @@ Petit panneau d'accès rapide (en haut à droite ou en bas) :
 - 8 KPIs visibles avec tendance, dont les 3 nouveaux axes (ruptures / IV→PO / éco).
 - Skeletons pendant le chargement, empty states avec CTA, plus aucun hex en dur.
 - Bloc "Patients impactés par rupture" et "Top économies génériques" fonctionnels avec données réelles.
+
+## ✅ Finalisation
+- KPIs : sparkline 14j + delta période vs période précédente (Conciliations, Critiques) avec couleur "bon/mauvais" sémantique.
+- Couleurs : tous les hex remplacés par `--chart-*`, `--destructive`, `--primary` via `useChartColors`.
+- File priorisée : pagination 10/page.
+- Bouton "Cohorte synthétique" déplacé dans menu **Actions** (avec accès Import BDPM).

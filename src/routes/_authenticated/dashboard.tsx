@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
   Users, FileText, ShieldAlert, Sparkles, BarChart3,
   Loader2, Activity, AlertTriangle, Pill, Euro,
-  UserPlus, Upload, GitBranch, RotateCcw,
+  UserPlus, Upload, GitBranch, RotateCcw, MoreHorizontal, TrendingUp, TrendingDown, Minus,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { seedSyntheticCohort } from "@/lib/conciliation/seedSynthetic.functions";
@@ -22,7 +26,7 @@ import type { RiskResult } from "@/lib/conciliation/riskScore";
 import { findIvPoCandidate, isIvRoute } from "@/lib/clinical/ivPoCandidates";
 import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line,
 } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -38,17 +42,36 @@ const DIV_LABEL: Record<string, string> = {
   duplication: "Doublon",
   aucune: "Aucune",
 };
-const DIV_COLORS = ["#ef4444", "#f97316", "#eab308", "#3b82f6", "#8b5cf6", "#94a3b8"];
-const RISK_COLORS: Record<string, string> = {
-  critique: "#dc2626",
-  eleve: "#ea580c",
-  modere: "#eab308",
-  faible: "#16a34a",
-};
+
+// Resolve semantic CSS variables to concrete color strings usable by SVG/Recharts
+function useChartColors() {
+  const [c, setC] = useState({
+    chart1: "#3b82f6", chart2: "#14b8a6", chart3: "#f59e0b", chart4: "#ef4444", chart5: "#64748b",
+    destructive: "#dc2626", primary: "#3b82f6", muted: "#94a3b8",
+  });
+  useEffect(() => {
+    const css = getComputedStyle(document.documentElement);
+    const read = (n: string, fb: string) => css.getPropertyValue(n).trim() || fb;
+    setC({
+      chart1: read("--chart-1", "#3b82f6"),
+      chart2: read("--chart-2", "#14b8a6"),
+      chart3: read("--chart-3", "#f59e0b"),
+      chart4: read("--chart-4", "#ef4444"),
+      chart5: read("--chart-5", "#64748b"),
+      destructive: read("--destructive", "#dc2626"),
+      primary: read("--primary", "#3b82f6"),
+      muted: read("--muted-foreground", "#94a3b8"),
+    });
+  }, []);
+  return c;
+}
+
 
 function DashboardPage() {
   const qc = useQueryClient();
   const seed = useServerFn(seedSyntheticCohort);
+  const colors = useChartColors();
+  const divPalette = [colors.destructive, colors.chart3, colors.chart2, colors.primary, colors.chart5, colors.muted];
 
   const today = new Date();
   const defaultFrom = new Date(today.getTime() - 30 * 86400000).toISOString().slice(0, 10);
@@ -223,11 +246,17 @@ function DashboardPage() {
     return Array.from(m.entries()).map(([k, v]) => ({ name: DIV_LABEL[k] ?? k, value: v }));
   }, [realDivergences]);
 
+  const riskColorMap: Record<string, string> = {
+    critique: colors.destructive,
+    eleve: colors.chart3,
+    modere: colors.chart2,
+    faible: colors.primary,
+  };
   const risksByLevel = useMemo(() => {
     const m = new Map<string, number>();
     risks.forEach((r) => m.set(r.niveau, (m.get(r.niveau) ?? 0) + 1));
-    return Array.from(m.entries()).map(([k, v]) => ({ name: k, value: v, color: RISK_COLORS[k] ?? "#94a3b8" }));
-  }, [risks]);
+    return Array.from(m.entries()).map(([k, v]) => ({ name: k, value: v, color: riskColorMap[k] ?? colors.muted }));
+  }, [risks, colors.muted]);
 
   const dailyActivity = useMemo(() => {
     const days = 14;
@@ -255,10 +284,14 @@ function DashboardPage() {
         .from("risk_scores")
         .select("id, score, niveau, episode_id, computed_at, episodes(motif, service, patient_id, patients(nom, prenom))")
         .order("score", { ascending: false })
-        .limit(10);
+        .limit(100);
       return data ?? [];
     },
   });
+  const [prioPage, setPrioPage] = useState(0);
+  const PRIO_PER_PAGE = 10;
+  const prioTotalPages = Math.max(1, Math.ceil(priorities.length / PRIO_PER_PAGE));
+  const paginatedPriorities = priorities.slice(prioPage * PRIO_PER_PAGE, (prioPage + 1) * PRIO_PER_PAGE);
 
   const seedMut = useMutation({
     mutationFn: async (n: number) => seed({ data: { n } }),
@@ -268,6 +301,28 @@ function DashboardPage() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
   });
+
+  // Trend (delta période courante vs précédente, même longueur)
+  const periodDays = Math.max(1, Math.round((new Date(toIso).getTime() - new Date(fromIso).getTime()) / 86400000));
+  const prevFromIso = new Date(new Date(fromIso).getTime() - periodDays * 86400000).toISOString();
+  const prevToIso = new Date(new Date(fromIso).getTime() - 1).toISOString();
+  const prevDivQ = useQuery({
+    queryKey: ["dash-prev-divergences", prevFromIso, prevToIso, service, epIds],
+    queryFn: async () => {
+      let q = supabase
+        .from("conciliation_medicaments")
+        .select("id, gravite, statut, episode_id, created_at")
+        .gte("created_at", prevFromIso)
+        .lte("created_at", prevToIso);
+      if (service !== "all") q = q.in("episode_id", epIds.length ? epIds : ["00000000-0000-0000-0000-000000000000"]);
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+  const prevDiv = prevDivQ.data ?? [];
+  const prevCritiques = prevDiv.filter((d) => d.gravite === "critique" || d.gravite === "majeur").length;
+  const prevConciliations = new Set(prevDiv.map((d) => d.episode_id)).size;
+  const delta = (cur: number, prev: number) => prev === 0 ? (cur > 0 ? 100 : 0) : Math.round(((cur - prev) / prev) * 100);
 
   const isLoadingKpis = patientsCountQ.isLoading || divQ.isLoading || risksQ.isLoading || treatsQ.isLoading;
 
@@ -279,11 +334,28 @@ function DashboardPage() {
           <p className="text-sm text-muted-foreground">ConcilMed·IA — Conciliation médicamenteuse assistée par IA</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => seedMut.mutate(20)} disabled={seedMut.isPending}>
-            {seedMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
-            Cohorte synthétique
-          </Button>
           <Link to="/evaluation"><Button size="sm"><BarChart3 className="h-4 w-4 mr-1" /> Évaluation</Button></Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={seedMut.isPending}>
+                {seedMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <MoreHorizontal className="h-4 w-4 mr-1" />}
+                Actions
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Outils</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => seedMut.mutate(20)} disabled={seedMut.isPending}>
+                <Sparkles className="h-4 w-4 mr-2" /> Cohorte synthétique (20)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => seedMut.mutate(50)} disabled={seedMut.isPending}>
+                <Sparkles className="h-4 w-4 mr-2" /> Cohorte synthétique (50)
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/admin/bdpm"><Pill className="h-4 w-4 mr-2" /> Import BDPM</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -345,8 +417,26 @@ function DashboardPage() {
       {/* KPIs row 1 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <KPI loading={isLoadingKpis} icon={<Users className="h-5 w-5" />} label="Patients" value={patientsCountQ.data ?? 0} />
-        <KPI loading={isLoadingKpis} icon={<FileText className="h-5 w-5" />} label="Conciliations" value={conciliationsDone} />
-        <KPI loading={isLoadingKpis} icon={<ShieldAlert className="h-5 w-5 text-destructive" />} label="Critiques" value={critiques} tone="critical" />
+        <KPI
+          loading={isLoadingKpis}
+          icon={<FileText className="h-5 w-5" />}
+          label="Conciliations"
+          value={conciliationsDone}
+          deltaPct={delta(conciliationsDone, prevConciliations)}
+          spark={dailyActivity.map((d) => d.conciliations)}
+          sparkColor={colors.primary}
+        />
+        <KPI
+          loading={isLoadingKpis}
+          icon={<ShieldAlert className="h-5 w-5 text-destructive" />}
+          label="Critiques"
+          value={critiques}
+          tone="critical"
+          deltaPct={delta(critiques, prevCritiques)}
+          deltaInverse
+          spark={dailyActivity.map((d) => d.critiques)}
+          sparkColor={colors.destructive}
+        />
         <KPI loading={isLoadingKpis} icon={<Activity className="h-5 w-5" />} label="Risque élevé" value={highRisk} />
       </div>
 
@@ -394,7 +484,7 @@ function DashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={divByType} dataKey="value" nameKey="name" outerRadius={80} label>
-                    {divByType.map((_, i) => <Cell key={i} fill={DIV_COLORS[i % DIV_COLORS.length]} />)}
+                    {divByType.map((_, i) => <Cell key={i} fill={divPalette[i % divPalette.length]} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
@@ -432,9 +522,9 @@ function DashboardPage() {
                 <YAxis fontSize={11} allowDecimals={false} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="conciliations" fill="#3b82f6" name="Concil." />
-                <Bar dataKey="divergences" fill="#f97316" name="Diverg." />
-                <Bar dataKey="critiques" fill="#dc2626" name="Critiques" />
+                <Bar dataKey="conciliations" fill={colors.primary} name="Concil." />
+                <Bar dataKey="divergences" fill={colors.chart3} name="Diverg." />
+                <Bar dataKey="critiques" fill={colors.destructive} name="Critiques" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -500,7 +590,7 @@ function DashboardPage() {
                     <div className="text-xs text-muted-foreground truncate">→ {e.denomination_generique}</div>
                   </div>
                   <div className="text-right shrink-0 ml-3">
-                    <div className="text-base font-bold text-emerald-600">−{Number(e.economie_eur).toFixed(2)} €</div>
+                    <div className="text-base font-bold text-primary">−{Number(e.economie_eur).toFixed(2)} €</div>
                     <div className="text-[10px] text-muted-foreground">/ boîte</div>
                   </div>
                 </div>
@@ -519,7 +609,7 @@ function DashboardPage() {
               Aucun score calculé. Générez une cohorte synthétique ou ouvrez un épisode pour calculer le score.
             </p>
           )}
-          {priorities.map((r) => {
+          {paginatedPriorities.map((r) => {
             const ep = r.episodes as { motif?: string; service?: string; patient_id?: string; patients?: { nom?: string; prenom?: string } } | null;
             const pat = ep?.patients;
             const pid = ep?.patient_id;
@@ -541,13 +631,45 @@ function DashboardPage() {
               </Link>
             );
           })}
+          {priorities.length > PRIO_PER_PAGE && (
+            <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground">
+              <span>{prioPage * PRIO_PER_PAGE + 1}–{Math.min((prioPage + 1) * PRIO_PER_PAGE, priorities.length)} / {priorities.length}</span>
+              <div className="flex gap-1">
+                <Button size="sm" variant="ghost" disabled={prioPage === 0} onClick={() => setPrioPage((p) => Math.max(0, p - 1))}>
+                  <ChevronLeft className="h-3 w-3" />
+                </Button>
+                <Button size="sm" variant="ghost" disabled={prioPage >= prioTotalPages - 1} onClick={() => setPrioPage((p) => Math.min(prioTotalPages - 1, p + 1))}>
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
 
-function KPI({ icon, label, value, tone, hint, loading }: { icon: React.ReactNode; label: string; value: number | string; tone?: "critical"; hint?: string; loading?: boolean }) {
+function KPI({
+  icon, label, value, tone, hint, loading, deltaPct, deltaInverse, spark, sparkColor,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+  tone?: "critical";
+  hint?: string;
+  loading?: boolean;
+  deltaPct?: number;
+  deltaInverse?: boolean;
+  spark?: number[];
+  sparkColor?: string;
+}) {
+  const hasDelta = typeof deltaPct === "number" && Number.isFinite(deltaPct);
+  const isUp = hasDelta && deltaPct! > 0;
+  const isDown = hasDelta && deltaPct! < 0;
+  const isGood = deltaInverse ? isDown : isUp;
+  const isBad = deltaInverse ? isUp : isDown;
+  const deltaCls = isGood ? "text-primary" : isBad ? "text-destructive" : "text-muted-foreground";
   return (
     <Card className={tone === "critical" ? "border-destructive/30" : ""}>
       <CardHeader className="pb-2">
@@ -558,8 +680,27 @@ function KPI({ icon, label, value, tone, hint, loading }: { icon: React.ReactNod
           <Skeleton className="h-8 w-20" />
         ) : (
           <>
-            <div className="text-3xl font-bold">{value}</div>
-            {hint && <div className="text-[11px] text-muted-foreground mt-1">{hint}</div>}
+            <div className="flex items-end justify-between gap-2">
+              <div className="text-3xl font-bold">{value}</div>
+              {spark && spark.length > 0 && (
+                <div className="w-20 h-8 opacity-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={spark.map((v, i) => ({ i, v }))}>
+                      <Line type="monotone" dataKey="v" stroke={sparkColor ?? "currentColor"} strokeWidth={1.5} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              {hasDelta && (
+                <span className={`inline-flex items-center text-[11px] ${deltaCls}`}>
+                  {isUp ? <TrendingUp className="h-3 w-3 mr-0.5" /> : isDown ? <TrendingDown className="h-3 w-3 mr-0.5" /> : <Minus className="h-3 w-3 mr-0.5" />}
+                  {deltaPct! > 0 ? "+" : ""}{deltaPct}%
+                </span>
+              )}
+              {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
+            </div>
           </>
         )}
       </CardContent>
