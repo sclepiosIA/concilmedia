@@ -609,7 +609,7 @@ function DashboardPage() {
               Aucun score calculé. Générez une cohorte synthétique ou ouvrez un épisode pour calculer le score.
             </p>
           )}
-          {priorities.map((r) => {
+          {paginatedPriorities.map((r) => {
             const ep = r.episodes as { motif?: string; service?: string; patient_id?: string; patients?: { nom?: string; prenom?: string } } | null;
             const pat = ep?.patients;
             const pid = ep?.patient_id;
@@ -631,6 +631,19 @@ function DashboardPage() {
               </Link>
             );
           })}
+          {priorities.length > PRIO_PER_PAGE && (
+            <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground">
+              <span>{prioPage * PRIO_PER_PAGE + 1}–{Math.min((prioPage + 1) * PRIO_PER_PAGE, priorities.length)} / {priorities.length}</span>
+              <div className="flex gap-1">
+                <Button size="sm" variant="ghost" disabled={prioPage === 0} onClick={() => setPrioPage((p) => Math.max(0, p - 1))}>
+                  <ChevronLeft className="h-3 w-3" />
+                </Button>
+                <Button size="sm" variant="ghost" disabled={prioPage >= prioTotalPages - 1} onClick={() => setPrioPage((p) => Math.min(prioTotalPages - 1, p + 1))}>
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
