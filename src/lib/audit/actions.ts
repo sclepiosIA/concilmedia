@@ -47,6 +47,7 @@ export const AUDIT_ENTITY_TYPES = {
   ADMIN: "admin",
   EVAL_DATASET: "eval_dataset",
   EVAL_RUN: "eval_run",
+  API_KEY: "api_key",
 } as const;
 
 export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[keyof typeof AUDIT_ENTITY_TYPES];
