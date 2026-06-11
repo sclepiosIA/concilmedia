@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
   Users, FileText, ShieldAlert, Sparkles, BarChart3,
-  Loader2, Activity, AlertTriangle, Pill, EuroIcon,
+  Loader2, Activity, AlertTriangle, Pill, Euro,
   UserPlus, Upload, GitBranch, RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -369,7 +369,7 @@ function DashboardPage() {
         />
         <KPI
           loading={econQ.isLoading}
-          icon={<EuroIcon className="h-5 w-5" />}
+          icon={<Euro className="h-5 w-5" />}
           label="Économie générique"
           value={`${totalEconomiePotentielle.toFixed(2)} €`}
           hint="Top 8 substitutions cumulées"
@@ -483,7 +483,7 @@ function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <EuroIcon className="h-4 w-4" />
+              <Euro className="h-4 w-4" />
               Top substitutions génériques
             </CardTitle>
           </CardHeader>
