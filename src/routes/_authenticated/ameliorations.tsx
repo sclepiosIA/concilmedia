@@ -353,6 +353,7 @@ const PISTES: Piste[] = [
       "Alertes : delta > seuil entre deux conciliations",
     ],
     prerequis: ["Plusieurs séjours par patient"],
+    statut: "Livré v1",
   },
   {
     id: 12,

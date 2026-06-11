@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRiskPopulationRouteImport } from './routes/_authenticated/risk-population'
 import { Route as AuthenticatedEvaluationRouteImport } from './routes/_authenticated/evaluation'
 import { Route as AuthenticatedEquipeRouteImport } from './routes/_authenticated/equipe'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -50,6 +51,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRiskPopulationRoute =
+  AuthenticatedRiskPopulationRouteImport.update({
+    id: '/risk-population',
+    path: '/risk-population',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEvaluationRoute = AuthenticatedEvaluationRouteImport.update({
   id: '/evaluation',
   path: '/evaluation',
@@ -190,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/equipe': typeof AuthenticatedEquipeRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
+  '/risk-population': typeof AuthenticatedRiskPopulationRoute
   '/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
@@ -217,6 +225,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/equipe': typeof AuthenticatedEquipeRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
+  '/risk-population': typeof AuthenticatedRiskPopulationRoute
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
   '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
@@ -245,6 +254,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/equipe': typeof AuthenticatedEquipeRoute
   '/_authenticated/evaluation': typeof AuthenticatedEvaluationRoute
+  '/_authenticated/risk-population': typeof AuthenticatedRiskPopulationRoute
   '/_authenticated/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
   '/_authenticated/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/_authenticated/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
@@ -274,6 +284,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/equipe'
     | '/evaluation'
+    | '/risk-population'
     | '/admin/ai'
     | '/admin/bdpm'
     | '/admin/import-fhir'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/equipe'
     | '/evaluation'
+    | '/risk-population'
     | '/admin/bdpm'
     | '/admin/import-fhir'
     | '/admin/import-reel'
@@ -328,6 +340,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/equipe'
     | '/_authenticated/evaluation'
+    | '/_authenticated/risk-population'
     | '/_authenticated/admin/ai'
     | '/_authenticated/admin/bdpm'
     | '/_authenticated/admin/import-fhir'
@@ -376,6 +389,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/risk-population': {
+      id: '/_authenticated/risk-population'
+      path: '/risk-population'
+      fullPath: '/risk-population'
+      preLoaderRoute: typeof AuthenticatedRiskPopulationRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/evaluation': {
       id: '/_authenticated/evaluation'
@@ -601,6 +621,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEquipeRoute: typeof AuthenticatedEquipeRoute
   AuthenticatedEvaluationRoute: typeof AuthenticatedEvaluationRoute
+  AuthenticatedRiskPopulationRoute: typeof AuthenticatedRiskPopulationRoute
   AuthenticatedConciliationMetriquesRoute: typeof AuthenticatedConciliationMetriquesRoute
   AuthenticatedConciliationSupervisionRoute: typeof AuthenticatedConciliationSupervisionRoute
   AuthenticatedEpisodesEpisodeIdRoute: typeof AuthenticatedEpisodesEpisodeIdRouteWithChildren
@@ -615,6 +636,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEquipeRoute: AuthenticatedEquipeRoute,
   AuthenticatedEvaluationRoute: AuthenticatedEvaluationRoute,
+  AuthenticatedRiskPopulationRoute: AuthenticatedRiskPopulationRoute,
   AuthenticatedConciliationMetriquesRoute:
     AuthenticatedConciliationMetriquesRoute,
   AuthenticatedConciliationSupervisionRoute:

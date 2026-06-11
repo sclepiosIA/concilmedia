@@ -24,8 +24,9 @@ import { CollapsibleSection } from "@/components/patient/CollapsibleSection";
 import { ConciliationCompleteCard } from "@/components/patient/ConciliationCompleteCard";
 import { DmpHmdSection } from "@/components/patient/DmpHmdSection";
 import { DmpAdherenceSection } from "@/components/patient/DmpAdherenceSection";
+import { RiskTrendCard } from "@/components/patient/RiskTrendCard";
 import { AssignmentPanel } from "@/components/team/AssignmentPanel";
-import { Database, FlaskConical, Hospital, Pill, Sparkles, Stethoscope } from "lucide-react";
+import { Database, FlaskConical, Hospital, Pill, Sparkles, Stethoscope, TrendingUp } from "lucide-react";
 import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
 import { useConciliationTimer } from "@/hooks/useConciliationTimer";
 
@@ -314,6 +315,17 @@ function PatientDetailPage() {
         >
           <DmpAdherenceSection patientId={patientId} />
         </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Trajectoire du risque iatrogène"
+          icon={<TrendingUp className="h-4 w-4 text-primary" />}
+          storageKey={`sec:risk-trend:${patientId}`}
+          defaultOpen={false}
+        >
+          <RiskTrendCard patientId={patientId} />
+        </CollapsibleSection>
+
+
 
 
 

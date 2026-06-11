@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Sparkles, ScanSearch, ShieldAlert, Loader2, Download, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Sparkles, ScanSearch, ShieldAlert, Loader2, Download, CheckCircle2, TrendingUp } from "lucide-react";
 import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.functions";
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
 import { PharmacistConciliationPanel } from "@/components/conciliation/PharmacistConciliationPanel";
@@ -20,6 +20,7 @@ import { DivergencesSummaryCard } from "@/components/conciliation/DivergencesSum
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
+import { getPatientRiskTrend } from "@/lib/risk/riskTrend.functions";
 import { toast } from "sonner";
 import type { RiskResult } from "@/lib/conciliation/riskScore";
 import { useConciliationTimer } from "@/hooks/useConciliationTimer";
@@ -83,6 +84,9 @@ function EpisodeConciliationPage() {
     }
   }, [latestRisk, riskMut]);
 
+  const trendFn = useServerFn(getPatientRiskTrend);
+
+
 
   const { data: episode } = useQuery({
     queryKey: ["episode", episodeId],
@@ -102,6 +106,24 @@ function EpisodeConciliationPage() {
     enabled: !!episode?.patient_id,
     queryFn: async () => (await supabase.from("allergies").select("*").eq("patient_id", episode!.patient_id)).data ?? [],
   });
+
+  const { data: trend } = useQuery({
+    queryKey: ["risk-trend", episode?.patient_id],
+    enabled: !!episode?.patient_id,
+    queryFn: () => trendFn({ data: { patientId: episode!.patient_id } }),
+  });
+  const currentPoint = trend?.points.find((pt) => pt.episode_id === episodeId);
+  const trendAlert =
+    currentPoint && currentPoint.delta_vs_precedent !== null &&
+    (currentPoint.delta_vs_precedent >= 3 || (currentPoint.niveau_rank_delta ?? 0) >= 1)
+      ? currentPoint
+      : null;
+  const previousPoint = (() => {
+    if (!trend || !currentPoint) return null;
+    const idx = trend.points.findIndex((pt) => pt.episode_id === episodeId);
+    return idx > 0 ? trend.points[idx - 1] : null;
+  })();
+
 
   if (!episode) return <div className="container py-8">Chargement…</div>;
   const p = episode.patients;
@@ -178,9 +200,35 @@ function EpisodeConciliationPage() {
         </CardContent>
       </Card>
 
+      {trendAlert && previousPoint && (
+        <Card className="mb-3 border-destructive/40 bg-destructive/5">
+          <CardContent className="py-3 flex items-start gap-3">
+            <TrendingUp className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+            <div className="flex-1 text-sm">
+              <div className="font-medium text-destructive">
+                Risque iatrogène en hausse de {trendAlert.delta_vs_precedent! > 0 ? "+" : ""}
+                {trendAlert.delta_vs_precedent} points vs séjour du{" "}
+                {previousPoint.date_entree
+                  ? new Date(previousPoint.date_entree).toLocaleDateString("fr-FR")
+                  : new Date(previousPoint.date).toLocaleDateString("fr-FR")}
+                {previousPoint.service ? ` (${previousPoint.service})` : ""}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                Score précédent : {previousPoint.score} ({previousPoint.niveau}) → actuel : {trendAlert.score} ({trendAlert.niveau}).
+                Consulter la trajectoire complète sur la fiche patient.
+              </div>
+            </div>
+            <Link to="/patients/$patientId" params={{ patientId: episode.patient_id }}>
+              <Button variant="outline" size="sm">Voir la trajectoire</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="my-4">
         <DivergencesSummaryCard conciliations={recon.conciliations} />
       </div>
+
 
 
 
