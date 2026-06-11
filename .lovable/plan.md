@@ -1,79 +1,67 @@
-# Piste #9 v2 — Conciliation de sortie (extensions)
+# Piste #10 v2 — Interopérabilité DMP / Mon Espace Santé (approfondissement)
 
-La v1 est livrée (table `discharge_letters`, comparaison habituel/entrée/sortie, génération IA, route `/episodes/$episodeId/sortie`, statuts brouillon/prête/envoyée, impression navigateur). Cette v2 corrige les limites listées et professionnalise le module.
+La v1 livre l'import HMD (simulé + CSV), le rapprochement et l'ajout aux traitements habituels. La v2 exploite ces données cliniquement et ferme la boucle "lecture DMP → action → écriture DMP".
 
 ## Objectifs v2
 
-1. Export PDF natif (au lieu de `window.print`) — réutilisable, archivable, signable.
-2. Envoi MSSanté simulé avec journal d'envoi (vraie intégration API hors v2, mais traçabilité prête).
-3. Édition manuelle de la lettre générée avant validation (le pharmacien doit pouvoir corriger).
-4. Versioning : régénérer crée une nouvelle version sans écraser l'ancienne (déjà partiellement le cas, à formaliser + UI).
-5. Pré-remplissage automatique du médecin traitant depuis la fiche patient si renseigné.
-6. Traçabilité fine : qui a généré, validé, envoyé, à quelle date.
-7. Inclusion explicite des allergies et comorbidités dans la lettre.
+1. **Analyser** l'historique HMD au-delà du simple listing.
+2. **Détecter** les écarts d'observance et les ruptures de délivrance.
+3. **Écrire** vers Mon Espace Santé (push lettre de liaison + BCM) — simulé.
+4. **Auditer** chaque accès DMP (exigence Ségur).
 
-## Spécifications
+## Lots de livraison
 
-### 1. Migration (1 seule)
+### Lot A — Analyse observance & ruptures
+- Server fn `analyzeHmdAdherence(patientId)` : pour chaque molécule des traitements habituels, calcule à partir du HMD :
+  - taux de couverture (jours couverts / jours attendus sur 6 mois — MPR simplifié)
+  - dernière délivrance, intervalle moyen
+  - statut : `bonne` / `partielle` / `rupture` / `surconsommation`
+- Persisté dans une table `hmd_adherence_snapshots` (patient_id, molecule, mpr, statut, computed_at).
 
-- `discharge_letters` : ajouter colonnes
-  - `version int NOT NULL DEFAULT 1` (rang dans la série pour cet `episode_id`)
-  - `parent_letter_id uuid NULL REFERENCES discharge_letters(id)` (filiation)
-  - `validated_by uuid NULL REFERENCES auth.users(id)`, `validated_at timestamptz NULL`
-  - `sent_by uuid NULL REFERENCES auth.users(id)`
-  - `delivery_channel text NULL` (`mssante`, `print`, `manual`)
-  - `delivery_log jsonb NOT NULL DEFAULT '[]'` (entrées `{at, by, channel, recipient, status, message}`)
-- `patients` : ajouter `medecin_traitant_nom text NULL`, `medecin_traitant_mssante text NULL`, `pharmacien_officine_nom text NULL`, `pharmacien_officine_mssante text NULL` (si absents).
-- Pas de nouvelle table.
+### Lot B — Détection d'écarts prescription ↔ délivrance
+- Server fn `detectHmdDiscrepancies(patientId)` qui croise `patient_treatments` actifs avec dernières lignes HMD :
+  - prescrit mais jamais délivré sur 90 j → alerte rouge
+  - délivré mais absent des traitements déclarés → suggestion d'ajout
+  - posologie HMD ≠ posologie déclarée → drapeau divergence
+- Résultats injectés comme alertes pharmaceutiques dans la fiche patient et l'épisode actif.
 
-### 2. Server fns (`src/lib/discharge/`)
+### Lot C — Timeline HMD
+- Composant `HmdTimeline` (sur fiche patient) : frise 12 mois par molécule (heatmap mensuelle des boîtes délivrées) + survol = prescripteur / pharmacie.
+- Filtres par classe ATC et par statut adhérence.
 
-- `updateDischargeLetter` — patch `letter_html`, `recipient_*` (uniquement statut `brouillon`).
-- `validateDischargeLetter` — passe `brouillon` → `prete`, stamp `validated_by/at`.
-- `regenerateDischargeLetter` — crée une nouvelle ligne `version = max+1`, `parent_letter_id = current`, marque l'ancienne `clos` (statut élargi : ajouter `'clos'` au CHECK).
-- `sendDischargeLetterMSSante` — v2 : push une entrée dans `delivery_log`, set `status='envoyee'`, `sent_by`, `sent_at`, `delivery_channel='mssante'`. Vérifie au moins une adresse MSSanté présente. Hors v2 : appel API MSSanté réel.
-- `exportDischargeLetterPdf` — server fn renvoyant `{ base64, filename }`, génère le PDF côté serveur via `pdf-lib` (déjà utilisé par `pdfExport.functions.ts`).
+### Lot D — Push Mon Espace Santé (simulé)
+- Server fn `pushDocumentToMes({ episodeId, documentType, documentId })` :
+  - types supportés : `lettre_liaison`, `bcm`, `plan_pharmaceutique`
+  - simule le dépôt MES (table `mes_pushes` : status, ack_id, timestamp, payload_hash)
+  - bouton "Pousser vers Mon Espace Santé" sur la page sortie et sur le BCM
+- Affichage de l'historique des pushes dans la fiche patient.
 
-Prompt IA enrichi : injecter allergies sévères et comorbidités principales du patient pour que la section « Recommandations » soit personnalisée.
+### Lot E — Audit & consentement
+- Table `dmp_access_audit` (user_id, patient_id, action, timestamp, motif) — un log par lecture/écriture DMP/MES, exigence ANS.
+- Champ `consentement_dmp` (booléen + date) sur la fiche patient ; toute opération DMP/MES bloquée sans consentement actif, modale de recueil.
 
-### 3. UI — `episodes.$episodeId.sortie.tsx`
+## Détails techniques
 
-- **Pré-remplissage** des champs destinataires depuis `patients.medecin_traitant_*` / `pharmacien_officine_*` au montage.
-- **Bouton « Modifier »** sur une lettre en `brouillon` → ouvre un `Textarea` (ou éditeur minimal contenteditable) sur `letter_html`, bouton « Enregistrer ».
-- **Bouton « Régénérer »** → appelle `regenerateDischargeLetter`, conserve les anciennes versions affichées repliées avec badge `v1`, `v2`...
-- **Bouton « Valider »** (uniquement `brouillon`) → `validateDischargeLetter`, passage en `prete`.
-- **Bouton « Envoyer via MSSanté »** (uniquement `prete`) → `sendDischargeLetterMSSante` (v2 simulé), désactivé si aucune adresse MSSanté.
-- **Bouton « Télécharger PDF »** remplace « Imprimer » (impression reste possible depuis le PDF).
-- **Journal d'envoi** : si `delivery_log` non vide, afficher timeline (canal, destinataire, statut, date, opérateur).
-- **Affichage allergies/comorbidités** dans l'en-tête de la page pour rappel.
+- **Migration SQL** : `hmd_adherence_snapshots`, `mes_pushes`, `dmp_access_audit`, colonnes `consentement_dmp_*` sur `patients`. RLS + GRANT sur les 3 tables, RLS via `has_role` (pharmacien/superviseur lecture/écriture, admin all).
+- **Server fns** dans `src/lib/dmp/` :
+  - `dmpAdherence.functions.ts` (analyse + détection)
+  - `mesPush.functions.ts` (push simulé + audit auto)
+  - `dmpAudit.functions.ts` (lecture log)
+  - toutes protégées par `requireSupabaseAuth` + check rôle + insertion auto dans `dmp_access_audit`.
+- **UI** :
+  - `src/components/patient/HmdTimeline.tsx`
+  - `src/components/patient/HmdAdherenceCard.tsx` (MPR + statuts)
+  - `src/components/patient/DmpConsentDialog.tsx`
+  - Bouton "Pousser MES" intégré à `episodes.$episodeId.sortie.tsx` et au BCM.
+  - Section "Audit DMP" dans la fiche patient (lecture seule).
+- **Ameliorations.tsx** : passage de la piste #10 en `Livré v2` une fois les lots A–E terminés.
 
-### 4. Statut
+## Limites assumées (hors v2)
+- Pas de vraie connexion DMP/MES (carte CPS, Ségur, ANS) — tout est simulé/journalisé.
+- MPR calculé sur déclaratif posologique, pas sur durée de traitement DMP réelle.
 
-`ameliorations.tsx` : Piste #9 passe à `statut: "Livré v2"` avec note des hors-scope restants (envoi MSSanté **réel** + push DMP).
-
-## Fichiers touchés
-
-```
-supabase migration (1)
-src/lib/discharge/dischargeLetter.functions.ts   (étendu)
-src/lib/discharge/exportDischargePdf.functions.ts (nouveau)
-src/routes/_authenticated/episodes.$episodeId.sortie.tsx  (étendu)
-src/components/discharge/LetterVersionItem.tsx   (nouveau, extrait UI)
-src/components/discharge/LetterEditor.tsx        (nouveau, édition HTML simple)
-src/routes/_authenticated/ameliorations.tsx      (statut)
-```
-
-## Hors v2 (intentionnel)
-
-- Appel API MSSanté réel (nécessite carte CPS + certificat ANS) — simulé en v2.
-- Push DMP / Mon Espace Santé (couvert par Piste #10).
-- Éditeur WYSIWYG riche (TipTap) — v2 = textarea HTML avec aperçu, suffisant pour corrections.
-- Signature électronique du pharmacien — Piste séparée.
-
-## Critères de validation
-
-- Régénérer une lettre conserve l'ancienne avec son numéro de version.
-- Modifier une lettre n'est possible qu'en `brouillon`.
-- Le bouton MSSanté est désactivé tant qu'aucune adresse n'est saisie.
-- Le PDF téléchargé contient l'en-tête patient, la synthèse des changements, l'ordonnance de sortie et les destinataires.
-- Le journal d'envoi liste l'historique des envois avec horodatage et opérateur.
+## Critères d'acceptation
+- Import HMD existant → l'analyse adhérence se calcule et s'affiche.
+- Au moins une alerte d'écart visible quand on retire un traitement habituel délivré récemment.
+- Push MES enregistré dans `mes_pushes` + ligne d'audit créée.
+- Sans consentement DMP actif, tous les boutons DMP/MES sont désactivés avec tooltip.
