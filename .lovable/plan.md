@@ -1,67 +1,85 @@
-## Piste #13 v2 — Audit & traçabilité étendus
+## Piste #15 — Évaluation continue des modèles LLM (v1)
 
-La v1 a posé l'infrastructure (table append-only `audit_log`, hash chain SHA-256, RPC `append_audit_log`, page admin `/admin/audit` avec vérification d'intégrité et export CSV, premier point instrumenté `ai_analysis_run`). La v2 étend la couverture, durcit l'export et formalise la rétention.
+Objectif : un banc d'essai reproductible qui rejoue un jeu de cas annotés (golden set) sur chaque combinaison `(ai_task, provider, model)`, calcule des métriques de qualité / latence / coût, archive les runs et alerte sur les régressions, le tout accessible depuis l'admin.
 
-### Lot A — Instrumentation transverse des actions sensibles
+### Périmètre v1
+- Tâches IA évaluées en priorité (déjà routées via `runAITask`) :
+  - `reconciliation_analysis` (DNI, omissions, transferts)
+  - `bmo_synthesis` (synthèse patient)
+  - `liaison_letter` (lettre de liaison)
+- Sources de golden set réutilisées (pas de nouvelle UI d'annotation v1) :
+  - `ground_truth_dnis` → vérité terrain DNI
+  - `pharmacist_gold_standards` → BMO/lettre validées
+- Lancement : manuel depuis admin + cron quotidien optionnel (out of v1, seulement bouton + endpoint préparé).
 
-Ajout d'appels `recordAudit({ action, entityType, entityId, payload })` aux points clés (côté serveur quand possible, sinon côté UI après succès) :
+### Lots
 
-- **Patient / DMP** : consultation fiche patient (`patient_view`), modification consentement DMP (déjà tracé en `dmp_access_audit` → miroir vers `audit_log` pour la chaîne unifiée), accès historique DMP (`dmp_history_view`).
-- **Épisode & conciliation** : ouverture épisode (`episode_view`), validation BMO (`bmo_validate`), validation conciliation sortie (`sortie_validate`), modification prescription (`prescription_update`).
-- **IA** : `ai_analysis_run` (déjà fait), `ai_synthesis_run` (synthèse patient), `ai_liaison_letter_generate`, `ai_reconciliation_run`.
-- **Exports** : `export_pdf_liaison`, `export_pdf_bmo`, `export_csv_metrics`, `export_audit_csv` (auto-audité quand un admin télécharge le journal).
-- **Admin** : `role_grant`, `role_revoke`, `bdpm_refresh`, `rag_index_rebuild`.
+**Lot A — Schéma & migrations**
+- Nouvelles tables (publiques, RLS admin-only, GRANT authenticated/service_role) :
+  - `eval_datasets(id, slug unique, task_slug, description, item_count, created_at)`
+  - `eval_dataset_items(id, dataset_id, ref_type, ref_id, input jsonb, expected jsonb, weight, created_at)` — `ref_type` ∈ {`ground_truth_dni`, `pharmacist_gold_standard`, `manual`}
+  - `eval_runs(id, dataset_id, task_slug, provider_id, model, status, started_at, finished_at, n_items, n_ok, n_fail, metrics jsonb, cost_eur, total_tokens, triggered_by, created_at)`
+  - `eval_run_items(id, run_id, dataset_item_id, output jsonb, score jsonb, latency_ms, tokens_in, tokens_out, cost_eur, error text, created_at)`
+- Index : `eval_runs(task_slug, model, started_at desc)`, `eval_run_items(run_id)`.
+- RLS : SELECT/INSERT réservés `has_role(auth.uid(),'admin')` ; service_role full.
 
-Pour chaque point : action stable (snake_case court), `entityType` standardisé (`patient`, `episode`, `prescription`, `analysis`, `export`, `admin`), `entityId` réel, `payload` minimal sans PII brute (uniquement IDs + métadonnées : type d'export, modèle IA utilisé, durée, taille, motif si fourni).
+**Lot B — Métriques (`src/lib/eval/metrics.ts`)**
+- Helpers purs et testables :
+  - `scoreDniSet(expected, output)` → précision / rappel / F1 sur l'ensemble des DNI normalisés (clé `{atc|name}+severity`).
+  - `scoreBmo(expected, output)` → exactitude par champ (nb médocs match, posologie, voie) + F1 sur la liste finale.
+  - `scoreLetter(expected, output)` → ROUGE-L simplifié (LCS) + couverture des items clés via tags.
+- Sortie standard : `{ score: 0..1, breakdown: Record<string,number>, notes?: string[] }`.
 
-### Lot B — Export signé inviolable
+**Lot C — Constitution du dataset (`src/lib/eval/dataset.functions.ts`)**
+- `buildDatasetFromGroundTruth({ taskSlug, limit })` : agrège `ground_truth_dnis` (DNI) ou `pharmacist_gold_standards` (BMO/lettre) → upsert `eval_datasets` + `eval_dataset_items`. Idempotent par `(ref_type, ref_id)`.
+- `listDatasets()`, `getDataset(id)` (admin).
 
-Nouvelle server fn `exportAuditSigned({ since?, until? })` (admin only) qui :
+**Lot D — Exécution du banc (`src/lib/eval/runner.functions.ts`)**
+- `runEvaluation({ datasetId, models: [{providerId, model}], maxConcurrency=2 })` :
+  1. Crée `eval_runs` (status=running).
+  2. Pour chaque item × modèle : appelle `runAITask` (mode déterministe : `temperature=0`, seed si dispo) avec l'input du dataset, mesure latence, capture tokens et coût (depuis la réponse provider, sinon estimation via prix `available_models`).
+  3. Calcule score via Lot B → insert `eval_run_items`.
+  4. Agrège `metrics` (F1 moyen pondéré, p50/p95 latence, coût total, taux d'échec), met à jour `eval_runs`.
+- Logue chaque run dans `audit_log` via `audit('EVAL_RUN_EXECUTE', 'eval_run', runId, { taskSlug, model })`.
+- Garde-fou : annule si > N minutes, marque `status='failed'`.
 
-1. Lit un intervalle d'`audit_log` ordonné par `seq`.
-2. Sérialise en JSON canonique (clés triées, séparateurs fixes).
-3. Calcule un **hash global** = SHA-256(`first.prev_hash || last.hash || count || since || until`).
-4. Renvoie un bundle `{ entries, manifest: { count, since, until, firstHash, lastHash, exportHash, exportedAt, exportedBy } }`.
-5. Trace lui-même un événement `audit_export` dans le journal.
+**Lot E — Détection de régression**
+- `compareToBaseline(runId)` server fn : prend le dernier run "baseline" (même task, même dataset, modèle précédent du même provider OU run le plus récent), retourne `delta` par métrique + flag `regression` si F1 chute > 5 pts ou latence p95 > +30 %.
+- Pas d'alerting externe v1 : badge rouge dans l'UI + entrée `audit_log` `EVAL_REGRESSION_DETECTED`.
 
-UI : bouton "Export signé (JSON)" sur `/admin/audit`, à côté du CSV. Téléchargement `.json` + affichage du `exportHash` pour archivage externe.
+**Lot F — UI admin (`/admin/ai/eval`)**
+- Nouvelle route `src/routes/_authenticated/admin.ai.eval.tsx` + lien depuis `admin.ai.index.tsx`.
+- Sections :
+  1. **Datasets** : liste + bouton "Reconstruire depuis ground truth" par task.
+  2. **Lancer un run** : sélecteur dataset + matrice modèles (issue de `ai_providers` × `available_models`) + bouton exécuter.
+  3. **Historique** : table runs (task, modèle, F1, p95, coût, statut, date) avec filtre task/modèle.
+  4. **Détail run** : métriques globales, top items en échec (input/expected/output diff), comparaison baseline.
+- Accès gated par `useIsAdmin` (déjà utilisé pour `EntityAuditPanel`).
 
-### Lot C — Rétention & purge contrôlée
-
-- Ajout d'une colonne `retention_class text NOT NULL DEFAULT 'standard'` (`standard` = 5 ans, `sensitive` = 10 ans, `permanent` = jamais).
-- Server fn `getAuditRetentionStats()` (admin) : compte par classe, plus ancienne entrée, volume.
-- **Pas de purge automatique en v2** : la suppression casserait la chaîne. À la place, on documente la politique dans `/admin/audit` (panneau "Politique de rétention" texte + lien vers DPO). La purge réelle sera un Lot v3 avec re-chaînage cryptographique (Merkle root archivé).
-
-### Lot D — Vue par entité
-
-- Sur la fiche patient et la fiche épisode, ajout d'un panneau pliable "Journal d'audit (admin)" qui appelle `listAudit({ entityType, entityId })` — visible uniquement si l'utilisateur est admin (hook `useIsAdmin`).
-- Affiche les 20 dernières entrées concernant cette entité, lien "Voir tout" vers `/admin/audit?entityType=…&entityId=…` (filtres pré-remplis via search params).
-
-### Lot E — Mise à jour pistes & doc
-
-- Marquer Piste #13 en "Livré v2" dans `ameliorations.tsx`.
-- Note : "v3 = purge avec Merkle root archivé + signature externe (timestamping RFC 3161)".
+**Lot G — Mise à jour pistes**
+- `ameliorations.tsx` : piste #15 → statut "Livré v1", note "v2 = annotation in-app + cron nocturne + alerte email/Slack sur régression".
 
 ### Détails techniques
+- Tous les serverFn passent par `requireSupabaseAuth` + check `has_role('admin')`.
+- Coût : si provider ne renvoie pas le coût, estimation `(tokens_in*prixIn + tokens_out*prixOut)/1M` depuis `availableModels.ts` (compléter le mapping si manquant).
+- Concurrence : `Promise.all` par batch de `maxConcurrency` ; on borne à 5 modèles × 20 items par appel UI pour rester < 60 s ; au-delà, prévenir l'utilisateur et reco cron.
+- Déterminisme : `temperature=0`, JSON schema déjà imposé par `runAITask`.
+- Aucun PII supplémentaire stocké : les inputs golden sont déjà anonymisés (ground truth / gold standards).
+- Audit actions à ajouter dans `src/lib/audit/actions.ts` : `EVAL_DATASET_BUILD`, `EVAL_RUN_EXECUTE`, `EVAL_REGRESSION_DETECTED`.
 
-- **Helper client** : `src/lib/audit/auditClient.ts` exportant `audit(action, entityType, entityId, payload?)` qui appelle `recordAudit` en *fire-and-forget* (jamais bloquant, jamais throw). Tous les call sites UI passent par ce helper pour garantir l'uniformité et la résilience.
-- **Côté server fns** : appel direct à `append_audit_log` via `supabase.rpc` dans le `.handler()` après l'opération métier, en `try/catch` silencieux (l'échec d'audit ne doit jamais annuler une action clinique réussie, mais est loggé console).
-- **Validation Zod** : `action` whitelistée via un enum exporté `AuditAction` (centralisé dans `src/lib/audit/actions.ts`) pour éviter les fautes de frappe et faciliter le filtrage UI.
-- **Payload PII** : règle stricte — pas de nom patient, pas de contenu de prescription, pas de texte libre IA. Seulement IDs internes et métadonnées techniques.
-- **Pas de nouvelle migration de schéma sauf** : ajout de `retention_class` (Lot C), et un index `audit_log(action)` pour les filtres.
-- **`/admin/audit`** : ajout des search params (`action`, `entityType`, `entityId`) lus depuis l'URL pour partager des liens filtrés.
+### Hors périmètre v1
+- UI d'annotation manuelle de nouveaux cas (réutilise existant).
+- Cron nocturne automatique (préparer le serverFn, ne pas planifier).
+- Alerting email/Slack.
+- A/B testing en production (shadow mode).
+- Comparaison multi-provider sur prompts versionnés (v2 via `ai_prompt_versions`).
 
 ### Critères d'acceptation
+- Un admin peut, depuis `/admin/ai/eval`, construire un dataset DNI à partir de `ground_truth_dnis`, lancer un run sur 2 modèles, voir F1/latence/coût, et identifier les items en régression.
+- Toute exécution apparaît dans `audit_log` ≤ 2 s.
+- Les non-admins n'ont aucun accès (route + serverFn).
+- Build et lints passent ; aucune modification de `runAITask` au-delà de l'ajout d'un mode `dryRun=false` déterministe si nécessaire.
 
-- Toute action listée Lot A apparaît dans `/admin/audit` ≤ 2 s après exécution.
-- L'export signé est rejoué : on recalcule `exportHash` localement (script ou outil tiers) et il correspond au manifest.
-- Une tentative `UPDATE` ou `DELETE` sur `audit_log` via l'API (même admin) échoue (déjà bloqué par trigger en v1, à re-vérifier).
-- L'échec de la passerelle IA n'empêche pas l'audit des actions déterministes (audit reste opérationnel en mode dégradé).
-- Le panneau "Journal d'audit (admin)" n'est jamais visible pour un utilisateur non-admin (vérif côté serveur via `listAudit` qui throw `Forbidden`).
-
-### Hors v2
-
-- Purge avec re-chaînage Merkle.
-- Timestamping RFC 3161 / horodatage qualifié eIDAS.
-- Diffusion temps réel (websocket) du journal aux admins connectés.
-- Anonymisation différée (RGPD droit à l'oubli) — nécessite une stratégie d'effacement compatible chaîne.
+### Fichiers prévus
+- **Créés** : migration SQL, `src/lib/eval/metrics.ts`, `src/lib/eval/dataset.functions.ts`, `src/lib/eval/runner.functions.ts`, `src/lib/eval/baseline.functions.ts`, `src/routes/_authenticated/admin.ai.eval.tsx`, `src/components/admin/eval/RunMatrix.tsx`, `src/components/admin/eval/RunDetail.tsx`.
+- **Modifiés** : `src/lib/audit/actions.ts`, `src/routes/_authenticated/admin.ai.index.tsx` (lien), `src/routes/_authenticated/ameliorations.tsx` (statut), `src/integrations/supabase/types.ts` (auto-régen).

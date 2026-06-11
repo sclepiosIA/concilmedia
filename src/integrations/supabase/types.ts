@@ -1489,6 +1489,206 @@ export type Database = {
           },
         ]
       }
+      eval_dataset_items: {
+        Row: {
+          created_at: string
+          dataset_id: string
+          expected: Json
+          id: string
+          input: Json
+          ref_id: string | null
+          ref_type: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          dataset_id: string
+          expected?: Json
+          id?: string
+          input?: Json
+          ref_id?: string | null
+          ref_type: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          dataset_id?: string
+          expected?: Json
+          id?: string
+          input?: Json
+          ref_id?: string | null
+          ref_type?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eval_dataset_items_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "eval_datasets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eval_datasets: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          item_count: number
+          slug: string
+          task_slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_count?: number
+          slug: string
+          task_slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_count?: number
+          slug?: string
+          task_slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      eval_run_items: {
+        Row: {
+          cost_eur: number
+          created_at: string
+          dataset_item_id: string
+          error: string | null
+          id: string
+          latency_ms: number | null
+          output: Json
+          run_id: string
+          score: Json
+          tokens_in: number | null
+          tokens_out: number | null
+        }
+        Insert: {
+          cost_eur?: number
+          created_at?: string
+          dataset_item_id: string
+          error?: string | null
+          id?: string
+          latency_ms?: number | null
+          output?: Json
+          run_id: string
+          score?: Json
+          tokens_in?: number | null
+          tokens_out?: number | null
+        }
+        Update: {
+          cost_eur?: number
+          created_at?: string
+          dataset_item_id?: string
+          error?: string | null
+          id?: string
+          latency_ms?: number | null
+          output?: Json
+          run_id?: string
+          score?: Json
+          tokens_in?: number | null
+          tokens_out?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eval_run_items_dataset_item_id_fkey"
+            columns: ["dataset_item_id"]
+            isOneToOne: false
+            referencedRelation: "eval_dataset_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eval_run_items_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "eval_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eval_runs: {
+        Row: {
+          cost_eur: number
+          created_at: string
+          dataset_id: string
+          finished_at: string | null
+          id: string
+          metrics: Json
+          model: string
+          n_fail: number
+          n_items: number
+          n_ok: number
+          provider_id: string | null
+          started_at: string
+          status: string
+          task_slug: string
+          total_tokens: number
+          triggered_by: string | null
+        }
+        Insert: {
+          cost_eur?: number
+          created_at?: string
+          dataset_id: string
+          finished_at?: string | null
+          id?: string
+          metrics?: Json
+          model: string
+          n_fail?: number
+          n_items?: number
+          n_ok?: number
+          provider_id?: string | null
+          started_at?: string
+          status?: string
+          task_slug: string
+          total_tokens?: number
+          triggered_by?: string | null
+        }
+        Update: {
+          cost_eur?: number
+          created_at?: string
+          dataset_id?: string
+          finished_at?: string | null
+          id?: string
+          metrics?: Json
+          model?: string
+          n_fail?: number
+          n_items?: number
+          n_ok?: number
+          provider_id?: string | null
+          started_at?: string
+          status?: string
+          task_slug?: string
+          total_tokens?: number
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eval_runs_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "eval_datasets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eval_runs_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "ai_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fhir_push_logs: {
         Row: {
           created_at: string

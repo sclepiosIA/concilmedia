@@ -136,10 +136,20 @@ function AdminAiIndex() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-1">Tâches IA</h1>
-      <p className="text-sm text-muted-foreground mb-4">
-        Configure les prompts système, modèles et fournisseurs pour chaque endpoint IA.
-      </p>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-2xl font-bold mb-1">Tâches IA</h1>
+          <p className="text-sm text-muted-foreground">
+            Configure les prompts système, modèles et fournisseurs pour chaque endpoint IA.
+          </p>
+        </div>
+        <Link
+          to="/admin/ai/eval"
+          className="text-sm underline text-muted-foreground hover:text-foreground"
+        >
+          Banc d'essai LLM →
+        </Link>
+      </div>
 
       {tasks.length > 0 && (
         <div className="flex items-center gap-3 mb-3 text-sm">

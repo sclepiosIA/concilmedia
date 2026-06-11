@@ -448,6 +448,7 @@ const PISTES: Piste[] = [
       "Tableau de bord admin : F1, latence, coût par 1000 tokens",
     ],
     prerequis: ["Constitution du dataset annoté"],
+    statut: "Livré v1",
   },
   {
     id: 16,
