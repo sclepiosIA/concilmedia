@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { ShortagesAdminCard } from "@/components/admin/ShortagesAdminCard";
 
 export const Route = createFileRoute("/_authenticated/admin/ai/")({
   component: AdminAiIndex,
