@@ -15,6 +15,7 @@ import { useAiHealth } from "@/hooks/useAiHealth";
 export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
   const qc = useQueryClient();
   const analyzeFn = useServerFn(analyzeConciliation);
+  const auditFn = useServerFn(recordAudit);
   const ai = useAiHealth();
 
   const { data: latest } = useQuery({
