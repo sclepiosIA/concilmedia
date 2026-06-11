@@ -70,6 +70,8 @@ function useChartColors() {
 function DashboardPage() {
   const qc = useQueryClient();
   const seed = useServerFn(seedSyntheticCohort);
+  const colors = useChartColors();
+  const divPalette = [colors.destructive, colors.chart3, colors.chart2, colors.primary, colors.chart5, colors.muted];
 
   const today = new Date();
   const defaultFrom = new Date(today.getTime() - 30 * 86400000).toISOString().slice(0, 10);
