@@ -265,22 +265,16 @@ export function TraitementsHabituelsSection({ patientId }: { patientId: string }
                           <PriseCell value={t.posologie_coucher} icon={Moon} label="Coucher" shortLabel="Co" />
                         </div>
 
-                        <div className="flex flex-col gap-1 text-xs min-w-[160px]">
-                          {t.posologie_texte && (
-                            <span className="text-foreground/80 italic">{t.posologie_texte}</span>
-                          )}
-                          {t.indication && <span className="text-foreground/80">{t.indication}</span>}
-                          {t.duree && (
-                            <span className="text-foreground/80">
-                              <span className="font-medium">Durée :</span> {t.duree}
-                            </span>
-                          )}
-                          {t.source && !t.source_document_id && (
-                            <span className="text-muted-foreground">
-                              Source : {SOURCE_LABEL[t.source] ?? t.source}
-                            </span>
-                          )}
-                        </div>
+                        <PosologieDetails
+                          posologie_texte={t.posologie_texte}
+                          indication={t.indication}
+                          duree={t.duree}
+                          sourceLabel={
+                            t.source && !t.source_document_id
+                              ? (SOURCE_LABEL[t.source] ?? t.source)
+                              : null
+                          }
+                        />
 
                         <div className="flex justify-end">
                           <Button
