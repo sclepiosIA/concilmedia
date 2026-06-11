@@ -36,6 +36,7 @@ import { Route as ApiPublicFhirSplatRouteImport } from './routes/api/public/fhir
 import { Route as AuthenticatedEpisodesEpisodeIdSortieRouteImport } from './routes/_authenticated/episodes.$episodeId.sortie'
 import { Route as AuthenticatedAdminAiRlhfRouteImport } from './routes/_authenticated/admin.ai.rlhf'
 import { Route as AuthenticatedAdminAiProvidersRouteImport } from './routes/_authenticated/admin.ai.providers'
+import { Route as AuthenticatedAdminAiEvalRouteImport } from './routes/_authenticated/admin.ai.eval'
 import { Route as AuthenticatedAdminAiTasksSlugRouteImport } from './routes/_authenticated/admin.ai.tasks.$slug'
 
 const AuthRoute = AuthRouteImport.update({
@@ -187,6 +188,12 @@ const AuthenticatedAdminAiProvidersRoute =
     path: '/providers',
     getParentRoute: () => AuthenticatedAdminAiRoute,
   } as any)
+const AuthenticatedAdminAiEvalRoute =
+  AuthenticatedAdminAiEvalRouteImport.update({
+    id: '/eval',
+    path: '/eval',
+    getParentRoute: () => AuthenticatedAdminAiRoute,
+  } as any)
 const AuthenticatedAdminAiTasksSlugRoute =
   AuthenticatedAdminAiTasksSlugRouteImport.update({
     id: '/tasks/$slug',
@@ -216,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRouteWithChildren
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients/': typeof AuthenticatedPatientsIndexRoute
+  '/admin/ai/eval': typeof AuthenticatedAdminAiEvalRoute
   '/admin/ai/providers': typeof AuthenticatedAdminAiProvidersRoute
   '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
@@ -244,6 +252,7 @@ export interface FileRoutesByTo {
   '/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRouteWithChildren
   '/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/patients': typeof AuthenticatedPatientsIndexRoute
+  '/admin/ai/eval': typeof AuthenticatedAdminAiEvalRoute
   '/admin/ai/providers': typeof AuthenticatedAdminAiProvidersRoute
   '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
@@ -275,6 +284,7 @@ export interface FileRoutesById {
   '/_authenticated/episodes/$episodeId': typeof AuthenticatedEpisodesEpisodeIdRouteWithChildren
   '/_authenticated/patients/$patientId': typeof AuthenticatedPatientsPatientIdRoute
   '/_authenticated/patients/': typeof AuthenticatedPatientsIndexRoute
+  '/_authenticated/admin/ai/eval': typeof AuthenticatedAdminAiEvalRoute
   '/_authenticated/admin/ai/providers': typeof AuthenticatedAdminAiProvidersRoute
   '/_authenticated/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/_authenticated/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
@@ -306,6 +316,7 @@ export interface FileRouteTypes {
     | '/episodes/$episodeId'
     | '/patients/$patientId'
     | '/patients/'
+    | '/admin/ai/eval'
     | '/admin/ai/providers'
     | '/admin/ai/rlhf'
     | '/episodes/$episodeId/sortie'
@@ -334,6 +345,7 @@ export interface FileRouteTypes {
     | '/episodes/$episodeId'
     | '/patients/$patientId'
     | '/patients'
+    | '/admin/ai/eval'
     | '/admin/ai/providers'
     | '/admin/ai/rlhf'
     | '/episodes/$episodeId/sortie'
@@ -364,6 +376,7 @@ export interface FileRouteTypes {
     | '/_authenticated/episodes/$episodeId'
     | '/_authenticated/patients/$patientId'
     | '/_authenticated/patients/'
+    | '/_authenticated/admin/ai/eval'
     | '/_authenticated/admin/ai/providers'
     | '/_authenticated/admin/ai/rlhf'
     | '/_authenticated/episodes/$episodeId/sortie'
@@ -570,6 +583,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAiProvidersRouteImport
       parentRoute: typeof AuthenticatedAdminAiRoute
     }
+    '/_authenticated/admin/ai/eval': {
+      id: '/_authenticated/admin/ai/eval'
+      path: '/eval'
+      fullPath: '/admin/ai/eval'
+      preLoaderRoute: typeof AuthenticatedAdminAiEvalRouteImport
+      parentRoute: typeof AuthenticatedAdminAiRoute
+    }
     '/_authenticated/admin/ai/tasks/$slug': {
       id: '/_authenticated/admin/ai/tasks/$slug'
       path: '/tasks/$slug'
@@ -581,6 +601,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAdminAiRouteChildren {
+  AuthenticatedAdminAiEvalRoute: typeof AuthenticatedAdminAiEvalRoute
   AuthenticatedAdminAiProvidersRoute: typeof AuthenticatedAdminAiProvidersRoute
   AuthenticatedAdminAiRlhfRoute: typeof AuthenticatedAdminAiRlhfRoute
   AuthenticatedAdminAiIndexRoute: typeof AuthenticatedAdminAiIndexRoute
@@ -588,6 +609,7 @@ interface AuthenticatedAdminAiRouteChildren {
 }
 
 const AuthenticatedAdminAiRouteChildren: AuthenticatedAdminAiRouteChildren = {
+  AuthenticatedAdminAiEvalRoute: AuthenticatedAdminAiEvalRoute,
   AuthenticatedAdminAiProvidersRoute: AuthenticatedAdminAiProvidersRoute,
   AuthenticatedAdminAiRlhfRoute: AuthenticatedAdminAiRlhfRoute,
   AuthenticatedAdminAiIndexRoute: AuthenticatedAdminAiIndexRoute,
