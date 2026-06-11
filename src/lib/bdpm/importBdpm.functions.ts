@@ -167,7 +167,8 @@ export const importBdpm = createServerFn({ method: "POST" })
           dosage_substance: r[4] ?? null,
           reference_dosage: r[5] ?? null,
           nature_composant: r[6] ?? null,
-        }));
+        }))
+        .filter((row) => knownCis.has(row.cis));
       let compoInserted = 0;
       for (let i = 0; i < compoRows.length; i += 1000) {
         const slice = compoRows.slice(i, i + 1000);
