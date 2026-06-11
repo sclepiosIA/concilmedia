@@ -29,6 +29,9 @@ import { AssignmentPanel } from "@/components/team/AssignmentPanel";
 import { Database, FlaskConical, Hospital, Pill, Sparkles, Stethoscope, TrendingUp } from "lucide-react";
 import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
 import { useConciliationTimer } from "@/hooks/useConciliationTimer";
+import { EntityAuditPanel } from "@/components/audit/EntityAuditPanel";
+import { audit } from "@/lib/audit/auditClient";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/lib/audit/actions";
 
 const patientSearchSchema = z.object({
   autoConciliate: fallback(z.boolean(), false).default(false),
@@ -44,6 +47,11 @@ function PatientDetailPage() {
   const { patientId } = Route.useParams();
   const { autoConciliate } = Route.useSearch();
   useConciliationTimer({ step: "open_patient", patientId });
+
+  useEffect(() => {
+    audit(AUDIT_ACTIONS.PATIENT_VIEW, AUDIT_ENTITY_TYPES.PATIENT, patientId);
+  }, [patientId]);
+
 
 
   useEffect(() => {
@@ -357,6 +365,8 @@ function PatientDetailPage() {
         >
           <ConciliationCompleteCard patientId={patientId} autoStart />
         </CollapsibleSection>
+
+        <EntityAuditPanel entityType="patient" entityId={patientId} />
       </div>
       
     </div>

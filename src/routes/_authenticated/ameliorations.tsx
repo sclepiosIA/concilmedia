@@ -395,11 +395,15 @@ const PISTES: Piste[] = [
     ],
     miseEnOeuvre: [
       "Table audit_log append-only (trigger sur tables sensibles)",
-      "Hash chaîné pour inviolabilité",
-      "Export CSV/JSON daté et signé",
+      "Hash chaîné SHA-256 pour inviolabilité",
+      "Export CSV + export signé JSON avec exportHash recalculable",
+      "Instrumentation transverse (patient_view, episode_view, ai_*, export_*, role_*)",
+      "Panneau audit par entité (admin) sur fiches patient/épisode",
+      "Classes de rétention (standard 5 ans / sensible 10 ans / permanent)",
+      "v3 = purge avec Merkle root archivé + timestamping RFC 3161",
     ],
     prerequis: ["Politique de rétention validée DPO"],
-    statut: "Livré v1",
+    statut: "Livré v2",
   },
   {
     id: 14,
