@@ -126,6 +126,7 @@ export const importBdpm = createServerFn({ method: "POST" })
       rowsTotal += filesProcessed[FILES.atc];
 
       // --- 3. Présentations (CIP) ---
+      const knownCis = new Set(cisRows.map((r) => r.cis));
       const cipLines = await fetchAndDecode(FILES.cip);
       const cipRows = cipLines
         .map(parseRow)
@@ -141,7 +142,8 @@ export const importBdpm = createServerFn({ method: "POST" })
           agrement_collectivites: toBool(r[7]),
           taux_remboursement: r[8] ?? null,
           prix_eur: r[9] ? Number(r[9].replace(",", ".")) || null : null,
-        }));
+        }))
+        .filter((row) => knownCis.has(row.cis));
       filesProcessed[FILES.cip] = await upsertChunks(
         supabaseAdmin,
         "bdpm_presentations",
@@ -165,7 +167,8 @@ export const importBdpm = createServerFn({ method: "POST" })
           dosage_substance: r[4] ?? null,
           reference_dosage: r[5] ?? null,
           nature_composant: r[6] ?? null,
-        }));
+        }))
+        .filter((row) => knownCis.has(row.cis));
       let compoInserted = 0;
       for (let i = 0; i < compoRows.length; i += 1000) {
         const slice = compoRows.slice(i, i + 1000);
