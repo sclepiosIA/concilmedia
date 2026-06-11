@@ -34,6 +34,10 @@ export const AUDIT_ACTIONS = {
   // API publique (piste #14)
   API_KEY_CREATE: "api_key_create",
   API_KEY_REVOKE: "api_key_revoke",
+  // Enrichissement clinique (ruptures, IV→PO, médico-éco)
+  SHORTAGES_SYNC: "shortages_sync",
+  IV_PO_SUGGEST: "iv_po_suggest",
+  ECON_SUGGEST: "econ_suggest",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
