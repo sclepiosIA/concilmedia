@@ -10,6 +10,7 @@ import { audit } from "@/lib/audit/auditClient";
 import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/lib/audit/actions";
 import { toast } from "sonner";
 import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
+import { ShortagesEconomicsPanel } from "@/components/conciliation/ShortagesEconomicsPanel";
 import { RiskScoreCompare } from "@/components/conciliation/RiskScoreCompare";
 import { useAiHealth } from "@/hooks/useAiHealth";
 
