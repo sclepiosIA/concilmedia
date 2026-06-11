@@ -1,95 +1,79 @@
-## Piste #8 v1 — Module pharmacien conciliateur multi-sites
+# Piste #9 v2 — Conciliation de sortie (extensions)
 
-L'app a déjà le socle multi-tenant (Piste #4) : tables `organizations`, `organization_members` (rôle `admin|pharmacien|observateur`), helpers RLS `is_org_member/is_org_admin`, et `patients.organization_id`. Il manque la notion d'équipe/service, l'assignation d'un dossier à un pharmacien, le transfert avec historique, et une vue superviseur.
+La v1 est livrée (table `discharge_letters`, comparaison habituel/entrée/sortie, génération IA, route `/episodes/$episodeId/sortie`, statuts brouillon/prête/envoyée, impression navigateur). Cette v2 corrige les limites listées et professionnalise le module.
 
-### 1. Schéma BDD (1 migration)
+## Objectifs v2
 
-**Étendre `organization_members`** :
-- `service text NULL` — service hospitalier (« Gériatrie », « Cardio », « Tous »…).
-- `display_name text NULL` — nom affichable dans les listes de transfert (fallback : email).
+1. Export PDF natif (au lieu de `window.print`) — réutilisable, archivable, signable.
+2. Envoi MSSanté simulé avec journal d'envoi (vraie intégration API hors v2, mais traçabilité prête).
+3. Édition manuelle de la lettre générée avant validation (le pharmacien doit pouvoir corriger).
+4. Versioning : régénérer crée une nouvelle version sans écraser l'ancienne (déjà partiellement le cas, à formaliser + UI).
+5. Pré-remplissage automatique du médecin traitant depuis la fiche patient si renseigné.
+6. Traçabilité fine : qui a généré, validé, envoyé, à quelle date.
+7. Inclusion explicite des allergies et comorbidités dans la lettre.
 
-**Étendre `patients`** (additif, rétro-compatible) :
-- `assigned_to uuid NULL REFERENCES auth.users(id) ON DELETE SET NULL` — pharmacien titulaire du dossier.
-- `service text NULL` — service du séjour (utilisé pour filtrer la file).
-- `workflow_status text NOT NULL DEFAULT 'a_faire'` CHECK in `('a_faire','en_cours','en_attente_validation','valide','clos')`.
-- Index `(organization_id, workflow_status, assigned_to)`.
+## Spécifications
 
-**Nouvelle table `conciliation_transfers`** : historique des transferts/assignations.
-- `id, patient_id, organization_id, from_user_id, to_user_id, motif text, created_at, created_by`.
-- RLS : SELECT/INSERT pour membres de l'org (`is_org_member`).
-- GRANT `SELECT, INSERT` à `authenticated`, `ALL` à `service_role`.
+### 1. Migration (1 seule)
 
-**RLS patients** : déjà scopé orga, on garde. Pas de policy supplémentaire — `assigned_to` est un attribut, pas une restriction d'accès (un superviseur doit pouvoir réassigner).
+- `discharge_letters` : ajouter colonnes
+  - `version int NOT NULL DEFAULT 1` (rang dans la série pour cet `episode_id`)
+  - `parent_letter_id uuid NULL REFERENCES discharge_letters(id)` (filiation)
+  - `validated_by uuid NULL REFERENCES auth.users(id)`, `validated_at timestamptz NULL`
+  - `sent_by uuid NULL REFERENCES auth.users(id)`
+  - `delivery_channel text NULL` (`mssante`, `print`, `manual`)
+  - `delivery_log jsonb NOT NULL DEFAULT '[]'` (entrées `{at, by, channel, recipient, status, message}`)
+- `patients` : ajouter `medecin_traitant_nom text NULL`, `medecin_traitant_mssante text NULL`, `pharmacien_officine_nom text NULL`, `pharmacien_officine_mssante text NULL` (si absents).
+- Pas de nouvelle table.
 
-### 2. Server fns (`src/lib/team/`)
+### 2. Server fns (`src/lib/discharge/`)
 
-- `listTeam.functions.ts` → `listOrgMembers({ organizationId })` : retourne `{ user_id, role, service, display_name }[]` pour peupler les selects de transfert.
-- `assignPatient.functions.ts` :
-  - `assignPatient({ patientId, toUserId, motif? })` : middleware auth, vérifie `is_org_member`, met à jour `patients.assigned_to`, insère un `conciliation_transfers`. Idempotent.
-  - `setWorkflowStatus({ patientId, status })` : transitions contrôlées (`a_faire→en_cours→en_attente_validation→valide`; `clos` accessible depuis tout état).
-- `listTransfers.functions.ts` → historique d'un patient.
-- `updateMemberService.functions.ts` → admin org seulement (`is_org_admin`), modifie `service` / `display_name`.
+- `updateDischargeLetter` — patch `letter_html`, `recipient_*` (uniquement statut `brouillon`).
+- `validateDischargeLetter` — passe `brouillon` → `prete`, stamp `validated_by/at`.
+- `regenerateDischargeLetter` — crée une nouvelle ligne `version = max+1`, `parent_letter_id = current`, marque l'ancienne `clos` (statut élargi : ajouter `'clos'` au CHECK).
+- `sendDischargeLetterMSSante` — v2 : push une entrée dans `delivery_log`, set `status='envoyee'`, `sent_by`, `sent_at`, `delivery_channel='mssante'`. Vérifie au moins une adresse MSSanté présente. Hors v2 : appel API MSSanté réel.
+- `exportDischargeLetterPdf` — server fn renvoyant `{ base64, filename }`, génère le PDF côté serveur via `pdf-lib` (déjà utilisé par `pdfExport.functions.ts`).
 
-Toutes utilisent `requireSupabaseAuth` + vérification d'appartenance org.
+Prompt IA enrichi : injecter allergies sévères et comorbidités principales du patient pour que la section « Recommandations » soit personnalisée.
 
-### 3. UI
+### 3. UI — `episodes.$episodeId.sortie.tsx`
 
-**Refonte `patients.index.tsx`** : filtres barres latérales/haut :
-- Organisation (déjà), **Service** (distinct sur memberships ou patients), **Statut workflow** (badges), **Affectation** (Mes dossiers / Non assignés / Tous).
-- Colonne « Assigné à » + badge statut + bouton « Prendre en charge » (raccourci `assignPatient` vers soi-même si non assigné).
-
-**Patient detail (`patients.$patientId.tsx`)** :
-- Nouveau bloc « Affectation » : sélecteur statut, sélecteur pharmacien (alimenté par `listOrgMembers`), zone motif, bouton « Transférer ».
-- Timeline transferts via `listTransfers`.
-
-**Nouvelle route `_authenticated/conciliation.supervision.tsx`** :
-- Sélecteur orga.
-- Vue Kanban 4 colonnes (`à_faire`, `en_cours`, `en_attente_validation`, `valide`), cartes patient avec service + pharmacien + âge dossier.
-- KPIs en haut : nb dossiers par statut, par pharmacien, > 48 h sans mouvement.
-- Drag&drop hors v1 (boutons « passer à l'étape suivante » suffisent).
-
-**Admin équipe `admin.team.tsx`** (visible si `is_org_admin`) :
-- Table membres de l'org sélectionnée : email/nom, rôle, service éditable inline, bouton retirer.
-- (Invitation par email = hors v1, on assume l'inscription manuelle puis ajout par admin via `organization_members`).
-
-Liens latéraux ajoutés dans `admin.tsx` (Équipe) et dans la nav principale (Supervision).
+- **Pré-remplissage** des champs destinataires depuis `patients.medecin_traitant_*` / `pharmacien_officine_*` au montage.
+- **Bouton « Modifier »** sur une lettre en `brouillon` → ouvre un `Textarea` (ou éditeur minimal contenteditable) sur `letter_html`, bouton « Enregistrer ».
+- **Bouton « Régénérer »** → appelle `regenerateDischargeLetter`, conserve les anciennes versions affichées repliées avec badge `v1`, `v2`...
+- **Bouton « Valider »** (uniquement `brouillon`) → `validateDischargeLetter`, passage en `prete`.
+- **Bouton « Envoyer via MSSanté »** (uniquement `prete`) → `sendDischargeLetterMSSante` (v2 simulé), désactivé si aucune adresse MSSanté.
+- **Bouton « Télécharger PDF »** remplace « Imprimer » (impression reste possible depuis le PDF).
+- **Journal d'envoi** : si `delivery_log` non vide, afficher timeline (canal, destinataire, statut, date, opérateur).
+- **Affichage allergies/comorbidités** dans l'en-tête de la page pour rappel.
 
 ### 4. Statut
 
-`ameliorations.tsx` : Piste #8 → `statut: "Livré v1"`.
+`ameliorations.tsx` : Piste #9 passe à `statut: "Livré v2"` avec note des hors-scope restants (envoi MSSanté **réel** + push DMP).
 
-### Fichiers
+## Fichiers touchés
 
-```text
-supabase/migrations/<ts>_piste8_team_workflow.sql                NEW
-src/lib/team/listTeam.functions.ts                                NEW
-src/lib/team/assignPatient.functions.ts                           NEW
-src/lib/team/listTransfers.functions.ts                           NEW
-src/lib/team/updateMemberService.functions.ts                     NEW
-src/components/team/AssignmentPanel.tsx                           NEW (bloc patient detail)
-src/components/team/TransferHistory.tsx                           NEW
-src/components/team/WorkflowStatusBadge.tsx                       NEW
-src/routes/_authenticated/conciliation.supervision.tsx            NEW
-src/routes/_authenticated/admin.team.tsx                          NEW
-src/routes/_authenticated/patients.index.tsx                      EDIT (filtres + colonne)
-src/routes/_authenticated/patients.$patientId.tsx                 EDIT (intègre AssignmentPanel)
-src/routes/_authenticated/admin.tsx                               EDIT (lien Équipe)
-src/routes/_authenticated/ameliorations.tsx                       EDIT (statut)
-src/integrations/supabase/types.ts                                AUTO (régénéré)
+```
+supabase migration (1)
+src/lib/discharge/dischargeLetter.functions.ts   (étendu)
+src/lib/discharge/exportDischargePdf.functions.ts (nouveau)
+src/routes/_authenticated/episodes.$episodeId.sortie.tsx  (étendu)
+src/components/discharge/LetterVersionItem.tsx   (nouveau, extrait UI)
+src/components/discharge/LetterEditor.tsx        (nouveau, édition HTML simple)
+src/routes/_authenticated/ameliorations.tsx      (statut)
 ```
 
-### Hors-périmètre v1 (v2 potentielle)
+## Hors v2 (intentionnel)
 
-- Invitations par email + onboarding pharmacien (nécessite Edge function + templates).
-- Drag&drop Kanban.
-- Notifications (toast / email) sur transfert reçu.
-- Multi-organisation GHT « cross-org » (un dossier visible par plusieurs orgs) — nécessite refonte RLS.
-- Statistiques superviseur historisées (file d'attente moyenne, SLA).
+- Appel API MSSanté réel (nécessite carte CPS + certificat ANS) — simulé en v2.
+- Push DMP / Mon Espace Santé (couvert par Piste #10).
+- Éditeur WYSIWYG riche (TipTap) — v2 = textarea HTML avec aperçu, suffisant pour corrections.
+- Signature électronique du pharmacien — Piste séparée.
 
-### Risques / mitigations
+## Critères de validation
 
-- **Régression RLS patients** : la migration n'ajoute que des colonnes, ne touche pas aux policies existantes.
-- **Cohérence `workflow_status` vs `conciliation_validations`** : le statut workflow est un *flag UI*, indépendant de la table validations. La transition `en_attente_validation→valide` est purement déclarative ; la validation pharmaceutique réelle reste dans `conciliation_validations`.
-- **Patients legacy sans `organization_id`** : `assigned_to` reste possible mais le filtre orga ne les voit pas ; on les expose dans une section « Démos / non rattachés ».
-
-À ta validation, je passe en build.
+- Régénérer une lettre conserve l'ancienne avec son numéro de version.
+- Modifier une lettre n'est possible qu'en `brouillon`.
+- Le bouton MSSanté est désactivé tant qu'aucune adresse n'est saisie.
+- Le PDF téléchargé contient l'en-tête patient, la synthèse des changements, l'ordonnance de sortie et les destinataires.
+- Le journal d'envoi liste l'historique des envois avec horodatage et opérateur.
