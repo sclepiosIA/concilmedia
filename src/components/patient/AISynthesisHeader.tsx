@@ -112,7 +112,7 @@ export function AISynthesisHeader({ patientId }: { patientId: string }) {
             Synthèse IA — conciliation médicamenteuse
             {payload && <Badge variant="outline" className="ml-2 bg-white">Score risque {payload.score_risque}/100</Badge>}
           </div>
-          <Button size="sm" variant={payload ? "outline" : "default"} onClick={() => mut.mutate()} disabled={mut.isPending}>
+          <Button size="sm" variant={payload ? "outline" : "default"} onClick={() => mut.mutate()} disabled={mut.isPending || ai.degraded} title={ai.degraded ? `IA indisponible : ${ai.message}` : undefined}>
             {mut.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
             {payload ? "Relancer l'analyse IA" : "Lancer l'analyse IA"}
           </Button>
