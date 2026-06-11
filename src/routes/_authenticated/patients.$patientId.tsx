@@ -316,6 +316,17 @@ function PatientDetailPage() {
           <DmpAdherenceSection patientId={patientId} />
         </CollapsibleSection>
 
+        <CollapsibleSection
+          title="Trajectoire du risque iatrogène"
+          icon={<TrendingUp className="h-4 w-4 text-primary" />}
+          storageKey={`sec:risk-trend:${patientId}`}
+          defaultOpen={false}
+        >
+          <RiskTrendCard patientId={patientId} />
+        </CollapsibleSection>
+
+
+
 
 
         <CollapsibleSection
