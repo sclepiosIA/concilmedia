@@ -199,6 +199,26 @@ function DischargePage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const pushMesFn = useServerFn(pushDocumentToMes);
+  const pushMes = useMutation({
+    mutationFn: (letterId: string) => {
+      const pid = cmp.data?.patient?.id;
+      if (!pid) throw new Error("Patient introuvable");
+      return pushMesFn({
+        data: {
+          patientId: pid,
+          episodeId,
+          documentType: "lettre_liaison",
+          documentId: letterId,
+          payloadSummary: { from: "page_sortie" },
+        },
+      });
+    },
+    onSuccess: (r) => toast.success(`Lettre poussée vers Mon Espace Santé (ACK ${r.ack_id})`),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
   if (cmp.isLoading) return <div className="container py-8">Chargement…</div>;
   if (cmp.error) return <div className="container py-8 text-destructive">{(cmp.error as Error).message}</div>;
   const data = cmp.data!;
