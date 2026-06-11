@@ -126,7 +126,21 @@ export const importBdpm = createServerFn({ method: "POST" })
       rowsTotal += filesProcessed[FILES.atc];
 
       // --- 3. Présentations (CIP) ---
-      const knownCis = new Set(cisRows.map((r) => r.cis));
+      // Re-read CIS effectivement présents en base pour garantir l'intégrité FK
+      const knownCis = new Set<number>();
+      {
+        const pageSize = 1000;
+        for (let from = 0; ; from += pageSize) {
+          const { data, error } = await supabaseAdmin
+            .from("bdpm_specialites")
+            .select("cis")
+            .range(from, from + pageSize - 1);
+          if (error) throw new Error(`bdpm_specialites read: ${error.message}`);
+          if (!data || data.length === 0) break;
+          for (const row of data) knownCis.add(Number(row.cis));
+          if (data.length < pageSize) break;
+        }
+      }
       const cipLines = await fetchAndDecode(FILES.cip);
       const cipRows = cipLines
         .map(parseRow)
