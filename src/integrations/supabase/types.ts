@@ -1157,6 +1157,47 @@ export type Database = {
           },
         ]
       }
+      dmp_access_audit: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json
+          id: string
+          motif: string | null
+          patient_id: string
+          resource: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json
+          id?: string
+          motif?: string | null
+          patient_id: string
+          resource?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          motif?: string | null
+          patient_id?: string
+          resource?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dmp_access_audit_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dmp_hmd_imports: {
         Row: {
           created_at: string
@@ -1501,6 +1542,117 @@ export type Database = {
           },
         ]
       }
+      hmd_adherence_snapshots: {
+        Row: {
+          computed_at: string
+          created_by: string | null
+          discrepancies: Json
+          id: string
+          import_id: string | null
+          items: Json
+          patient_id: string
+          summary: Json
+          window_months: number
+        }
+        Insert: {
+          computed_at?: string
+          created_by?: string | null
+          discrepancies?: Json
+          id?: string
+          import_id?: string | null
+          items?: Json
+          patient_id: string
+          summary?: Json
+          window_months?: number
+        }
+        Update: {
+          computed_at?: string
+          created_by?: string | null
+          discrepancies?: Json
+          id?: string
+          import_id?: string | null
+          items?: Json
+          patient_id?: string
+          summary?: Json
+          window_months?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hmd_adherence_snapshots_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "dmp_hmd_imports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hmd_adherence_snapshots_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mes_pushes: {
+        Row: {
+          ack_id: string | null
+          document_id: string | null
+          document_type: string
+          episode_id: string | null
+          error_message: string | null
+          id: string
+          patient_id: string
+          payload_hash: string | null
+          payload_summary: Json
+          pushed_at: string
+          pushed_by: string | null
+          status: string
+        }
+        Insert: {
+          ack_id?: string | null
+          document_id?: string | null
+          document_type: string
+          episode_id?: string | null
+          error_message?: string | null
+          id?: string
+          patient_id: string
+          payload_hash?: string | null
+          payload_summary?: Json
+          pushed_at?: string
+          pushed_by?: string | null
+          status?: string
+        }
+        Update: {
+          ack_id?: string | null
+          document_id?: string | null
+          document_type?: string
+          episode_id?: string | null
+          error_message?: string | null
+          id?: string
+          patient_id?: string
+          payload_hash?: string | null
+          payload_summary?: Json
+          pushed_at?: string
+          pushed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mes_pushes_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mes_pushes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -1622,6 +1774,9 @@ export type Database = {
           assigned_to: string | null
           cohort_id: string | null
           cohort_tag: string | null
+          consentement_dmp: boolean
+          consentement_dmp_date: string | null
+          consentement_dmp_recueilli_par: string | null
           created_at: string
           created_by: string
           data_source: string
@@ -1655,6 +1810,9 @@ export type Database = {
           assigned_to?: string | null
           cohort_id?: string | null
           cohort_tag?: string | null
+          consentement_dmp?: boolean
+          consentement_dmp_date?: string | null
+          consentement_dmp_recueilli_par?: string | null
           created_at?: string
           created_by: string
           data_source?: string
@@ -1688,6 +1846,9 @@ export type Database = {
           assigned_to?: string | null
           cohort_id?: string | null
           cohort_tag?: string | null
+          consentement_dmp?: boolean
+          consentement_dmp_date?: string | null
+          consentement_dmp_recueilli_par?: string | null
           created_at?: string
           created_by?: string
           data_source?: string
