@@ -1,67 +1,58 @@
-# Piste #10 v2 — Interopérabilité DMP / Mon Espace Santé (approfondissement)
+# Piste #11 v1 — Score de risque iatrogène longitudinal
 
-La v1 livre l'import HMD (simulé + CSV), le rapprochement et l'ajout aux traitements habituels. La v2 exploite ces données cliniquement et ferme la boucle "lecture DMP → action → écriture DMP".
+`risk_scores` est déjà alimenté par épisode (score, niveau, variables, computed_at). Tout est en place pour exploiter l'historique sans changement de schéma majeur.
 
-## Objectifs v2
+## Objectifs
 
-1. **Analyser** l'historique HMD au-delà du simple listing.
-2. **Détecter** les écarts d'observance et les ruptures de délivrance.
-3. **Écrire** vers Mon Espace Santé (push lettre de liaison + BCM) — simulé.
-4. **Auditer** chaque accès DMP (exigence Ségur).
+1. Suivre la trajectoire du risque iatrogène d'un patient au fil des épisodes.
+2. Alerter quand le risque s'aggrave significativement entre deux séjours.
+3. Donner une vue populationnelle (établissement / service) au superviseur.
 
-## Lots de livraison
+## Lots
 
-### Lot A — Analyse observance & ruptures
-- Server fn `analyzeHmdAdherence(patientId)` : pour chaque molécule des traitements habituels, calcule à partir du HMD :
-  - taux de couverture (jours couverts / jours attendus sur 6 mois — MPR simplifié)
-  - dernière délivrance, intervalle moyen
-  - statut : `bonne` / `partielle` / `rupture` / `surconsommation`
-- Persisté dans une table `hmd_adherence_snapshots` (patient_id, molecule, mpr, statut, computed_at).
+### Lot A — Server functions d'historique
+Fichier `src/lib/risk/riskTrend.functions.ts` :
+- `getPatientRiskTrend({ patientId })` : joint `risk_scores` ↔ `episodes` (filtre par patient), renvoie la série chronologique `{ episode_id, date_entree, service, score, niveau, variables, delta_vs_precedent }`.
+- `getRiskAlerts({ patientId? })` : retourne les épisodes où `delta >= +3 points` ou passage de niveau (faible→modéré→élevé), avec contexte.
+- `getPopulationRiskStats({ organizationId?, periodDays })` : agrégats — moyenne du dernier score par patient, distribution par niveau, top services à risque, % patients en aggravation.
 
-### Lot B — Détection d'écarts prescription ↔ délivrance
-- Server fn `detectHmdDiscrepancies(patientId)` qui croise `patient_treatments` actifs avec dernières lignes HMD :
-  - prescrit mais jamais délivré sur 90 j → alerte rouge
-  - délivré mais absent des traitements déclarés → suggestion d'ajout
-  - posologie HMD ≠ posologie déclarée → drapeau divergence
-- Résultats injectés comme alertes pharmaceutiques dans la fiche patient et l'épisode actif.
+Toutes protégées par `requireSupabaseAuth`. Lecture seule, pas de migration nécessaire.
 
-### Lot C — Timeline HMD
-- Composant `HmdTimeline` (sur fiche patient) : frise 12 mois par molécule (heatmap mensuelle des boîtes délivrées) + survol = prescripteur / pharmacie.
-- Filtres par classe ATC et par statut adhérence.
+### Lot B — UI patient : timeline + delta
+- Nouveau composant `src/components/patient/RiskTrendCard.tsx` :
+  - mini-courbe SVG (sparkline maison, sans dépendance) du score sur tous les épisodes
+  - badge "↑ aggravation" / "↓ amélioration" / "stable" sur le dernier delta
+  - liste des facteurs (variables JSONB) qui ont basculé positivement vs épisode précédent
+- Intégration dans `patients.$patientId.tsx` via `CollapsibleSection` "Trajectoire du risque iatrogène".
 
-### Lot D — Push Mon Espace Santé (simulé)
-- Server fn `pushDocumentToMes({ episodeId, documentType, documentId })` :
-  - types supportés : `lettre_liaison`, `bcm`, `plan_pharmaceutique`
-  - simule le dépôt MES (table `mes_pushes` : status, ack_id, timestamp, payload_hash)
-  - bouton "Pousser vers Mon Espace Santé" sur la page sortie et sur le BCM
-- Affichage de l'historique des pushes dans la fiche patient.
+### Lot C — Alertes sur fiche épisode
+- Dans `episodes.$episodeId.tsx`, encart en haut : "⚠ Risque en hausse de +X points vs séjour du JJ/MM/AAAA" si delta significatif détecté côté serveur.
+- Lien vers la fiche patient pour voir l'historique complet.
 
-### Lot E — Audit & consentement
-- Table `dmp_access_audit` (user_id, patient_id, action, timestamp, motif) — un log par lecture/écriture DMP/MES, exigence ANS.
-- Champ `consentement_dmp` (booléen + date) sur la fiche patient ; toute opération DMP/MES bloquée sans consentement actif, modale de recueil.
+### Lot D — Vue populationnelle (superviseur)
+- Nouvelle route `src/routes/_authenticated/risk-population.tsx` :
+  - filtre période (30/90/365 j) et service
+  - cartes KPI : score moyen, % niveau élevé, % patients aggravés
+  - tableau "Top patients aggravés" (lien fiche) et "Top services à risque"
+- Lien depuis la sidebar (visible si rôle superviseur/admin — `has_role`).
+
+### Lot E — Marquage piste #11
+- `ameliorations.tsx` : ajout `statut: "Livré v1"` à la piste #11.
 
 ## Détails techniques
 
-- **Migration SQL** : `hmd_adherence_snapshots`, `mes_pushes`, `dmp_access_audit`, colonnes `consentement_dmp_*` sur `patients`. RLS + GRANT sur les 3 tables, RLS via `has_role` (pharmacien/superviseur lecture/écriture, admin all).
-- **Server fns** dans `src/lib/dmp/` :
-  - `dmpAdherence.functions.ts` (analyse + détection)
-  - `mesPush.functions.ts` (push simulé + audit auto)
-  - `dmpAudit.functions.ts` (lecture log)
-  - toutes protégées par `requireSupabaseAuth` + check rôle + insertion auto dans `dmp_access_audit`.
-- **UI** :
-  - `src/components/patient/HmdTimeline.tsx`
-  - `src/components/patient/HmdAdherenceCard.tsx` (MPR + statuts)
-  - `src/components/patient/DmpConsentDialog.tsx`
-  - Bouton "Pousser MES" intégré à `episodes.$episodeId.sortie.tsx` et au BCM.
-  - Section "Audit DMP" dans la fiche patient (lecture seule).
-- **Ameliorations.tsx** : passage de la piste #10 en `Livré v2` une fois les lots A–E terminés.
+- Calcul des deltas : tri par `computed_at` croissant ; `delta = score_n - score_{n-1}` ; basculement de niveau via mapping `faible=1, modéré=2, élevé=3`.
+- Seuils alertes : `delta >= +3` OU passage à un niveau supérieur → flag rouge ; `delta <= -3` → vert.
+- Sparkline : SVG inline, pas de lib externe (50×120 px, ligne + points colorés par niveau).
+- Agrégats populationnels : une seule requête `risk_scores` + `episodes` + `patients`, filtre `organization_id` via `has_role` superviseur.
+- Aucune migration SQL. Les types existants suffisent.
 
-## Limites assumées (hors v2)
-- Pas de vraie connexion DMP/MES (carte CPS, Ségur, ANS) — tout est simulé/journalisé.
-- MPR calculé sur déclaratif posologique, pas sur durée de traitement DMP réelle.
+## Hors v1
+- Forecast prédictif (modèle ML)  → futur v2.
+- Notification push / email sur aggravation → futur v2.
 
 ## Critères d'acceptation
-- Import HMD existant → l'analyse adhérence se calcule et s'affiche.
-- Au moins une alerte d'écart visible quand on retire un traitement habituel délivré récemment.
-- Push MES enregistré dans `mes_pushes` + ligne d'audit créée.
-- Sans consentement DMP actif, tous les boutons DMP/MES sont désactivés avec tooltip.
+- Fiche patient affiche la courbe + delta sur tous les épisodes du patient.
+- Fiche épisode affiche un encart d'alerte quand le score augmente significativement.
+- Route `/risk-population` accessible aux superviseurs uniquement, KPI cohérents.
+- Piste #11 marquée "Livré v1" dans l'onglet améliorations.
