@@ -126,8 +126,7 @@ export const Route = createFileRoute("/api/public/hooks/sync-ansm-shortages")({
           await supabaseAdmin.rpc("append_audit_log", {
             _action: "shortages_sync",
             _entity_type: "admin",
-            _entity_id: null,
-            _payload: { count: rows.length, source: url } as unknown as Record<string, unknown>,
+            _payload: { count: rows.length, source: url } as unknown as never,
           });
         } catch {
           // append_audit_log requiert auth.uid() — ignoré pour cron
