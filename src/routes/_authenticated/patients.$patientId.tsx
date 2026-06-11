@@ -306,6 +306,16 @@ function PatientDetailPage() {
           <DmpHmdSection patientId={patientId} />
         </CollapsibleSection>
 
+        <CollapsibleSection
+          title="DMP — Adhérence, écarts & Mon Espace Santé"
+          icon={<Database className="h-4 w-4 text-primary" />}
+          storageKey={`sec:dmp-adh:${patientId}`}
+          defaultOpen={false}
+        >
+          <DmpAdherenceSection patientId={patientId} />
+        </CollapsibleSection>
+
+
 
         <CollapsibleSection
           title="Prescriptions hospitalières"
