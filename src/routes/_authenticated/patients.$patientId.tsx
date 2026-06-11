@@ -23,6 +23,7 @@ import { MedicationProfileCard } from "@/components/patient/MedicationProfileCar
 import { CollapsibleSection } from "@/components/patient/CollapsibleSection";
 import { ConciliationCompleteCard } from "@/components/patient/ConciliationCompleteCard";
 import { DmpHmdSection } from "@/components/patient/DmpHmdSection";
+import { DmpAdherenceSection } from "@/components/patient/DmpAdherenceSection";
 import { AssignmentPanel } from "@/components/team/AssignmentPanel";
 import { Database, FlaskConical, Hospital, Pill, Sparkles, Stethoscope } from "lucide-react";
 import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
@@ -304,6 +305,16 @@ function PatientDetailPage() {
         >
           <DmpHmdSection patientId={patientId} />
         </CollapsibleSection>
+
+        <CollapsibleSection
+          title="DMP — Adhérence, écarts & Mon Espace Santé"
+          icon={<Database className="h-4 w-4 text-primary" />}
+          storageKey={`sec:dmp-adh:${patientId}`}
+          defaultOpen={false}
+        >
+          <DmpAdherenceSection patientId={patientId} />
+        </CollapsibleSection>
+
 
 
         <CollapsibleSection

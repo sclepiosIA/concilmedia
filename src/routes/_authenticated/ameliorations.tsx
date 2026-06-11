@@ -323,11 +323,14 @@ const PISTES: Piste[] = [
       "Import manuel CSV pour les sites disposant d'un extrait DMP",
       "Rapprochement automatique avec traitements habituels (déjà présent / à ajouter / à vérifier)",
       "Sélection multiple → ajout en un clic aux traitements habituels",
+      "v2 — Analyse d'adhérence (MPR 6 mois) + détection d'écarts prescription/délivrance",
+      "v2 — Push simulé vers Mon Espace Santé (lettre de liaison, BCM, plan pharmaceutique)",
+      "v2 — Consentement DMP patient + journal d'audit ANS de tous les accès",
     ],
     prerequis: [
-      "Carte CPS + référencement Ségur + validation ANS pour l'accès DMP réel (hors v1)",
+      "Carte CPS + référencement Ségur + validation ANS pour l'accès DMP réel (hors v2)",
     ],
-    statut: "Livré v1",
+    statut: "Livré v2",
   },
   {
     id: 11,
