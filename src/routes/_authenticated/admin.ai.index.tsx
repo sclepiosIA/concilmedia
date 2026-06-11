@@ -152,6 +152,10 @@ function AdminAiIndex() {
         </Link>
       </div>
 
+      <ShortagesAdminCard />
+
+
+
       {tasks.length > 0 && (
         <div className="flex items-center gap-3 mb-3 text-sm">
           <Checkbox
