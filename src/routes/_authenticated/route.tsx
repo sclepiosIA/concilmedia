@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Users, LogOut, LayoutDashboard, Settings, Layers, Sparkles, GitBranch, UsersRound, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isAdmin } from "@/lib/admin/ai.functions";
+import { AiHealthBanner, AiHealthIndicator } from "@/components/ai/AiHealthBanner";
 import logoAsset from "@/assets/concilmed-logo.png.asset.json";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -101,12 +102,14 @@ function AuthLayout() {
                 <Settings className="h-4 w-4" /> Admin IA
               </Link>
             )}
+            <AiHealthIndicator />
             <Button variant="ghost" size="sm" onClick={signOut} aria-label="Se déconnecter">
               <LogOut className="h-4 w-4" />
             </Button>
           </nav>
         </div>
       </header>
+      <AiHealthBanner />
       <main><Outlet /></main>
     </div>
   );

@@ -376,6 +376,7 @@ const PISTES: Piste[] = [
       "Possibilité d'un LLM auto-hébergé (Mistral, Llama) en option",
     ],
     prerequis: ["Évaluation clinique du moteur déterministe seul"],
+    statut: "Livré v1",
   },
   {
     id: 13,
