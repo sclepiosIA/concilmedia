@@ -126,15 +126,15 @@ export const buildDniDataset = createServerFn({ method: "POST" })
         episode_id: eid,
         prescriptions: medsByEpisode.get(eid) ?? [],
       };
-      const { error: upErr } = await supabaseAdmin
-        .from("eval_dataset_items")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: upErr } = await (supabaseAdmin.from("eval_dataset_items") as any)
         .upsert(
           {
             dataset_id: datasetId,
             ref_type: "ground_truth_dni",
             ref_id: eid,
-            input: input as unknown as Record<string, unknown>,
-            expected: { dnis: expected } as unknown as Record<string, unknown>,
+            input,
+            expected: { dnis: expected },
             weight: 1.0,
           },
           { onConflict: "dataset_id,ref_type,ref_id" },
