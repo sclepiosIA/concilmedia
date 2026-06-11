@@ -334,11 +334,28 @@ function DashboardPage() {
           <p className="text-sm text-muted-foreground">ConcilMed·IA — Conciliation médicamenteuse assistée par IA</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => seedMut.mutate(20)} disabled={seedMut.isPending}>
-            {seedMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
-            Cohorte synthétique
-          </Button>
           <Link to="/evaluation"><Button size="sm"><BarChart3 className="h-4 w-4 mr-1" /> Évaluation</Button></Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={seedMut.isPending}>
+                {seedMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <MoreHorizontal className="h-4 w-4 mr-1" />}
+                Actions
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Outils</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => seedMut.mutate(20)} disabled={seedMut.isPending}>
+                <Sparkles className="h-4 w-4 mr-2" /> Cohorte synthétique (20)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => seedMut.mutate(50)} disabled={seedMut.isPending}>
+                <Sparkles className="h-4 w-4 mr-2" /> Cohorte synthétique (50)
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/admin/bdpm"><Pill className="h-4 w-4 mr-2" /> Import BDPM</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
