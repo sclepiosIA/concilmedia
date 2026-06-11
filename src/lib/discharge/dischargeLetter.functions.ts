@@ -738,7 +738,9 @@ export const exportDischargeLetterPdf = createServerFn({ method: "POST" })
     }
 
     const bytes = await pdf.save();
-    const b64 = Buffer.from(bytes).toString("base64");
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    const b64 = btoa(bin);
     const filename = `lettre-liaison-v${row.version}-${new Date(row.created_at as string).toISOString().slice(0, 10)}.pdf`;
     return { base64: b64, filename };
   });
