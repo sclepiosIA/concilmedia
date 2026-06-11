@@ -29,6 +29,7 @@ import { Route as AuthenticatedAdminRagRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAdminImportReelRouteImport } from './routes/_authenticated/admin.import-reel'
 import { Route as AuthenticatedAdminImportFhirRouteImport } from './routes/_authenticated/admin.import-fhir'
 import { Route as AuthenticatedAdminBdpmRouteImport } from './routes/_authenticated/admin.bdpm'
+import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as AuthenticatedAdminAiRouteImport } from './routes/_authenticated/admin.ai'
 import { Route as AuthenticatedAdminAiIndexRouteImport } from './routes/_authenticated/admin.ai.index'
 import { Route as ApiPublicFhirSplatRouteImport } from './routes/api/public/fhir/$'
@@ -147,6 +148,11 @@ const AuthenticatedAdminBdpmRoute = AuthenticatedAdminBdpmRouteImport.update({
   path: '/bdpm',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminAiRoute = AuthenticatedAdminAiRouteImport.update({
   id: '/ai',
   path: '/ai',
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/risk-population': typeof AuthenticatedRiskPopulationRoute
   '/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
+  '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
   '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
@@ -226,6 +233,7 @@ export interface FileRoutesByTo {
   '/equipe': typeof AuthenticatedEquipeRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/risk-population': typeof AuthenticatedRiskPopulationRoute
+  '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
   '/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/_authenticated/evaluation': typeof AuthenticatedEvaluationRoute
   '/_authenticated/risk-population': typeof AuthenticatedRiskPopulationRoute
   '/_authenticated/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
+  '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/_authenticated/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
   '/_authenticated/admin/import-reel': typeof AuthenticatedAdminImportReelRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/evaluation'
     | '/risk-population'
     | '/admin/ai'
+    | '/admin/audit'
     | '/admin/bdpm'
     | '/admin/import-fhir'
     | '/admin/import-reel'
@@ -313,6 +323,7 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/evaluation'
     | '/risk-population'
+    | '/admin/audit'
     | '/admin/bdpm'
     | '/admin/import-fhir'
     | '/admin/import-reel'
@@ -342,6 +353,7 @@ export interface FileRouteTypes {
     | '/_authenticated/evaluation'
     | '/_authenticated/risk-population'
     | '/_authenticated/admin/ai'
+    | '/_authenticated/admin/audit'
     | '/_authenticated/admin/bdpm'
     | '/_authenticated/admin/import-fhir'
     | '/_authenticated/admin/import-reel'
@@ -509,6 +521,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBdpmRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/audit': {
+      id: '/_authenticated/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/ai': {
       id: '/_authenticated/admin/ai'
       path: '/ai'
@@ -580,6 +599,7 @@ const AuthenticatedAdminAiRouteWithChildren =
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAiRoute: typeof AuthenticatedAdminAiRouteWithChildren
+  AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminBdpmRoute: typeof AuthenticatedAdminBdpmRoute
   AuthenticatedAdminImportFhirRoute: typeof AuthenticatedAdminImportFhirRoute
   AuthenticatedAdminImportReelRoute: typeof AuthenticatedAdminImportReelRoute
@@ -589,6 +609,7 @@ interface AuthenticatedAdminRouteChildren {
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAiRoute: AuthenticatedAdminAiRouteWithChildren,
+  AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminBdpmRoute: AuthenticatedAdminBdpmRoute,
   AuthenticatedAdminImportFhirRoute: AuthenticatedAdminImportFhirRoute,
   AuthenticatedAdminImportReelRoute: AuthenticatedAdminImportReelRoute,
@@ -659,3 +680,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
