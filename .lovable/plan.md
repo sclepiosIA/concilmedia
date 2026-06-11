@@ -1,139 +1,89 @@
 
-# Plan — Enrichissement de l'analyse pharmaceutique
+# Plan — Refonte du tableau de bord
 
-Ajout de 4 nouvelles dimensions au moteur d'analyse, exploitées par l'IA et affichées dans les panneaux existants (`AIAnalysisPanel`, `ClinicalAlertsPanel`, `ConciliationCompleteCard`).
+## Problème identifié : header absent
 
-## 1. Tensions & ruptures d'approvisionnement (automatisé au max)
+Le lien **"Tableau de bord"** de la barre de navigation pointe vers `/` (fichier `src/routes/index.tsx`), qui est en dehors du layout `_authenticated`. Résultat : on tombe sur une page sans header ni navigation. Le vrai dashboard riche (`/_authenticated/dashboard`) n'est en pratique jamais affiché.
 
-**Source automatique** : l'ANSM publie l'open data des ruptures/tensions sur data.gouv.fr (jeu `ansm-rupture-stock-medicaments` au format CSV/JSON, mis à jour quotidiennement). On automatise via :
+### Correctif
+1. Modifier le lien "Tableau de bord" dans `src/routes/_authenticated/route.tsx` pour pointer vers `/dashboard`.
+2. Dans `src/routes/index.tsx`, rediriger l'utilisateur connecté vers `/dashboard` via `beforeLoad`. Les visiteurs non connectés continuent à voir `/auth` (déjà géré).
+3. Conséquence : le header sticky `_authenticated` est conservé sur le tableau de bord.
 
-- Table `drug_shortages` (CIS, dénomination, statut `tension|rupture|arret`, date_debut, date_fin_prevue, raison, alternative_proposee, source_url, imported_at).
-- Endpoint `POST /api/public/hooks/sync-ansm-shortages` (TanStack server route, vérif `apikey`) qui :
-  - fetch le CSV ANSM,
-  - upsert dans `drug_shortages` (clé = CIS),
-  - jointure avec `bdpm_specialites` pour rattacher le CIS aux dénominations connues.
-- Cron `pg_cron` quotidien (06:00 UTC) appelant cet endpoint.
-- Bouton "Synchroniser maintenant" dans l'UI admin (page `/admin/ai/index` → nouvel onglet "Ruptures").
-- Fallback : on lit aussi `bdpm_presentations.etat_commercialisation` (Arrêt / Suspension) en complément.
+## Refonte du dashboard (`/_authenticated/dashboard`)
 
-**Côté analyse** : avant l'appel LLM, on filtre les médicaments du dossier dont la DCI/CIS apparaît dans `drug_shortages` ou en `Arrêt de commercialisation`. On injecte la liste dans le prompt et on demande à l'IA de proposer une alternative documentée.
+Le dashboard actuel est fonctionnel mais date d'avant les pistes #15 / #16 / #17. Il manque les nouvelles dimensions (tensions ANSM, IV→PO, médico-éco) et plusieurs raffinements UX.
 
-## 2. Switch IV → PO (hybride règle + LLM)
+### 1. KPIs (ligne supérieure)
+Passer de 4 à 8 KPIs en 2 lignes, avec tendance vs période précédente (flèche ↑↓ + pourcentage) :
+- Patients actifs
+- Conciliations réalisées (période)
+- Divergences critiques/majeures
+- Taux de validation pharmacien
+- **Patients touchés par une rupture ANSM** (nouveau)
+- **Candidats IV→PO identifiés** (nouveau)
+- **Économies génériques potentielles €/jour** (nouveau, somme cohorte)
+- Temps moyen de conciliation (h)
 
-- Whitelist `IV_TO_PO_CANDIDATES` (biodispo ≥ 80% ou indication de relais) : levofloxacine, ciprofloxacine, métronidazole, linézolide, fluconazole, paracétamol, oméprazole/ésoméprazole, corticoïdes, clindamycine, doxycycline, rifampicine.
-- Heuristique dans `analyzePatientConciliationComplete` : si `prescriptions_hospitalieres[i].voie_administration ∈ {IV, IVL, IVD}` et DCI ∈ whitelist → ajout d'un flag `iv_po_candidate` (alimenté avec patient stable détecté via signes : pas de sepsis sévère dans antécédents/comorbidités récents, tolérance digestive).
-- Injection dans le prompt : "Pour chaque IV candidat, valide/écarte le relais PO en citant la biodisponibilité et le critère clinique limitant."
-- LLM enrichit avec posologie PO équivalente, économies attendues (lien avec § 3), références (SPILF, SFAR).
+Chaque KPI : icône domaine, valeur, mini-trend (sparkline) sur 14 j, badge delta.
 
-## 3. Médico-économique & génériques (coût + alternative générique)
+### 2. Filtres (inchangés mais améliorés)
+- Période, service, statut divergence (déjà présents).
+- Ajout d'un préréglage rapide : *Aujourd'hui / 7 j / 30 j / 90 j*.
+- Bouton "Réinitialiser".
 
-- Vue SQL `v_drug_cheapest_generic` : pour chaque CIS, renvoie le CIS le moins cher partageant DCI normalisée + dosage + forme dans `bdpm_specialites + bdpm_presentations + bdpm_compositions`, ainsi que `prix_eur` et économie potentielle.
-- Helper `buildEconomicsContext(dossier)` : pour chaque traitement habituel et prescription hospitalière, calcule :
-  - `coût_unitaire_eur` (depuis BDPM),
-  - `coût_journalier_estime_eur` (× posologie quotidienne),
-  - `generique_moins_cher` (CIS, dénomination, prix, économie %).
-- Injection dans le prompt LLM dans une section dédiée. Nouveau champ JSON :
-  ```json
-  "economie": {
-    "cout_journalier_total_eur": number,
-    "substitutions_generiques": [{"medicament":"","generique_propose":"","economie_eur_par_jour":number,"confiance":0-100}],
-    "synthese_medicoeconomique":"1-2 phrases"
-  }
-  ```
-- Affichage : nouveau bloc "Médico-économie" dans `AIAnalysisPanel` (badge €/jour + tableau substitutions, copyable).
+### 3. Graphiques
+- **Activité quotidienne** : conserver, ajouter ligne "alertes critiques".
+- **Répartition divergences** : conserver (pie).
+- **Répartition risques** : conserver (pie).
+- **Nouveau bloc Médico-économie** : barres horizontales "Top 5 substitutions génériques" (économie €/j).
+- **Nouveau bloc Tensions/ruptures** : liste compacte des médicaments en rupture qui concernent des patients actifs, avec lien vers le patient.
 
-## 4. Wiring transverse
+### 4. File priorisée (existante)
+- Garder, ajouter une badge "Rupture" / "IV→PO" / "€" quand le patient est concerné.
+- Pagination simple (10 / page) au lieu de limit hard-codée.
 
-- `AIAnalysisPayload` étendu (`tensions_approvisionnement`, `relais_iv_po`, `economie`).
-- `analyze.functions.ts` + `analyzePatientConciliationComplete.functions.ts` : ajoutent les 3 sections au system prompt + au schéma JSON, et passent en input :
-  - `shortages_context` (depuis `drug_shortages`),
-  - `iv_po_candidates` (heuristique),
-  - `economics_context` (helper §3).
-- `ClinicalAlertsPanel` : 3 nouveaux groupes (icônes : AlertTriangle pour rupture, Pill pour IV→PO, EuroSign pour éco).
-- `cohort_evaluations` & `eval` : on ajoute `tension`, `iv_po`, `eco` comme catégories de divergences scorables (compteurs simples, pas de F1 v1).
-- Audit : actions `SHORTAGES_SYNC`, `IV_PO_SUGGEST`, `ECON_SUGGEST` dans `audit/actions.ts`.
+### 5. Hygiène design
+- Remplacer les couleurs hex en dur (`#ef4444`, `#3b82f6`, etc.) par les tokens sémantiques de `src/styles.css` (`--destructive`, `--primary`, `--warning`, etc.) via variables CSS lues côté JS.
+- Skeletons de chargement (utiliser `Skeleton` shadcn) au lieu de KPIs à 0 pendant le fetch.
+- Empty states avec CTA explicite ("Importer une ordonnance", "Générer cohorte synthétique").
+- Bouton "Cohorte synthétique" déplacé dans un menu "Actions" pour désencombrer.
+
+### 6. Quick actions (nouveau)
+Petit panneau d'accès rapide (en haut à droite ou en bas) :
+- Nouveau patient → `/patients`
+- Importer ordonnance → bouton qui ouvre l'uploader
+- Voir supervision → `/conciliation/supervision`
+- Banc d'évaluation → `/evaluation`
 
 ## Détails techniques
 
-### Migration `xxxx_shortages_economics.sql`
-```sql
-CREATE TABLE public.drug_shortages (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  cis text NOT NULL,
-  denomination text,
-  statut text NOT NULL CHECK (statut IN ('tension','rupture','arret','remise_a_disposition')),
-  date_debut date,
-  date_fin_prevue date,
-  raison text,
-  alternative text,
-  source_url text,
-  imported_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(cis, statut, date_debut)
-);
-CREATE INDEX ON public.drug_shortages(cis);
-GRANT SELECT ON public.drug_shortages TO authenticated;
-GRANT ALL ON public.drug_shortages TO service_role;
-ALTER TABLE public.drug_shortages ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "auth read shortages" ON public.drug_shortages FOR SELECT TO authenticated USING (true);
+### Fichiers à modifier
+- `src/routes/_authenticated/route.tsx` : `to="/"` → `to="/dashboard"`.
+- `src/routes/index.tsx` : `beforeLoad` qui vérifie la session et `throw redirect({ to: "/dashboard" })` si connecté ; sinon laisse la page actuelle (landing).
+- `src/routes/_authenticated/dashboard.tsx` : refonte progressive (KPIs, trends, blocs).
 
-CREATE OR REPLACE VIEW public.v_drug_cheapest_generic AS
-SELECT s.cis,
-       s.denomination,
-       g.cis  AS cis_generique,
-       g.denomination AS denomination_generique,
-       p.prix_eur AS prix_actuel,
-       pg.prix_eur AS prix_generique,
-       (p.prix_eur - pg.prix_eur) AS economie_eur
-FROM bdpm_specialites s
-JOIN bdpm_presentations p ON p.cis = s.cis
-JOIN bdpm_compositions c ON c.cis = s.cis
-JOIN bdpm_compositions cg ON cg.dosage = c.dosage
-                          AND lower(cg.substance) = lower(c.substance)
-JOIN bdpm_specialites g ON g.cis = cg.cis AND g.forme = s.forme AND g.cis <> s.cis
-JOIN bdpm_presentations pg ON pg.cis = g.cis
-WHERE p.prix_eur IS NOT NULL AND pg.prix_eur IS NOT NULL AND pg.prix_eur < p.prix_eur;
-GRANT SELECT ON public.v_drug_cheapest_generic TO authenticated;
-```
+### Fichiers à créer
+- `src/components/dashboard/KpiCard.tsx` — carte KPI avec sparkline + delta.
+- `src/components/dashboard/ShortagesPatientsCard.tsx` — patients impactés par rupture.
+- `src/components/dashboard/EconomicsTopCard.tsx` — top substitutions génériques.
+- `src/components/dashboard/QuickActions.tsx`.
+- `src/lib/dashboard/aggregations.functions.ts` (optionnel) — server fns pour précalculer côté DB (économies cohorte, intersections rupture↔patient) et éviter N requêtes client.
 
-### Fichiers
-**Créés**
-- `supabase/migrations/<ts>_shortages_economics.sql`
-- `src/routes/api/public/hooks/sync-ansm-shortages.ts`
-- `src/lib/clinical/ivPoCandidates.ts` (whitelist + détecteur)
-- `src/lib/clinical/economics.server.ts` (buildEconomicsContext + cheapestGeneric)
-- `src/lib/clinical/shortages.server.ts` (lookup tension/rupture pour un dossier)
-- `src/components/conciliation/EconomicsPanel.tsx`
-- `src/components/conciliation/ShortagesPanel.tsx`
-- `src/components/admin/ShortagesAdmin.tsx`
+### Requêtes nouvelles
+- Jointure `drug_shortages` × traitements actifs des patients pour compter les patients impactés.
+- Vue `v_drug_cheapest_generic` × prescriptions actives pour économies estimées.
+- Pour les sparklines : un seul fetch agrégé par jour sur 14 j (groupage côté JS, comme déjà fait).
 
-**Modifiés**
-- `src/lib/conciliation/analyze.functions.ts` + `analyzePatientConciliationComplete.functions.ts` (schéma JSON, prompt, injection contexte)
-- `src/lib/conciliation/analyzePatientSynthesis.functions.ts` (mêmes ajouts)
-- `src/components/conciliation/AIAnalysisPanel.tsx` (rendu 3 nouveaux blocs)
-- `src/components/conciliation/ClinicalAlertsPanel.tsx`
-- `src/lib/audit/actions.ts` (3 actions)
-- `src/routes/_authenticated/admin.ai.index.tsx` (onglet ruptures)
-- `src/routes/_authenticated/ameliorations.tsx` (statut piste)
-- `src/integrations/supabase/types.ts`
-
-### Cron
-`supabase--insert` après migration :
-```sql
-SELECT cron.schedule('sync-ansm-shortages-daily', '0 6 * * *',
-  $$ SELECT net.http_post(
-    url:='https://concilmedia.lovable.app/api/public/hooks/sync-ansm-shortages',
-    headers:='{"Content-Type":"application/json","apikey":"<anon>"}'::jsonb,
-    body:='{}'::jsonb
-  ) $$);
-```
-
-## Hors v1
-- Suggestions d'équivalents thérapeutiques inter-classe (ex : IPP cher → oméprazole).
-- Calcul exact du coût hospitalier (UCD/T2A) — on reste sur les prix BDPM ville.
-- Notification proactive (email/Slack) lors d'une nouvelle rupture touchant un patient actif.
-- Scoring F1 dédié aux nouvelles catégories dans l'eval (juste comptage v1).
+## Hors scope v1
+- Export PDF du dashboard.
+- Drill-down interactif sur les graphiques (clic → liste filtrée).
+- Personnalisation utilisateur (épingler des cartes, réordonner).
+- Comparaison multi-services côte à côte.
 
 ## Critères d'acceptation
-- Le cron journalier alimente `drug_shortages` à partir du CSV ANSM ; bouton manuel disponible en admin.
-- L'analyse IA d'un patient affiche : alertes rupture avec alternative, suggestions IV→PO motivées, bloc médico-économie avec coût/jour et générique le moins cher.
-- Toutes les actions sont audit-loggées. RLS admin/auth respectée. Aucun secret exposé côté client.
+- Cliquer "Tableau de bord" affiche le header + la nav + le dashboard riche.
+- Visiteur non connecté arrive sur `/auth` ; visiteur connecté qui tape `/` est redirigé sur `/dashboard`.
+- 8 KPIs visibles avec tendance, dont les 3 nouveaux axes (ruptures / IV→PO / éco).
+- Skeletons pendant le chargement, empty states avec CTA, plus aucun hex en dur.
+- Bloc "Patients impactés par rupture" et "Top économies génériques" fonctionnels avec données réelles.
