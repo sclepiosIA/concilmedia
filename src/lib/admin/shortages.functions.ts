@@ -40,9 +40,13 @@ export const triggerShortagesSync = createServerFn({ method: "POST" })
       "https://concilmedia.lovable.app";
     const url = `${base.replace(/\/$/, "")}/api/public/hooks/sync-ansm-shortages`;
     const resp = await fetch(url, { method: "POST" });
-    const json = (await resp.json().catch(() => ({}))) as Record<string, unknown>;
+    const json = (await resp.json().catch(() => ({}))) as { ok?: boolean; imported?: number; error?: string; source?: string };
     if (!resp.ok) {
-      throw new Error(typeof json.error === "string" ? json.error : `HTTP ${resp.status}`);
+      throw new Error(json.error ?? `HTTP ${resp.status}`);
     }
-    return json;
+    return {
+      ok: json.ok ?? true,
+      imported: json.imported ?? 0,
+      source: json.source ?? null,
+    };
   });
