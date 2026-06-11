@@ -32,11 +32,13 @@ import { Route as AuthenticatedAdminBdpmRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as AuthenticatedAdminAiRouteImport } from './routes/_authenticated/admin.ai'
 import { Route as AuthenticatedAdminAiIndexRouteImport } from './routes/_authenticated/admin.ai.index'
+import { Route as ApiPublicV1HealthRouteImport } from './routes/api/public/v1/health'
 import { Route as ApiPublicFhirSplatRouteImport } from './routes/api/public/fhir/$'
 import { Route as AuthenticatedEpisodesEpisodeIdSortieRouteImport } from './routes/_authenticated/episodes.$episodeId.sortie'
 import { Route as AuthenticatedAdminAiRlhfRouteImport } from './routes/_authenticated/admin.ai.rlhf'
 import { Route as AuthenticatedAdminAiProvidersRouteImport } from './routes/_authenticated/admin.ai.providers'
 import { Route as AuthenticatedAdminAiEvalRouteImport } from './routes/_authenticated/admin.ai.eval'
+import { Route as ApiPublicV1BdpmSearchRouteImport } from './routes/api/public/v1/bdpm.search'
 import { Route as AuthenticatedAdminAiTasksSlugRouteImport } from './routes/_authenticated/admin.ai.tasks.$slug'
 
 const AuthRoute = AuthRouteImport.update({
@@ -165,6 +167,11 @@ const AuthenticatedAdminAiIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAdminAiRoute,
   } as any)
+const ApiPublicV1HealthRoute = ApiPublicV1HealthRouteImport.update({
+  id: '/api/public/v1/health',
+  path: '/api/public/v1/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicFhirSplatRoute = ApiPublicFhirSplatRouteImport.update({
   id: '/api/public/fhir/$',
   path: '/api/public/fhir/$',
@@ -194,6 +201,11 @@ const AuthenticatedAdminAiEvalRoute =
     path: '/eval',
     getParentRoute: () => AuthenticatedAdminAiRoute,
   } as any)
+const ApiPublicV1BdpmSearchRoute = ApiPublicV1BdpmSearchRouteImport.update({
+  id: '/api/public/v1/bdpm/search',
+  path: '/api/public/v1/bdpm/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminAiTasksSlugRoute =
   AuthenticatedAdminAiTasksSlugRouteImport.update({
     id: '/tasks/$slug',
@@ -228,8 +240,10 @@ export interface FileRoutesByFullPath {
   '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
+  '/api/public/v1/health': typeof ApiPublicV1HealthRoute
   '/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
+  '/api/public/v1/bdpm/search': typeof ApiPublicV1BdpmSearchRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -257,8 +271,10 @@ export interface FileRoutesByTo {
   '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
+  '/api/public/v1/health': typeof ApiPublicV1HealthRoute
   '/admin/ai': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
+  '/api/public/v1/bdpm/search': typeof ApiPublicV1BdpmSearchRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -289,8 +305,10 @@ export interface FileRoutesById {
   '/_authenticated/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/_authenticated/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
+  '/api/public/v1/health': typeof ApiPublicV1HealthRoute
   '/_authenticated/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/_authenticated/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
+  '/api/public/v1/bdpm/search': typeof ApiPublicV1BdpmSearchRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -321,8 +339,10 @@ export interface FileRouteTypes {
     | '/admin/ai/rlhf'
     | '/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
+    | '/api/public/v1/health'
     | '/admin/ai/'
     | '/admin/ai/tasks/$slug'
+    | '/api/public/v1/bdpm/search'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -350,8 +370,10 @@ export interface FileRouteTypes {
     | '/admin/ai/rlhf'
     | '/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
+    | '/api/public/v1/health'
     | '/admin/ai'
     | '/admin/ai/tasks/$slug'
+    | '/api/public/v1/bdpm/search'
   id:
     | '__root__'
     | '/'
@@ -381,8 +403,10 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/ai/rlhf'
     | '/_authenticated/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
+    | '/api/public/v1/health'
     | '/_authenticated/admin/ai/'
     | '/_authenticated/admin/ai/tasks/$slug'
+    | '/api/public/v1/bdpm/search'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -390,6 +414,8 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicFhirSplatRoute: typeof ApiPublicFhirSplatRoute
+  ApiPublicV1HealthRoute: typeof ApiPublicV1HealthRoute
+  ApiPublicV1BdpmSearchRoute: typeof ApiPublicV1BdpmSearchRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -555,6 +581,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAiIndexRouteImport
       parentRoute: typeof AuthenticatedAdminAiRoute
     }
+    '/api/public/v1/health': {
+      id: '/api/public/v1/health'
+      path: '/api/public/v1/health'
+      fullPath: '/api/public/v1/health'
+      preLoaderRoute: typeof ApiPublicV1HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/fhir/$': {
       id: '/api/public/fhir/$'
       path: '/api/public/fhir/$'
@@ -589,6 +622,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/ai/eval'
       preLoaderRoute: typeof AuthenticatedAdminAiEvalRouteImport
       parentRoute: typeof AuthenticatedAdminAiRoute
+    }
+    '/api/public/v1/bdpm/search': {
+      id: '/api/public/v1/bdpm/search'
+      path: '/api/public/v1/bdpm/search'
+      fullPath: '/api/public/v1/bdpm/search'
+      preLoaderRoute: typeof ApiPublicV1BdpmSearchRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin/ai/tasks/$slug': {
       id: '/_authenticated/admin/ai/tasks/$slug'
@@ -698,7 +738,19 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicFhirSplatRoute: ApiPublicFhirSplatRoute,
+  ApiPublicV1HealthRoute: ApiPublicV1HealthRoute,
+  ApiPublicV1BdpmSearchRoute: ApiPublicV1BdpmSearchRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
