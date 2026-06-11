@@ -1055,55 +1055,76 @@ export type Database = {
           comparison_json: Json
           created_at: string
           created_by: string | null
+          delivery_channel: string | null
+          delivery_log: Json
           episode_id: string
           id: string
           letter_html: string | null
           letter_text: string | null
           organization_id: string | null
+          parent_letter_id: string | null
           patient_id: string
           recipient_medecin_mssante: string | null
           recipient_medecin_nom: string | null
           recipient_pharmacien_mssante: string | null
           recipient_pharmacien_nom: string | null
           sent_at: string | null
+          sent_by: string | null
           status: string
           updated_at: string
+          validated_at: string | null
+          validated_by: string | null
+          version: number
         }
         Insert: {
           comparison_json?: Json
           created_at?: string
           created_by?: string | null
+          delivery_channel?: string | null
+          delivery_log?: Json
           episode_id: string
           id?: string
           letter_html?: string | null
           letter_text?: string | null
           organization_id?: string | null
+          parent_letter_id?: string | null
           patient_id: string
           recipient_medecin_mssante?: string | null
           recipient_medecin_nom?: string | null
           recipient_pharmacien_mssante?: string | null
           recipient_pharmacien_nom?: string | null
           sent_at?: string | null
+          sent_by?: string | null
           status?: string
           updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          version?: number
         }
         Update: {
           comparison_json?: Json
           created_at?: string
           created_by?: string | null
+          delivery_channel?: string | null
+          delivery_log?: Json
           episode_id?: string
           id?: string
           letter_html?: string | null
           letter_text?: string | null
           organization_id?: string | null
+          parent_letter_id?: string | null
           patient_id?: string
           recipient_medecin_mssante?: string | null
           recipient_medecin_nom?: string | null
           recipient_pharmacien_mssante?: string | null
           recipient_pharmacien_nom?: string | null
           sent_at?: string | null
+          sent_by?: string | null
           status?: string
           updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -1118,6 +1139,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discharge_letters_parent_letter_id_fkey"
+            columns: ["parent_letter_id"]
+            isOneToOne: false
+            referencedRelation: "discharge_letters"
             referencedColumns: ["id"]
           },
           {
@@ -1540,10 +1568,14 @@ export type Database = {
           ins_pseudo: string | null
           ipp_authority_oid: string | null
           is_synthetic: boolean
+          medecin_traitant_mssante: string | null
+          medecin_traitant_nom: string | null
           nir: string | null
           nom: string
           notes: string | null
           organization_id: string | null
+          pharmacien_officine_mssante: string | null
+          pharmacien_officine_nom: string | null
           poids_kg: number | null
           prenom: string
           service: string | null
@@ -1569,10 +1601,14 @@ export type Database = {
           ins_pseudo?: string | null
           ipp_authority_oid?: string | null
           is_synthetic?: boolean
+          medecin_traitant_mssante?: string | null
+          medecin_traitant_nom?: string | null
           nir?: string | null
           nom: string
           notes?: string | null
           organization_id?: string | null
+          pharmacien_officine_mssante?: string | null
+          pharmacien_officine_nom?: string | null
           poids_kg?: number | null
           prenom: string
           service?: string | null
@@ -1598,10 +1634,14 @@ export type Database = {
           ins_pseudo?: string | null
           ipp_authority_oid?: string | null
           is_synthetic?: boolean
+          medecin_traitant_mssante?: string | null
+          medecin_traitant_nom?: string | null
           nir?: string | null
           nom?: string
           notes?: string | null
           organization_id?: string | null
+          pharmacien_officine_mssante?: string | null
+          pharmacien_officine_nom?: string | null
           poids_kg?: number | null
           prenom?: string
           service?: string | null
