@@ -719,8 +719,8 @@ export const exportDischargeLetterPdf = createServerFn({ method: "POST" })
     y -= 8;
 
     // Render letter content paragraph by paragraph from HTML
-    const raw = (row.letter_html as string | null) ?? row.letter_text ?? "";
-    const blocks = raw
+    const raw: string = ((row.letter_html as string | null) ?? (row.letter_text as string | null) ?? "");
+    const blocks: string[] = raw
       .replace(/<\/?(h[1-6])>/gi, "\n§§\n")
       .replace(/<li[^>]*>/gi, "• ")
       .replace(/<\/li>/gi, "\n")
@@ -728,7 +728,7 @@ export const exportDischargeLetterPdf = createServerFn({ method: "POST" })
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<[^>]+>/g, "")
       .split(/\n/)
-      .map((s) => s.trim());
+      .map((s: string) => s.trim());
     let nextBold = false;
     for (const block of blocks) {
       if (block === "§§") { nextBold = true; y -= 4; continue; }
