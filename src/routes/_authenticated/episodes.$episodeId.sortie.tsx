@@ -34,6 +34,8 @@ import {
   exportDischargeLetterPdf,
 } from "@/lib/discharge/dischargeLetter.functions";
 import { pushDocumentToMes } from "@/lib/dmp/mesPush.functions";
+import { audit } from "@/lib/audit/auditClient";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/lib/audit/actions";
 
 export const Route = createFileRoute("/_authenticated/episodes/$episodeId/sortie")({
   head: () => ({ meta: [{ title: "Conciliation de sortie" }] }),
@@ -134,6 +136,7 @@ function DischargePage() {
     onSuccess: () => {
       toast.success("Lettre de liaison générée");
       qc.invalidateQueries({ queryKey: ["discharge-letters", episodeId] });
+      audit(AUDIT_ACTIONS.AI_LIAISON_LETTER_GENERATE, AUDIT_ENTITY_TYPES.EPISODE, episodeId);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -149,9 +152,10 @@ function DischargePage() {
 
   const validate = useMutation({
     mutationFn: (letterId: string) => validateFn({ data: { letterId } }),
-    onSuccess: () => {
+    onSuccess: (_r, letterId) => {
       toast.success("Lettre validée");
       qc.invalidateQueries({ queryKey: ["discharge-letters", episodeId] });
+      audit(AUDIT_ACTIONS.SORTIE_VALIDATE, AUDIT_ENTITY_TYPES.EPISODE, episodeId, { letterId });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -187,7 +191,7 @@ function DischargePage() {
 
   const downloadPdf = useMutation({
     mutationFn: (letterId: string) => pdfFn({ data: { letterId } }),
-    onSuccess: (r) => {
+    onSuccess: (r, letterId) => {
       const blob = new Blob([Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0))], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -195,6 +199,7 @@ function DischargePage() {
       a.download = r.filename;
       a.click();
       URL.revokeObjectURL(url);
+      audit(AUDIT_ACTIONS.EXPORT_PDF_LIAISON, AUDIT_ENTITY_TYPES.EPISODE, episodeId, { letterId, filename: r.filename });
     },
     onError: (e: Error) => toast.error(e.message),
   });
