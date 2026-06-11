@@ -421,11 +421,13 @@ const PISTES: Piste[] = [
       "Monétisation via API keys",
     ],
     miseEnOeuvre: [
-      "Routes /api/public/v1/* avec clés API",
-      "Schémas OpenAPI 3 + portail développeur",
-      "Rate limiting + quotas par client",
+      "Routes /api/public/v1/* (health, bdpm/search, analyze, openapi)",
+      "Clés API hashées (sha256) + scopes + quota par minute + révocation",
+      "Admin /admin/api-keys : création (affichage 1 fois), audit, journal d'usage",
+      "v2 = OpenAPI portail, webhooks, signature HMAC, monétisation Stripe",
     ],
     prerequis: ["Modèle économique défini"],
+    statut: "Livré v1",
   },
   {
     id: 15,
