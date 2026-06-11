@@ -637,7 +637,26 @@ function DashboardPage() {
   );
 }
 
-function KPI({ icon, label, value, tone, hint, loading }: { icon: React.ReactNode; label: string; value: number | string; tone?: "critical"; hint?: string; loading?: boolean }) {
+function KPI({
+  icon, label, value, tone, hint, loading, deltaPct, deltaInverse, spark, sparkColor,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number | string;
+  tone?: "critical";
+  hint?: string;
+  loading?: boolean;
+  deltaPct?: number;
+  deltaInverse?: boolean;
+  spark?: number[];
+  sparkColor?: string;
+}) {
+  const hasDelta = typeof deltaPct === "number" && Number.isFinite(deltaPct);
+  const isUp = hasDelta && deltaPct! > 0;
+  const isDown = hasDelta && deltaPct! < 0;
+  const isGood = deltaInverse ? isDown : isUp;
+  const isBad = deltaInverse ? isUp : isDown;
+  const deltaCls = isGood ? "text-primary" : isBad ? "text-destructive" : "text-muted-foreground";
   return (
     <Card className={tone === "critical" ? "border-destructive/30" : ""}>
       <CardHeader className="pb-2">
@@ -648,8 +667,27 @@ function KPI({ icon, label, value, tone, hint, loading }: { icon: React.ReactNod
           <Skeleton className="h-8 w-20" />
         ) : (
           <>
-            <div className="text-3xl font-bold">{value}</div>
-            {hint && <div className="text-[11px] text-muted-foreground mt-1">{hint}</div>}
+            <div className="flex items-end justify-between gap-2">
+              <div className="text-3xl font-bold">{value}</div>
+              {spark && spark.length > 0 && (
+                <div className="w-20 h-8 opacity-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={spark.map((v, i) => ({ i, v }))}>
+                      <Line type="monotone" dataKey="v" stroke={sparkColor ?? "currentColor"} strokeWidth={1.5} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              {hasDelta && (
+                <span className={`inline-flex items-center text-[11px] ${deltaCls}`}>
+                  {isUp ? <TrendingUp className="h-3 w-3 mr-0.5" /> : isDown ? <TrendingDown className="h-3 w-3 mr-0.5" /> : <Minus className="h-3 w-3 mr-0.5" />}
+                  {deltaPct! > 0 ? "+" : ""}{deltaPct}%
+                </span>
+              )}
+              {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
+            </div>
           </>
         )}
       </CardContent>
