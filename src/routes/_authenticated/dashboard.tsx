@@ -423,7 +423,7 @@ function DashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={divByType} dataKey="value" nameKey="name" outerRadius={80} label>
-                    {divByType.map((_, i) => <Cell key={i} fill={DIV_COLORS[i % DIV_COLORS.length]} />)}
+                    {divByType.map((_, i) => <Cell key={i} fill={divPalette[i % divPalette.length]} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
