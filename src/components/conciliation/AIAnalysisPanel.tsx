@@ -34,7 +34,11 @@ export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
 
   const mut = useMutation({
     mutationFn: () => analyzeFn({ data: { episodeId } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["ai-analysis", episodeId] }); toast.success("Analyse IA terminée"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai-analysis", episodeId] });
+      toast.success("Analyse IA terminée");
+      auditFn({ data: { action: "ai_analysis_run", entityType: "episode", entityId: episodeId } }).catch(() => {});
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur IA"),
   });
 
