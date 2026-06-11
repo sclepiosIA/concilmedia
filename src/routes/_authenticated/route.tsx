@@ -72,6 +72,13 @@ function AuthLayout() {
               <UsersRound className="h-4 w-4" /> Équipe
             </Link>
             <Link
+              to="/risk-population"
+              className="text-sm font-medium px-3 py-2 rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1.5"
+              activeProps={{ className: "text-sm font-medium px-3 py-2 rounded-full bg-accent text-accent-foreground flex items-center gap-1.5" }}
+            >
+              <Activity className="h-4 w-4" /> Risque population
+            </Link>
+            <Link
               to="/architecture-ia"
               className="text-sm font-medium px-3 py-2 rounded-full text-ink-2 hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-1.5"
               activeProps={{ className: "text-sm font-medium px-3 py-2 rounded-full bg-accent text-accent-foreground flex items-center gap-1.5" }}
