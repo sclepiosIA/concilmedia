@@ -9,7 +9,56 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Trash2, Pill, Sunrise, Sun, Sunset, Moon, FileText, Clock, Stethoscope } from "lucide-react";
+import { Trash2, Pill, Sunrise, Sun, Sunset, Moon, FileText, Clock, Stethoscope, ChevronDown } from "lucide-react";
+import { useState } from "react";
+
+function PosologieDetails({
+  posologie_texte,
+  indication,
+  duree,
+  sourceLabel,
+}: {
+  posologie_texte: string | null;
+  indication: string | null;
+  duree: string | null;
+  sourceLabel: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const parts: string[] = [];
+  if (posologie_texte) parts.push(posologie_texte);
+  if (indication) parts.push(indication);
+  if (duree) parts.push(`Durée : ${duree}`);
+  if (sourceLabel) parts.push(`Source : ${sourceLabel}`);
+  if (parts.length === 0) return null;
+  const preview = parts.join(" · ");
+  return (
+    <div className="flex flex-col gap-1 text-xs min-w-[160px] max-w-[320px]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="group flex items-start gap-1 text-left text-foreground/80 hover:text-foreground"
+        aria-expanded={open}
+      >
+        <span className={open ? "" : "line-clamp-1"}>{preview}</span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="flex flex-col gap-0.5 pl-1 border-l-2 border-muted">
+          {posologie_texte && <span className="italic text-foreground/80">{posologie_texte}</span>}
+          {indication && <span className="text-foreground/80">{indication}</span>}
+          {duree && (
+            <span className="text-foreground/80">
+              <span className="font-medium">Durée :</span> {duree}
+            </span>
+          )}
+          {sourceLabel && <span className="text-muted-foreground">Source : {sourceLabel}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
 import { OrdonnanceUploader } from "@/components/conciliation/OrdonnanceUploader";
 import { SourceDocumentLink } from "@/components/conciliation/SourceDocumentLink";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
