@@ -33,6 +33,7 @@ import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminAiRouteImport } from './routes/_authenticated/admin.ai'
 import { Route as AuthenticatedAdminAiIndexRouteImport } from './routes/_authenticated/admin.ai.index'
 import { Route as ApiPublicV1HealthRouteImport } from './routes/api/public/v1/health'
+import { Route as ApiPublicV1AnalyzeRouteImport } from './routes/api/public/v1/analyze'
 import { Route as ApiPublicFhirSplatRouteImport } from './routes/api/public/fhir/$'
 import { Route as AuthenticatedEpisodesEpisodeIdSortieRouteImport } from './routes/_authenticated/episodes.$episodeId.sortie'
 import { Route as AuthenticatedAdminAiRlhfRouteImport } from './routes/_authenticated/admin.ai.rlhf'
@@ -172,6 +173,11 @@ const ApiPublicV1HealthRoute = ApiPublicV1HealthRouteImport.update({
   path: '/api/public/v1/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicV1AnalyzeRoute = ApiPublicV1AnalyzeRouteImport.update({
+  id: '/api/public/v1/analyze',
+  path: '/api/public/v1/analyze',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicFhirSplatRoute = ApiPublicFhirSplatRouteImport.update({
   id: '/api/public/fhir/$',
   path: '/api/public/fhir/$',
@@ -240,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
+  '/api/public/v1/analyze': typeof ApiPublicV1AnalyzeRoute
   '/api/public/v1/health': typeof ApiPublicV1HealthRoute
   '/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
@@ -271,6 +278,7 @@ export interface FileRoutesByTo {
   '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
+  '/api/public/v1/analyze': typeof ApiPublicV1AnalyzeRoute
   '/api/public/v1/health': typeof ApiPublicV1HealthRoute
   '/admin/ai': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
@@ -305,6 +313,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/_authenticated/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
+  '/api/public/v1/analyze': typeof ApiPublicV1AnalyzeRoute
   '/api/public/v1/health': typeof ApiPublicV1HealthRoute
   '/_authenticated/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/_authenticated/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
@@ -339,6 +348,7 @@ export interface FileRouteTypes {
     | '/admin/ai/rlhf'
     | '/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
+    | '/api/public/v1/analyze'
     | '/api/public/v1/health'
     | '/admin/ai/'
     | '/admin/ai/tasks/$slug'
@@ -370,6 +380,7 @@ export interface FileRouteTypes {
     | '/admin/ai/rlhf'
     | '/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
+    | '/api/public/v1/analyze'
     | '/api/public/v1/health'
     | '/admin/ai'
     | '/admin/ai/tasks/$slug'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/ai/rlhf'
     | '/_authenticated/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
+    | '/api/public/v1/analyze'
     | '/api/public/v1/health'
     | '/_authenticated/admin/ai/'
     | '/_authenticated/admin/ai/tasks/$slug'
@@ -414,6 +426,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicFhirSplatRoute: typeof ApiPublicFhirSplatRoute
+  ApiPublicV1AnalyzeRoute: typeof ApiPublicV1AnalyzeRoute
   ApiPublicV1HealthRoute: typeof ApiPublicV1HealthRoute
   ApiPublicV1BdpmSearchRoute: typeof ApiPublicV1BdpmSearchRoute
 }
@@ -588,6 +601,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicV1HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/analyze': {
+      id: '/api/public/v1/analyze'
+      path: '/api/public/v1/analyze'
+      fullPath: '/api/public/v1/analyze'
+      preLoaderRoute: typeof ApiPublicV1AnalyzeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/fhir/$': {
       id: '/api/public/fhir/$'
       path: '/api/public/fhir/$'
@@ -738,6 +758,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicFhirSplatRoute: ApiPublicFhirSplatRoute,
+  ApiPublicV1AnalyzeRoute: ApiPublicV1AnalyzeRoute,
   ApiPublicV1HealthRoute: ApiPublicV1HealthRoute,
   ApiPublicV1BdpmSearchRoute: ApiPublicV1BdpmSearchRoute,
 }
