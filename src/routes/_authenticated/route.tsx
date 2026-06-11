@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Users, LogOut, LayoutDashboard, Settings, Layers, Sparkles, GitBranch, UsersRound, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isAdmin } from "@/lib/admin/ai.functions";
+import { AiHealthBanner, AiHealthIndicator } from "@/components/ai/AiHealthBanner";
 import logoAsset from "@/assets/concilmed-logo.png.asset.json";
 
 export const Route = createFileRoute("/_authenticated")({
