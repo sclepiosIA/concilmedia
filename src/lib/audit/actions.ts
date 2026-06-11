@@ -27,6 +27,10 @@ export const AUDIT_ACTIONS = {
   ROLE_REVOKE: "role_revoke",
   BDPM_REFRESH: "bdpm_refresh",
   RAG_INDEX_REBUILD: "rag_index_rebuild",
+  // Évaluation modèles (piste #15)
+  EVAL_DATASET_BUILD: "eval_dataset_build",
+  EVAL_RUN_EXECUTE: "eval_run_execute",
+  EVAL_REGRESSION_DETECTED: "eval_regression_detected",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
