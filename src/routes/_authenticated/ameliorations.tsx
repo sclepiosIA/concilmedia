@@ -474,6 +474,30 @@ const PISTES: Piste[] = [
     ],
     prerequis: ["Modèle multi-établissement (lié piste 8)"],
   },
+  {
+    id: 17,
+    titre: "Tensions, IV→PO, médico-économie & génériques",
+    categorie: "Aide à la décision",
+    icon: Building2,
+    beneficeCle: "Analyse enrichie : ruptures ANSM, relais IV→PO, coût et substitutions génériques",
+    horizon: "Court terme",
+    complexite: "Moyenne",
+    objectif:
+      "Étendre l'analyse pharmaceutique à 4 nouveaux axes : tensions/ruptures d'approvisionnement (open data ANSM), candidats au relais IV→PO (hybride règle + validation LLM), coût journalier et substitution générique la moins chère (BDPM).",
+    benefices: [
+      "Alerte automatique sur les médicaments en tension/rupture avec proposition d'alternative",
+      "Identification systématique des opportunités de relais IV→PO (économies + confort patient)",
+      "Visibilité du coût journalier et des leviers d'économie via substitution générique",
+    ],
+    miseEnOeuvre: [
+      "Table drug_shortages + endpoint /api/public/hooks/sync-ansm-shortages (cron quotidien)",
+      "Vue v_drug_cheapest_generic (BDPM : même DCI/dosage/forme, prix mini)",
+      "Whitelist IV→PO + détecteur déterministe, injection dans le prompt LLM",
+      "Bloc Médico-éco + Tensions + IV→PO ajouté à AIAnalysisPanel",
+    ],
+    prerequis: ["BDPM importée (piste 2)", "Configuration du cron pg_cron pour l'ANSM"],
+    statut: "Livré v1",
+  },
 ];
 
 const HORIZON_VARIANT: Record<Horizon, string> = {
