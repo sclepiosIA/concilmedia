@@ -33,6 +33,7 @@ import {
   regenerateDischargeLetter,
   exportDischargeLetterPdf,
 } from "@/lib/discharge/dischargeLetter.functions";
+import { pushDocumentToMes } from "@/lib/dmp/mesPush.functions";
 
 export const Route = createFileRoute("/_authenticated/episodes/$episodeId/sortie")({
   head: () => ({ meta: [{ title: "Conciliation de sortie" }] }),
@@ -197,6 +198,26 @@ function DischargePage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const pushMesFn = useServerFn(pushDocumentToMes);
+  const pushMes = useMutation({
+    mutationFn: (letterId: string) => {
+      const pid = cmp.data?.patient?.id;
+      if (!pid) throw new Error("Patient introuvable");
+      return pushMesFn({
+        data: {
+          patientId: pid,
+          episodeId,
+          documentType: "lettre_liaison",
+          documentId: letterId,
+          payloadSummary: { from: "page_sortie" },
+        },
+      });
+    },
+    onSuccess: (r) => toast.success(`Lettre poussée vers Mon Espace Santé (ACK ${r.ack_id})`),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   if (cmp.isLoading) return <div className="container py-8">Chargement…</div>;
   if (cmp.error) return <div className="container py-8 text-destructive">{(cmp.error as Error).message}</div>;
@@ -399,6 +420,18 @@ function DischargePage() {
                             <Send className="h-4 w-4 mr-1" /> Envoyer MSSanté
                           </Button>
                         )}
+                        {l.status === "prete" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => pushMes.mutate(l.id)}
+                            disabled={pushMes.isPending}
+                            title="Pousser vers Mon Espace Santé (simulé)"
+                          >
+                            <Send className="h-4 w-4 mr-1" /> Push MES
+                          </Button>
+                        )}
+
                       </div>
                     </div>
 
