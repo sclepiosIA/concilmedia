@@ -30,6 +30,7 @@ import { Route as AuthenticatedAdminImportReelRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminImportFhirRouteImport } from './routes/_authenticated/admin.import-fhir'
 import { Route as AuthenticatedAdminBdpmRouteImport } from './routes/_authenticated/admin.bdpm'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authenticated/admin.api-keys'
 import { Route as AuthenticatedAdminAiRouteImport } from './routes/_authenticated/admin.ai'
 import { Route as AuthenticatedAdminAiIndexRouteImport } from './routes/_authenticated/admin.ai.index'
 import { Route as ApiPublicV1OpenapiRouteImport } from './routes/api/public/v1/openapi'
@@ -158,6 +159,12 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminApiKeysRoute =
+  AuthenticatedAdminApiKeysRouteImport.update({
+    id: '/api-keys',
+    path: '/api-keys',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminAiRoute = AuthenticatedAdminAiRouteImport.update({
   id: '/ai',
   path: '/ai',
@@ -236,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/risk-population': typeof AuthenticatedRiskPopulationRoute
   '/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
+  '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
@@ -269,6 +277,7 @@ export interface FileRoutesByTo {
   '/equipe': typeof AuthenticatedEquipeRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/risk-population': typeof AuthenticatedRiskPopulationRoute
+  '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
@@ -305,6 +314,7 @@ export interface FileRoutesById {
   '/_authenticated/evaluation': typeof AuthenticatedEvaluationRoute
   '/_authenticated/risk-population': typeof AuthenticatedRiskPopulationRoute
   '/_authenticated/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
+  '/_authenticated/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/_authenticated/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
     | '/evaluation'
     | '/risk-population'
     | '/admin/ai'
+    | '/admin/api-keys'
     | '/admin/audit'
     | '/admin/bdpm'
     | '/admin/import-fhir'
@@ -374,6 +385,7 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/evaluation'
     | '/risk-population'
+    | '/admin/api-keys'
     | '/admin/audit'
     | '/admin/bdpm'
     | '/admin/import-fhir'
@@ -409,6 +421,7 @@ export interface FileRouteTypes {
     | '/_authenticated/evaluation'
     | '/_authenticated/risk-population'
     | '/_authenticated/admin/ai'
+    | '/_authenticated/admin/api-keys'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/bdpm'
     | '/_authenticated/admin/import-fhir'
@@ -593,6 +606,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/api-keys': {
+      id: '/_authenticated/admin/api-keys'
+      path: '/api-keys'
+      fullPath: '/admin/api-keys'
+      preLoaderRoute: typeof AuthenticatedAdminApiKeysRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/ai': {
       id: '/_authenticated/admin/ai'
       path: '/ai'
@@ -701,6 +721,7 @@ const AuthenticatedAdminAiRouteWithChildren =
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAiRoute: typeof AuthenticatedAdminAiRouteWithChildren
+  AuthenticatedAdminApiKeysRoute: typeof AuthenticatedAdminApiKeysRoute
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminBdpmRoute: typeof AuthenticatedAdminBdpmRoute
   AuthenticatedAdminImportFhirRoute: typeof AuthenticatedAdminImportFhirRoute
@@ -711,6 +732,7 @@ interface AuthenticatedAdminRouteChildren {
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAiRoute: AuthenticatedAdminAiRouteWithChildren,
+  AuthenticatedAdminApiKeysRoute: AuthenticatedAdminApiKeysRoute,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminBdpmRoute: AuthenticatedAdminBdpmRoute,
   AuthenticatedAdminImportFhirRoute: AuthenticatedAdminImportFhirRoute,
