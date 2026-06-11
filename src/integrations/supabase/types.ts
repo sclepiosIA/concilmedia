@@ -340,6 +340,45 @@ export type Database = {
           },
         ]
       }
+      audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          hash: string
+          id: string
+          payload: Json
+          prev_hash: string | null
+          seq: number
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          hash: string
+          id?: string
+          payload?: Json
+          prev_hash?: string | null
+          seq?: number
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          hash?: string
+          id?: string
+          payload?: Json
+          prev_hash?: string | null
+          seq?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       bdpm_atc: {
         Row: {
           cis: number
@@ -2508,6 +2547,15 @@ export type Database = {
       ai_provider_set_key: {
         Args: { _master_key: string; _plain_key: string; _provider_id: string }
         Returns: undefined
+      }
+      append_audit_log: {
+        Args: {
+          _action: string
+          _entity_id?: string
+          _entity_type?: string
+          _payload?: Json
+        }
+        Returns: string
       }
       has_role: {
         Args: {

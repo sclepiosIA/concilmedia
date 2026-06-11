@@ -30,6 +30,8 @@ function AdminLayout() {
         <Link to="/admin/sih-config" className="text-muted-foreground hover:underline">SIH</Link>
         <span className="text-muted-foreground">·</span>
         <Link to="/conciliation/metriques" className="text-muted-foreground hover:underline">Métriques</Link>
+        <span className="text-muted-foreground">·</span>
+        <Link to="/admin/audit" className="text-muted-foreground hover:underline">Audit</Link>
 
       </div>
 

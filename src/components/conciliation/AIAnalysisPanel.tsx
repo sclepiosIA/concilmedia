@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, FileText, AlertTriangle } from "lucide-react";
 import { analyzeConciliation, type AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
+import { recordAudit } from "@/lib/audit/audit.functions";
 import { toast } from "sonner";
 import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
 import { RiskScoreCompare } from "@/components/conciliation/RiskScoreCompare";
@@ -14,6 +15,7 @@ import { useAiHealth } from "@/hooks/useAiHealth";
 export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
   const qc = useQueryClient();
   const analyzeFn = useServerFn(analyzeConciliation);
+  const auditFn = useServerFn(recordAudit);
   const ai = useAiHealth();
 
   const { data: latest } = useQuery({
@@ -32,7 +34,11 @@ export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
 
   const mut = useMutation({
     mutationFn: () => analyzeFn({ data: { episodeId } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["ai-analysis", episodeId] }); toast.success("Analyse IA terminée"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ai-analysis", episodeId] });
+      toast.success("Analyse IA terminée");
+      auditFn({ data: { action: "ai_analysis_run", entityType: "episode", entityId: episodeId } }).catch(() => {});
+    },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur IA"),
   });
 

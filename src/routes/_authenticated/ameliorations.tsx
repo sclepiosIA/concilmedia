@@ -399,6 +399,7 @@ const PISTES: Piste[] = [
       "Export CSV/JSON daté et signé",
     ],
     prerequis: ["Politique de rétention validée DPO"],
+    statut: "Livré v1",
   },
   {
     id: 14,
