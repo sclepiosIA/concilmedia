@@ -318,16 +318,16 @@ const PISTES: Piste[] = [
       "Détection des observances réelles vs prescrites",
     ],
     miseEnOeuvre: [
-      "Référencement DMP via INS + carte CPS pharmacien",
-      "Lecture HMD via API DMP",
-      "Fusion avec ATCD recueillis",
+      "Table dmp_hmd_imports : snapshot des lignes HMD + reconciliation",
+      "Import DMP simulé (génère un HMD plausible depuis les traitements habituels)",
+      "Import manuel CSV pour les sites disposant d'un extrait DMP",
+      "Rapprochement automatique avec traitements habituels (déjà présent / à ajouter / à vérifier)",
+      "Sélection multiple → ajout en un clic aux traitements habituels",
     ],
     prerequis: [
-      "Cartes CPS",
-      "Référencement Ségur",
-      "Validation ANS (Agence du Numérique en Santé)",
+      "Carte CPS + référencement Ségur + validation ANS pour l'accès DMP réel (hors v1)",
     ],
-  },
+    statut: "Livré v1",
   {
     id: 11,
     titre: "Score de risque iatrogène longitudinal",
