@@ -24,6 +24,7 @@ import { CollapsibleSection } from "@/components/patient/CollapsibleSection";
 import { ConciliationCompleteCard } from "@/components/patient/ConciliationCompleteCard";
 import { DmpHmdSection } from "@/components/patient/DmpHmdSection";
 import { DmpAdherenceSection } from "@/components/patient/DmpAdherenceSection";
+import { RiskTrendCard } from "@/components/patient/RiskTrendCard";
 import { AssignmentPanel } from "@/components/team/AssignmentPanel";
 import { Database, FlaskConical, Hospital, Pill, Sparkles, Stethoscope } from "lucide-react";
 import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
