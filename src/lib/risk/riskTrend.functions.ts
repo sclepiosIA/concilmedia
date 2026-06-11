@@ -74,7 +74,7 @@ export const getPatientRiskTrend = createServerFn({ method: "POST" })
         delta_vs_precedent: null,
         niveau_rank: rankNiveau(s.niveau),
         niveau_rank_delta: null,
-        variables: (s.variables as Record<string, unknown> | null) ?? null,
+        variables: (s.variables as Json | null) ?? null,
       });
     }
     merged.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
