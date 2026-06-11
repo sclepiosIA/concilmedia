@@ -22,8 +22,8 @@ export const recordAudit = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: id, error } = await supabase.rpc("append_audit_log", {
       _action: data.action,
-      _entity_type: data.entityType ?? null,
-      _entity_id: data.entityId ?? null,
+      _entity_type: data.entityType ?? undefined,
+      _entity_id: data.entityId ?? undefined,
       _payload: data.payload ?? {},
     });
     if (error) throw new Error(error.message);
