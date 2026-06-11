@@ -164,7 +164,7 @@ export const exportAuditSigned = createServerFn({ method: "POST" })
       await supabase.rpc("append_audit_log", {
         _action: "audit_export_signed",
         _entity_type: "admin",
-        _entity_id: null,
+        _entity_id: undefined,
         _payload: { count: entries.length, exportHash, since: data.since ?? null, until: data.until ?? null },
       });
     } catch {
