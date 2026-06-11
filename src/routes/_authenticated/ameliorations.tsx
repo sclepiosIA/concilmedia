@@ -495,7 +495,7 @@ const PISTES: Piste[] = [
       "Whitelist IV→PO + détecteur déterministe, injection dans le prompt LLM",
       "Bloc Médico-éco + Tensions + IV→PO ajouté à AIAnalysisPanel",
     ],
-    prerequis: ["BDPM importée (piste 2)", "Configuration du cron pg_cron pour l'ANSM"],
+    prerequis: ["BDPM importée (piste 2)", "Cron pg_cron quotidien actif (06:00 UTC)"],
     statut: "Livré v1",
   },
 ];
