@@ -76,7 +76,16 @@ export function predictLayer2Sync(input: Layer2Input): Layer2Output {
   };
 }
 
-// ---- Layer 4: omission severity ----
+// ---- Layer 4: omission severity (V2) ----
+// V2 fait passer le score principal par la table per-médicament calibrée sur les
+// lots 1/2/divergences/4 (notebook ConcilMed_Etage2_Etage4). On garde un repli
+// heuristique (mots-clés + ATC) quand le médicament n'est pas dans la table.
+import {
+  lookupMedSeverity,
+  MED_SEVERITY_VERSION,
+  MED_SEVERITY_BASE_RATE,
+} from "./medSeverityV2";
+
 const HIGH_RISK_KEYWORDS = [
   "warfarine", "warfarin", "apixaban", "rivaroxaban", "dabigatran", "edoxaban",
   "acenocoumarol", "fluindione", "heparin", "enoxaparin", "tinzaparin",
@@ -90,27 +99,45 @@ const HIGH_RISK_KEYWORDS = [
 ];
 const HIGH_RISK_ATC_PREFIX = ["B01", "A10", "C01", "N03", "L04", "N05A", "N02A"];
 
+const LAYER4_VERSION = `inline-2.0.0+${MED_SEVERITY_VERSION}`;
+
 export function predictLayer4Sync(input: Layer4Input): Layer4Output {
   const name = (input.norm_name || "").toLowerCase();
   const atc = (input.atc_class || "").toUpperCase();
   const age = input.age ?? 60;
   const nbMeds = input.nb_meds_hosp ?? 0;
 
+  // V2 — lookup per-médicament (signal dominant d'après l'étude).
+  const hit = lookupMedSeverity(input.norm_name);
+  const ctxBoost =
+    0.010 * Math.max(0, age - 50) +
+    0.020 * nbMeds +
+    ((input.duree_sejour ?? 0) > 10 ? 0.15 : 0);
+
+  if (hit && hit.count >= 5) {
+    // Probabilité de base = taux observé, légèrement modulé par le contexte clinique.
+    const score = Math.max(0, Math.min(1, hit.severity + 0.5 * (ctxBoost - 0.15)));
+    return {
+      severity_score: score,
+      is_severe: score >= 0.5 ? 1 : 0,
+      model_version: LAYER4_VERSION,
+    };
+  }
+
+  // Fallback heuristique pour les médicaments hors table.
   const nameHit = HIGH_RISK_KEYWORDS.some((k) => name.includes(k));
   const atcHit = HIGH_RISK_ATC_PREFIX.some((p) => atc.startsWith(p));
-
   const z =
     -2.0 +
     (nameHit ? 1.6 : 0) +
     (atcHit ? 1.2 : 0) +
-    0.015 * Math.max(0, age - 50) +
-    0.05 * nbMeds +
-    ((input.duree_sejour ?? 0) > 10 ? 0.3 : 0);
+    1.5 * ctxBoost +
+    (MED_SEVERITY_BASE_RATE - 0.2);
   const score = Math.max(0, Math.min(1, sigmoid(z)));
   return {
     severity_score: score,
     is_severe: score >= 0.5 ? 1 : 0,
-    model_version: MODEL_VERSION,
+    model_version: LAYER4_VERSION,
   };
 }
 

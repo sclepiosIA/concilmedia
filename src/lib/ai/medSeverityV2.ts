@@ -11,7 +11,7 @@ type Artifact = {
   meds: Record<string, MedRow>;
 };
 
-const ARTIFACT = data as Artifact;
+const ARTIFACT = data as unknown as Artifact;
 
 // Same normalization as the V2 notebook (norm_name).
 const UNIT = /(mg\/kg\/j|mg\/kg|mcg\/kg|mg\/j|g\/j|mcg|µg|ug|mg|g|ml|ui|u\/ml|%|‰)/gi;
