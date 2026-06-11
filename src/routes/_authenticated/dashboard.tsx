@@ -417,8 +417,26 @@ function DashboardPage() {
       {/* KPIs row 1 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <KPI loading={isLoadingKpis} icon={<Users className="h-5 w-5" />} label="Patients" value={patientsCountQ.data ?? 0} />
-        <KPI loading={isLoadingKpis} icon={<FileText className="h-5 w-5" />} label="Conciliations" value={conciliationsDone} />
-        <KPI loading={isLoadingKpis} icon={<ShieldAlert className="h-5 w-5 text-destructive" />} label="Critiques" value={critiques} tone="critical" />
+        <KPI
+          loading={isLoadingKpis}
+          icon={<FileText className="h-5 w-5" />}
+          label="Conciliations"
+          value={conciliationsDone}
+          deltaPct={delta(conciliationsDone, prevConciliations)}
+          spark={dailyActivity.map((d) => d.conciliations)}
+          sparkColor={colors.primary}
+        />
+        <KPI
+          loading={isLoadingKpis}
+          icon={<ShieldAlert className="h-5 w-5 text-destructive" />}
+          label="Critiques"
+          value={critiques}
+          tone="critical"
+          deltaPct={delta(critiques, prevCritiques)}
+          deltaInverse
+          spark={dailyActivity.map((d) => d.critiques)}
+          sparkColor={colors.destructive}
+        />
         <KPI loading={isLoadingKpis} icon={<Activity className="h-5 w-5" />} label="Risque élevé" value={highRisk} />
       </div>
 
