@@ -32,6 +32,9 @@ function AdminLayout() {
         <Link to="/conciliation/metriques" className="text-muted-foreground hover:underline">Métriques</Link>
         <span className="text-muted-foreground">·</span>
         <Link to="/admin/audit" className="text-muted-foreground hover:underline">Audit</Link>
+        <span className="text-muted-foreground">·</span>
+        <Link to="/admin/api-keys" className="text-muted-foreground hover:underline">API publique</Link>
+
 
       </div>
 

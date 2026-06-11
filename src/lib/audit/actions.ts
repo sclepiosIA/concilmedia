@@ -31,6 +31,9 @@ export const AUDIT_ACTIONS = {
   EVAL_DATASET_BUILD: "eval_dataset_build",
   EVAL_RUN_EXECUTE: "eval_run_execute",
   EVAL_REGRESSION_DETECTED: "eval_regression_detected",
+  // API publique (piste #14)
+  API_KEY_CREATE: "api_key_create",
+  API_KEY_REVOKE: "api_key_revoke",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -44,6 +47,7 @@ export const AUDIT_ENTITY_TYPES = {
   ADMIN: "admin",
   EVAL_DATASET: "eval_dataset",
   EVAL_RUN: "eval_run",
+  API_KEY: "api_key",
 } as const;
 
 export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[keyof typeof AUDIT_ENTITY_TYPES];

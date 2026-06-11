@@ -30,13 +30,18 @@ import { Route as AuthenticatedAdminImportReelRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminImportFhirRouteImport } from './routes/_authenticated/admin.import-fhir'
 import { Route as AuthenticatedAdminBdpmRouteImport } from './routes/_authenticated/admin.bdpm'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as AuthenticatedAdminApiKeysRouteImport } from './routes/_authenticated/admin.api-keys'
 import { Route as AuthenticatedAdminAiRouteImport } from './routes/_authenticated/admin.ai'
 import { Route as AuthenticatedAdminAiIndexRouteImport } from './routes/_authenticated/admin.ai.index'
+import { Route as ApiPublicV1OpenapiRouteImport } from './routes/api/public/v1/openapi'
+import { Route as ApiPublicV1HealthRouteImport } from './routes/api/public/v1/health'
+import { Route as ApiPublicV1AnalyzeRouteImport } from './routes/api/public/v1/analyze'
 import { Route as ApiPublicFhirSplatRouteImport } from './routes/api/public/fhir/$'
 import { Route as AuthenticatedEpisodesEpisodeIdSortieRouteImport } from './routes/_authenticated/episodes.$episodeId.sortie'
 import { Route as AuthenticatedAdminAiRlhfRouteImport } from './routes/_authenticated/admin.ai.rlhf'
 import { Route as AuthenticatedAdminAiProvidersRouteImport } from './routes/_authenticated/admin.ai.providers'
 import { Route as AuthenticatedAdminAiEvalRouteImport } from './routes/_authenticated/admin.ai.eval'
+import { Route as ApiPublicV1BdpmSearchRouteImport } from './routes/api/public/v1/bdpm.search'
 import { Route as AuthenticatedAdminAiTasksSlugRouteImport } from './routes/_authenticated/admin.ai.tasks.$slug'
 
 const AuthRoute = AuthRouteImport.update({
@@ -154,6 +159,12 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminApiKeysRoute =
+  AuthenticatedAdminApiKeysRouteImport.update({
+    id: '/api-keys',
+    path: '/api-keys',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminAiRoute = AuthenticatedAdminAiRouteImport.update({
   id: '/ai',
   path: '/ai',
@@ -165,6 +176,21 @@ const AuthenticatedAdminAiIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAdminAiRoute,
   } as any)
+const ApiPublicV1OpenapiRoute = ApiPublicV1OpenapiRouteImport.update({
+  id: '/api/public/v1/openapi',
+  path: '/api/public/v1/openapi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1HealthRoute = ApiPublicV1HealthRouteImport.update({
+  id: '/api/public/v1/health',
+  path: '/api/public/v1/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1AnalyzeRoute = ApiPublicV1AnalyzeRouteImport.update({
+  id: '/api/public/v1/analyze',
+  path: '/api/public/v1/analyze',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicFhirSplatRoute = ApiPublicFhirSplatRouteImport.update({
   id: '/api/public/fhir/$',
   path: '/api/public/fhir/$',
@@ -194,6 +220,11 @@ const AuthenticatedAdminAiEvalRoute =
     path: '/eval',
     getParentRoute: () => AuthenticatedAdminAiRoute,
   } as any)
+const ApiPublicV1BdpmSearchRoute = ApiPublicV1BdpmSearchRouteImport.update({
+  id: '/api/public/v1/bdpm/search',
+  path: '/api/public/v1/bdpm/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminAiTasksSlugRoute =
   AuthenticatedAdminAiTasksSlugRouteImport.update({
     id: '/tasks/$slug',
@@ -212,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/risk-population': typeof AuthenticatedRiskPopulationRoute
   '/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
+  '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
@@ -228,8 +260,12 @@ export interface FileRoutesByFullPath {
   '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
+  '/api/public/v1/analyze': typeof ApiPublicV1AnalyzeRoute
+  '/api/public/v1/health': typeof ApiPublicV1HealthRoute
+  '/api/public/v1/openapi': typeof ApiPublicV1OpenapiRoute
   '/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
+  '/api/public/v1/bdpm/search': typeof ApiPublicV1BdpmSearchRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -241,6 +277,7 @@ export interface FileRoutesByTo {
   '/equipe': typeof AuthenticatedEquipeRoute
   '/evaluation': typeof AuthenticatedEvaluationRoute
   '/risk-population': typeof AuthenticatedRiskPopulationRoute
+  '/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
@@ -257,8 +294,12 @@ export interface FileRoutesByTo {
   '/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
+  '/api/public/v1/analyze': typeof ApiPublicV1AnalyzeRoute
+  '/api/public/v1/health': typeof ApiPublicV1HealthRoute
+  '/api/public/v1/openapi': typeof ApiPublicV1OpenapiRoute
   '/admin/ai': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
+  '/api/public/v1/bdpm/search': typeof ApiPublicV1BdpmSearchRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -273,6 +314,7 @@ export interface FileRoutesById {
   '/_authenticated/evaluation': typeof AuthenticatedEvaluationRoute
   '/_authenticated/risk-population': typeof AuthenticatedRiskPopulationRoute
   '/_authenticated/admin/ai': typeof AuthenticatedAdminAiRouteWithChildren
+  '/_authenticated/admin/api-keys': typeof AuthenticatedAdminApiKeysRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/bdpm': typeof AuthenticatedAdminBdpmRoute
   '/_authenticated/admin/import-fhir': typeof AuthenticatedAdminImportFhirRoute
@@ -289,8 +331,12 @@ export interface FileRoutesById {
   '/_authenticated/admin/ai/rlhf': typeof AuthenticatedAdminAiRlhfRoute
   '/_authenticated/episodes/$episodeId/sortie': typeof AuthenticatedEpisodesEpisodeIdSortieRoute
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
+  '/api/public/v1/analyze': typeof ApiPublicV1AnalyzeRoute
+  '/api/public/v1/health': typeof ApiPublicV1HealthRoute
+  '/api/public/v1/openapi': typeof ApiPublicV1OpenapiRoute
   '/_authenticated/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/_authenticated/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
+  '/api/public/v1/bdpm/search': typeof ApiPublicV1BdpmSearchRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -305,6 +351,7 @@ export interface FileRouteTypes {
     | '/evaluation'
     | '/risk-population'
     | '/admin/ai'
+    | '/admin/api-keys'
     | '/admin/audit'
     | '/admin/bdpm'
     | '/admin/import-fhir'
@@ -321,8 +368,12 @@ export interface FileRouteTypes {
     | '/admin/ai/rlhf'
     | '/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
+    | '/api/public/v1/analyze'
+    | '/api/public/v1/health'
+    | '/api/public/v1/openapi'
     | '/admin/ai/'
     | '/admin/ai/tasks/$slug'
+    | '/api/public/v1/bdpm/search'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -334,6 +385,7 @@ export interface FileRouteTypes {
     | '/equipe'
     | '/evaluation'
     | '/risk-population'
+    | '/admin/api-keys'
     | '/admin/audit'
     | '/admin/bdpm'
     | '/admin/import-fhir'
@@ -350,8 +402,12 @@ export interface FileRouteTypes {
     | '/admin/ai/rlhf'
     | '/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
+    | '/api/public/v1/analyze'
+    | '/api/public/v1/health'
+    | '/api/public/v1/openapi'
     | '/admin/ai'
     | '/admin/ai/tasks/$slug'
+    | '/api/public/v1/bdpm/search'
   id:
     | '__root__'
     | '/'
@@ -365,6 +421,7 @@ export interface FileRouteTypes {
     | '/_authenticated/evaluation'
     | '/_authenticated/risk-population'
     | '/_authenticated/admin/ai'
+    | '/_authenticated/admin/api-keys'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/bdpm'
     | '/_authenticated/admin/import-fhir'
@@ -381,8 +438,12 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/ai/rlhf'
     | '/_authenticated/episodes/$episodeId/sortie'
     | '/api/public/fhir/$'
+    | '/api/public/v1/analyze'
+    | '/api/public/v1/health'
+    | '/api/public/v1/openapi'
     | '/_authenticated/admin/ai/'
     | '/_authenticated/admin/ai/tasks/$slug'
+    | '/api/public/v1/bdpm/search'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -390,6 +451,10 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicFhirSplatRoute: typeof ApiPublicFhirSplatRoute
+  ApiPublicV1AnalyzeRoute: typeof ApiPublicV1AnalyzeRoute
+  ApiPublicV1HealthRoute: typeof ApiPublicV1HealthRoute
+  ApiPublicV1OpenapiRoute: typeof ApiPublicV1OpenapiRoute
+  ApiPublicV1BdpmSearchRoute: typeof ApiPublicV1BdpmSearchRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -541,6 +606,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/api-keys': {
+      id: '/_authenticated/admin/api-keys'
+      path: '/api-keys'
+      fullPath: '/admin/api-keys'
+      preLoaderRoute: typeof AuthenticatedAdminApiKeysRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/ai': {
       id: '/_authenticated/admin/ai'
       path: '/ai'
@@ -554,6 +626,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/ai/'
       preLoaderRoute: typeof AuthenticatedAdminAiIndexRouteImport
       parentRoute: typeof AuthenticatedAdminAiRoute
+    }
+    '/api/public/v1/openapi': {
+      id: '/api/public/v1/openapi'
+      path: '/api/public/v1/openapi'
+      fullPath: '/api/public/v1/openapi'
+      preLoaderRoute: typeof ApiPublicV1OpenapiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/health': {
+      id: '/api/public/v1/health'
+      path: '/api/public/v1/health'
+      fullPath: '/api/public/v1/health'
+      preLoaderRoute: typeof ApiPublicV1HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/analyze': {
+      id: '/api/public/v1/analyze'
+      path: '/api/public/v1/analyze'
+      fullPath: '/api/public/v1/analyze'
+      preLoaderRoute: typeof ApiPublicV1AnalyzeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/fhir/$': {
       id: '/api/public/fhir/$'
@@ -590,6 +683,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAiEvalRouteImport
       parentRoute: typeof AuthenticatedAdminAiRoute
     }
+    '/api/public/v1/bdpm/search': {
+      id: '/api/public/v1/bdpm/search'
+      path: '/api/public/v1/bdpm/search'
+      fullPath: '/api/public/v1/bdpm/search'
+      preLoaderRoute: typeof ApiPublicV1BdpmSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/ai/tasks/$slug': {
       id: '/_authenticated/admin/ai/tasks/$slug'
       path: '/tasks/$slug'
@@ -621,6 +721,7 @@ const AuthenticatedAdminAiRouteWithChildren =
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAiRoute: typeof AuthenticatedAdminAiRouteWithChildren
+  AuthenticatedAdminApiKeysRoute: typeof AuthenticatedAdminApiKeysRoute
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminBdpmRoute: typeof AuthenticatedAdminBdpmRoute
   AuthenticatedAdminImportFhirRoute: typeof AuthenticatedAdminImportFhirRoute
@@ -631,6 +732,7 @@ interface AuthenticatedAdminRouteChildren {
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAiRoute: AuthenticatedAdminAiRouteWithChildren,
+  AuthenticatedAdminApiKeysRoute: AuthenticatedAdminApiKeysRoute,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminBdpmRoute: AuthenticatedAdminBdpmRoute,
   AuthenticatedAdminImportFhirRoute: AuthenticatedAdminImportFhirRoute,
@@ -698,6 +800,10 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicFhirSplatRoute: ApiPublicFhirSplatRoute,
+  ApiPublicV1AnalyzeRoute: ApiPublicV1AnalyzeRoute,
+  ApiPublicV1HealthRoute: ApiPublicV1HealthRoute,
+  ApiPublicV1OpenapiRoute: ApiPublicV1OpenapiRoute,
+  ApiPublicV1BdpmSearchRoute: ApiPublicV1BdpmSearchRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
