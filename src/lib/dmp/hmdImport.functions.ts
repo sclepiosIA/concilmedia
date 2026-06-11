@@ -158,8 +158,8 @@ export const simulateHmdImport = createServerFn({ method: "POST" })
         imported_by: userId,
         period_start: periodStart.toISOString().slice(0, 10),
         period_end: today.toISOString().slice(0, 10),
-        lines,
-        reconciliation: recon,
+        lines: lines as unknown as any,
+        reconciliation: recon as unknown as any,
         status: "a_rapprocher",
       })
       .select("id")
@@ -217,8 +217,8 @@ export const importHmdManual = createServerFn({ method: "POST" })
         imported_by: userId,
         period_start: dates[0]?.slice(0, 10) ?? null,
         period_end: dates[dates.length - 1]?.slice(0, 10) ?? null,
-        lines: data.lines,
-        reconciliation: recon,
+        lines: data.lines: lines as unknown as any,
+        reconciliation: recon as unknown as any,
         status: "a_rapprocher",
       })
       .select("id")
@@ -259,7 +259,7 @@ export const addHmdToTraitementsHabituels = createServerFn({ method: "POST" })
     if (e1) throw new Error(e1.message);
     if (!imp) throw new Error("Import HMD introuvable");
 
-    const lines = (imp.lines as HmdLine[]) ?? [];
+    const lines = (imp.lines as unknown as HmdLine[]) ?? [];
     const wanted = new Set(data.dcis.map((d) => norm(d)));
     // Pour chaque DCI demandée, prendre la délivrance la plus récente
     const byDci = new Map<string, HmdLine>();
