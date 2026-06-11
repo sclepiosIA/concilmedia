@@ -1157,6 +1157,72 @@ export type Database = {
           },
         ]
       }
+      dmp_hmd_imports: {
+        Row: {
+          created_at: string
+          id: string
+          imported_at: string
+          imported_by: string | null
+          lines: Json
+          notes: string | null
+          organization_id: string | null
+          patient_id: string
+          period_end: string | null
+          period_start: string | null
+          reconciliation: Json
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          lines?: Json
+          notes?: string | null
+          organization_id?: string | null
+          patient_id: string
+          period_end?: string | null
+          period_start?: string | null
+          reconciliation?: Json
+          source: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          lines?: Json
+          notes?: string | null
+          organization_id?: string | null
+          patient_id?: string
+          period_end?: string | null
+          period_start?: string | null
+          reconciliation?: Json
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dmp_hmd_imports_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dmp_hmd_imports_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents_sources: {
         Row: {
           created_at: string
