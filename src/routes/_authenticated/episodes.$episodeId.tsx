@@ -20,6 +20,7 @@ import { DivergencesSummaryCard } from "@/components/conciliation/DivergencesSum
 import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 
 import { computePrioritization } from "@/lib/conciliation/prioritize.functions";
+import { getPatientRiskTrend } from "@/lib/risk/riskTrend.functions";
 import { toast } from "sonner";
 import type { RiskResult } from "@/lib/conciliation/riskScore";
 import { useConciliationTimer } from "@/hooks/useConciliationTimer";
