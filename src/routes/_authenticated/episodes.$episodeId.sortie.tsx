@@ -420,6 +420,18 @@ function DischargePage() {
                             <Send className="h-4 w-4 mr-1" /> Envoyer MSSanté
                           </Button>
                         )}
+                        {l.status === "prete" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => pushMes.mutate(l.id)}
+                            disabled={pushMes.isPending}
+                            title="Pousser vers Mon Espace Santé (simulé)"
+                          >
+                            <Send className="h-4 w-4 mr-1" /> Push MES
+                          </Button>
+                        )}
+
                       </div>
                     </div>
 
