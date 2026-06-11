@@ -191,13 +191,35 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
     }
 
 
+    // Enrichissement clinique : ruptures, candidats IV→PO, contexte économique.
+    const allMeds = [...dossier.traitements_habituels, ...dossier.prescriptions_hospitalieres];
+    const [shortagesCtx, ivPoCtx, economicsCtx] = await Promise.all([
+      import("@/lib/clinical/shortages.server").then((m) => m.lookupShortagesForDossier(supabase, allMeds)).catch((e) => {
+        console.warn("[analyze] shortages lookup failed:", e);
+        return [];
+      }),
+      import("@/lib/clinical/ivPoCandidates").then((m) => m.detectIvPoCandidates(dossier.prescriptions_hospitalieres)).catch((e) => {
+        console.warn("[analyze] iv→po detection failed:", e);
+        return [];
+      }),
+      import("@/lib/clinical/economics.server").then((m) => m.buildEconomicsContext(supabase, allMeds)).catch((e) => {
+        console.warn("[analyze] economics context failed:", e);
+        return null;
+      }),
+    ]);
+    const enrichedPrompt = JSON.stringify(
+      { dossier, shortages_context: shortagesCtx, iv_po_candidates: ivPoCtx, economics_context: economicsCtx },
+      null,
+      2,
+    );
+
     let result;
     try {
       result = await generateText({
         ...callOptions,
         model,
         system: __finalSystemPrompt,
-        prompt: `Dossier patient :\n${JSON.stringify(dossier, null, 2)}`,
+        prompt: `Dossier patient et contexte d'enrichissement :\n${enrichedPrompt}`,
       });
 
     } catch (e: unknown) {
