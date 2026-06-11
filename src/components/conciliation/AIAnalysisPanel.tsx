@@ -53,9 +53,18 @@ export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
         <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> Analyse IA</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Button onClick={() => mut.mutate()} disabled={mut.isPending} className="w-full" size="sm">
+        <Button onClick={() => mut.mutate()} disabled={mut.isPending || ai.degraded} className="w-full" size="sm">
           {mut.isPending ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Analyse…</> : <><Sparkles className="h-4 w-4 mr-1" /> Lancer l'analyse</>}
         </Button>
+        {ai.degraded && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 text-amber-900 text-xs p-2 flex items-start gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              IA temporairement indisponible. Les analyses précédentes restent consultables.
+            </div>
+            <button type="button" className="underline" onClick={() => ai.refresh()}>Réessayer</button>
+          </div>
+        )}
 
         <RiskScoreCompare episodeId={episodeId} />
 
