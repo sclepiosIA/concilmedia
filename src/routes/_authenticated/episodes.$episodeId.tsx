@@ -107,6 +107,24 @@ function EpisodeConciliationPage() {
     queryFn: async () => (await supabase.from("allergies").select("*").eq("patient_id", episode!.patient_id)).data ?? [],
   });
 
+  const { data: trend } = useQuery({
+    queryKey: ["risk-trend", episode?.patient_id],
+    enabled: !!episode?.patient_id,
+    queryFn: () => trendFn({ data: { patientId: episode!.patient_id } }),
+  });
+  const currentPoint = trend?.points.find((pt) => pt.episode_id === episodeId);
+  const trendAlert =
+    currentPoint && currentPoint.delta_vs_precedent !== null &&
+    (currentPoint.delta_vs_precedent >= 3 || (currentPoint.niveau_rank_delta ?? 0) >= 1)
+      ? currentPoint
+      : null;
+  const previousPoint = (() => {
+    if (!trend || !currentPoint) return null;
+    const idx = trend.points.findIndex((pt) => pt.episode_id === episodeId);
+    return idx > 0 ? trend.points[idx - 1] : null;
+  })();
+
+
   if (!episode) return <div className="container py-8">Chargement…</div>;
   const p = episode.patients;
   const age = p?.date_naissance ? Math.floor((Date.now() - new Date(p.date_naissance).getTime()) / 31557600000) : null;
