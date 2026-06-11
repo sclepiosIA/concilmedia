@@ -529,7 +529,7 @@ function DashboardPage() {
                     <div className="text-xs text-muted-foreground truncate">→ {e.denomination_generique}</div>
                   </div>
                   <div className="text-right shrink-0 ml-3">
-                    <div className="text-base font-bold text-emerald-600">−{Number(e.economie_eur).toFixed(2)} €</div>
+                    <div className="text-base font-bold text-primary">−{Number(e.economie_eur).toFixed(2)} €</div>
                     <div className="text-[10px] text-muted-foreground">/ boîte</div>
                   </div>
                 </div>
