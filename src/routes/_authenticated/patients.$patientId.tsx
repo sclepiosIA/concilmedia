@@ -365,6 +365,8 @@ function PatientDetailPage() {
         >
           <ConciliationCompleteCard patientId={patientId} autoStart />
         </CollapsibleSection>
+
+        <EntityAuditPanel entityType="patient" entityId={patientId} />
       </div>
       
     </div>

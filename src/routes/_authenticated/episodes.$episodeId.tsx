@@ -307,6 +307,8 @@ function EpisodeConciliationPage() {
             )}
           </CardContent>
         </Card>
+
+        <EntityAuditPanel entityType="episode" entityId={episodeId} />
       </div>
     </div>
   );
