@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, FileText, AlertTriangle } from "lucide-react";
 import { analyzeConciliation, type AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
+import { recordAudit } from "@/lib/audit/audit.functions";
 import { toast } from "sonner";
 import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
 import { RiskScoreCompare } from "@/components/conciliation/RiskScoreCompare";
