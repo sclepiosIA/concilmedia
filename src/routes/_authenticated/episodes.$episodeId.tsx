@@ -84,6 +84,9 @@ function EpisodeConciliationPage() {
     }
   }, [latestRisk, riskMut]);
 
+  const trendFn = useServerFn(getPatientRiskTrend);
+
+
 
   const { data: episode } = useQuery({
     queryKey: ["episode", episodeId],
