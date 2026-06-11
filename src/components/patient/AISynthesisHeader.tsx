@@ -11,6 +11,8 @@ import { classifyDci } from "@/lib/conciliation/atcInteractions";
 import { toast } from "sonner";
 import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
 import { useAiHealth } from "@/hooks/useAiHealth";
+import { audit } from "@/lib/audit/auditClient";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/lib/audit/actions";
 
 const HIGH_RISK_KEYS = new Set(["anticoagulant", "insuline", "antiepileptique", "antiarythmique", "opioide", "ains"]);
 
@@ -78,6 +80,7 @@ export function AISynthesisHeader({ patientId }: { patientId: string }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patient-synthesis-analysis", patientId] });
       toast.success("Analyse IA terminée");
+      audit(AUDIT_ACTIONS.AI_SYNTHESIS_RUN, AUDIT_ENTITY_TYPES.PATIENT, patientId);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur IA"),
   });
