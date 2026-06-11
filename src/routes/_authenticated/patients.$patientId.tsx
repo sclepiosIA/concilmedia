@@ -22,8 +22,9 @@ import { ClinicalProfileCard } from "@/components/patient/ClinicalProfileCard";
 import { MedicationProfileCard } from "@/components/patient/MedicationProfileCard";
 import { CollapsibleSection } from "@/components/patient/CollapsibleSection";
 import { ConciliationCompleteCard } from "@/components/patient/ConciliationCompleteCard";
+import { DmpHmdSection } from "@/components/patient/DmpHmdSection";
 import { AssignmentPanel } from "@/components/team/AssignmentPanel";
-import { FlaskConical, Hospital, Pill, Sparkles, Stethoscope } from "lucide-react";
+import { Database, FlaskConical, Hospital, Pill, Sparkles, Stethoscope } from "lucide-react";
 import { analyzeLettreAdmission } from "@/lib/conciliation/extractLettreAdmission.functions";
 import { useConciliationTimer } from "@/hooks/useConciliationTimer";
 
@@ -294,6 +295,16 @@ function PatientDetailPage() {
             <TraitementsHabituelsSection patientId={patientId} />
           </div>
         </CollapsibleSection>
+
+        <CollapsibleSection
+          title="DMP — Historique de médicaments délivrés"
+          icon={<Database className="h-4 w-4 text-primary" />}
+          storageKey={`sec:dmp:${patientId}`}
+          defaultOpen={false}
+        >
+          <DmpHmdSection patientId={patientId} />
+        </CollapsibleSection>
+
 
         <CollapsibleSection
           title="Prescriptions hospitalières"
