@@ -17,7 +17,7 @@ export interface RiskTrendPoint {
   delta_vs_precedent: number | null;
   niveau_rank: number;
   niveau_rank_delta: number | null;
-  variables: unknown;
+  variables: Json | null;
 }
 
 function rankNiveau(n: string | null | undefined): number {
