@@ -22,6 +22,8 @@ import { ExportFhirButtons } from "@/components/conciliation/ExportFhirButtons";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { audit } from "@/lib/audit/auditClient";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/lib/audit/actions";
 
 function decisionKey(category: ItemDecision["category"], index: number) {
   return `${category}:${index}`;
@@ -67,6 +69,7 @@ export function ConciliationCompleteCard({ patientId, autoStart = false }: { pat
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patient-conciliation-complete", patientId] });
       toast.success("Conciliation pharmaceutique complète terminée");
+      audit(AUDIT_ACTIONS.AI_RECONCILIATION_RUN, AUDIT_ENTITY_TYPES.PATIENT, patientId);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur IA"),
   });
@@ -171,6 +174,7 @@ export function ConciliationCompleteCard({ patientId, autoStart = false }: { pat
       qc.invalidateQueries({ queryKey: ["conciliation-validation", analysisId] });
       toast.success("Conciliation validée");
       setEditingValidation(false);
+      audit(AUDIT_ACTIONS.BMO_VALIDATE, AUDIT_ENTITY_TYPES.PATIENT, patientId, { analysisId });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
   });
