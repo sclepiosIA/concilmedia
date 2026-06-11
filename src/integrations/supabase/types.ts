@@ -350,6 +350,7 @@ export type Database = {
           id: string
           payload: Json
           prev_hash: string | null
+          retention_class: string
           seq: number
           user_id: string | null
         }
@@ -362,6 +363,7 @@ export type Database = {
           id?: string
           payload?: Json
           prev_hash?: string | null
+          retention_class?: string
           seq?: number
           user_id?: string | null
         }
@@ -374,6 +376,7 @@ export type Database = {
           id?: string
           payload?: Json
           prev_hash?: string | null
+          retention_class?: string
           seq?: number
           user_id?: string | null
         }
