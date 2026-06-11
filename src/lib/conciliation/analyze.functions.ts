@@ -243,7 +243,7 @@ Réponds UNIQUEMENT avec le JSON, sans markdown, sans commentaire.`;
             model,
             system: __finalSystemPrompt + "\n\nIMPORTANT: Réponds uniquement par un objet JSON valide, sans aucun texte avant ou après.",
 
-            prompt: `Dossier patient :\n${JSON.stringify(dossier, null, 2)}`,
+            prompt: `Dossier patient et contexte d'enrichissement :\n${enrichedPrompt}`,
           });
           payload = parseLlmJson<AIAnalysisPayload>(retry.text);
         } catch {
