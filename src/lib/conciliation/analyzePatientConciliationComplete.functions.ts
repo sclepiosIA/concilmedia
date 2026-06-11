@@ -567,6 +567,30 @@ Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas d
       );
     }
 
+    // Enrichissement clinique (best-effort, bornes à 1500ms pour ne pas casser le SLO global).
+    const enrichmentPromise = Promise.all([
+      import("@/lib/clinical/shortages.server").then((m) =>
+        m.lookupShortagesForDossier(supabase, [
+          ...(dossier as AnalysisDossier).traitements_habituels,
+          ...(dossier as AnalysisDossier).prescriptions_hospitalieres,
+        ]),
+      ).catch(() => []),
+      import("@/lib/clinical/ivPoCandidates").then((m) =>
+        m.detectIvPoCandidates((dossier as AnalysisDossier).prescriptions_hospitalieres),
+      ).catch(() => []),
+      import("@/lib/clinical/economics.server").then((m) =>
+        m.buildEconomicsContext(supabase, [
+          ...(dossier as AnalysisDossier).traitements_habituels,
+          ...(dossier as AnalysisDossier).prescriptions_hospitalieres,
+        ]),
+      ).catch(() => null),
+    ]);
+    const enrichment = await Promise.race([
+      enrichmentPromise,
+      new Promise<[unknown[], unknown[], unknown]>((r) => setTimeout(() => r([[], [], null]), 2500)),
+    ]);
+    const [shortagesCtx, ivPoCtx, economicsCtx] = enrichment as [unknown[], unknown[], unknown];
+
     let payload: AIAnalysisPayload;
     try {
       const result = await withHardTimeout(
@@ -574,7 +598,12 @@ Priorité: omissions/ajouts/switch/dose. Max 8 divergences, max 4 actions. Pas d
           ...callOptionsWithDefaults,
           model,
           system: __systemPrompt,
-          prompt: `Dossier patient compact :\n${JSON.stringify(buildCompactAiDossier(dossier as AnalysisDossier))}`,
+          prompt: `Dossier patient compact :\n${JSON.stringify({
+            dossier: buildCompactAiDossier(dossier as AnalysisDossier),
+            shortages_context: shortagesCtx,
+            iv_po_candidates: ivPoCtx,
+            economics_context: economicsCtx,
+          })}`,
           abortSignal: signal,
         }),
         TIMEOUT_MS,
