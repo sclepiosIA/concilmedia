@@ -51,6 +51,7 @@ function EpisodeConciliationPage() {
       const url = URL.createObjectURL(new Blob([arr], { type: "application/pdf" }));
       const a = document.createElement("a"); a.href = url; a.download = r.filename; a.click();
       URL.revokeObjectURL(url);
+      audit(AUDIT_ACTIONS.EXPORT_PDF_LIAISON, AUDIT_ENTITY_TYPES.EPISODE, episodeId, { filename: r.filename });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Erreur PDF"); }
   };
 
