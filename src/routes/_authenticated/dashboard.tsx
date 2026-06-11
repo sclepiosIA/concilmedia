@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
   Users, FileText, ShieldAlert, Sparkles, BarChart3,
   Loader2, Activity, AlertTriangle, Pill, Euro,
-  UserPlus, Upload, GitBranch, RotateCcw,
+  UserPlus, Upload, GitBranch, RotateCcw, MoreHorizontal, TrendingUp, TrendingDown, Minus,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { seedSyntheticCohort } from "@/lib/conciliation/seedSynthetic.functions";
@@ -22,7 +26,7 @@ import type { RiskResult } from "@/lib/conciliation/riskScore";
 import { findIvPoCandidate, isIvRoute } from "@/lib/clinical/ivPoCandidates";
 import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line,
 } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -38,13 +42,30 @@ const DIV_LABEL: Record<string, string> = {
   duplication: "Doublon",
   aucune: "Aucune",
 };
-const DIV_COLORS = ["#ef4444", "#f97316", "#eab308", "#3b82f6", "#8b5cf6", "#94a3b8"];
-const RISK_COLORS: Record<string, string> = {
-  critique: "#dc2626",
-  eleve: "#ea580c",
-  modere: "#eab308",
-  faible: "#16a34a",
-};
+
+// Resolve semantic CSS variables to concrete color strings usable by SVG/Recharts
+function useChartColors() {
+  const [c, setC] = useState({
+    chart1: "#3b82f6", chart2: "#14b8a6", chart3: "#f59e0b", chart4: "#ef4444", chart5: "#64748b",
+    destructive: "#dc2626", primary: "#3b82f6", muted: "#94a3b8",
+  });
+  useEffect(() => {
+    const css = getComputedStyle(document.documentElement);
+    const read = (n: string, fb: string) => css.getPropertyValue(n).trim() || fb;
+    setC({
+      chart1: read("--chart-1", "#3b82f6"),
+      chart2: read("--chart-2", "#14b8a6"),
+      chart3: read("--chart-3", "#f59e0b"),
+      chart4: read("--chart-4", "#ef4444"),
+      chart5: read("--chart-5", "#64748b"),
+      destructive: read("--destructive", "#dc2626"),
+      primary: read("--primary", "#3b82f6"),
+      muted: read("--muted-foreground", "#94a3b8"),
+    });
+  }, []);
+  return c;
+}
+
 
 function DashboardPage() {
   const qc = useQueryClient();
