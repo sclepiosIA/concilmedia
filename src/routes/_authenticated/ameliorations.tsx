@@ -328,6 +328,7 @@ const PISTES: Piste[] = [
       "Carte CPS + référencement Ségur + validation ANS pour l'accès DMP réel (hors v1)",
     ],
     statut: "Livré v1",
+  },
   {
     id: 11,
     titre: "Score de risque iatrogène longitudinal",
