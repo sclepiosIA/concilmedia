@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,9 +8,13 @@ import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/")({
   ssr: false,
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getUser();
+    if (data.user) throw redirect({ to: "/dashboard" });
+  },
   head: () => ({
     meta: [
-      { title: "Conciliation Médicamenteuse — Tableau de bord" },
+      { title: "ConcilMed·IA — Conciliation médicamenteuse assistée par IA" },
       { name: "description", content: "Module standalone de conciliation médicamenteuse avec analyse pharmaceutique assistée par IA." },
     ],
   }),
