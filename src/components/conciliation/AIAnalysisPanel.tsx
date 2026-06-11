@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, FileText } from "lucide-react";
+import { Sparkles, Loader2, ClipboardList, Stethoscope, Activity, ShieldAlert, FileText, AlertTriangle } from "lucide-react";
 import { analyzeConciliation, type AIAnalysisPayload } from "@/lib/conciliation/analyze.functions";
 import { toast } from "sonner";
 import { ClinicalAlertsPanel } from "@/components/conciliation/ClinicalAlertsPanel";
 import { RiskScoreCompare } from "@/components/conciliation/RiskScoreCompare";
+import { useAiHealth } from "@/hooks/useAiHealth";
 
 export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
   const qc = useQueryClient();
