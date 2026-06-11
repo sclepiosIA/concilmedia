@@ -1,0 +1,1 @@
+ALTER VIEW public.v_drug_cheapest_generic SET (security_invoker = on);
