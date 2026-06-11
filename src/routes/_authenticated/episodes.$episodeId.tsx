@@ -24,6 +24,9 @@ import { getPatientRiskTrend } from "@/lib/risk/riskTrend.functions";
 import { toast } from "sonner";
 import type { RiskResult } from "@/lib/conciliation/riskScore";
 import { useConciliationTimer } from "@/hooks/useConciliationTimer";
+import { EntityAuditPanel } from "@/components/audit/EntityAuditPanel";
+import { audit } from "@/lib/audit/auditClient";
+import { AUDIT_ACTIONS, AUDIT_ENTITY_TYPES } from "@/lib/audit/actions";
 
 export const Route = createFileRoute("/_authenticated/episodes/$episodeId")({
   head: () => ({ meta: [{ title: "Conciliation médicamenteuse" }] }),
@@ -33,6 +36,9 @@ export const Route = createFileRoute("/_authenticated/episodes/$episodeId")({
 function EpisodeConciliationPage() {
   const { episodeId } = Route.useParams();
   useConciliationTimer({ step: "open_episode", episodeId });
+  useEffect(() => {
+    audit(AUDIT_ACTIONS.EPISODE_VIEW, AUDIT_ENTITY_TYPES.EPISODE, episodeId);
+  }, [episodeId]);
   const recon = useMedicationReconciliation(episodeId);
   const qc = useQueryClient();
   const computeRisk = useServerFn(computePrioritization);
