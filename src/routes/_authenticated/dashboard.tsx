@@ -244,11 +244,17 @@ function DashboardPage() {
     return Array.from(m.entries()).map(([k, v]) => ({ name: DIV_LABEL[k] ?? k, value: v }));
   }, [realDivergences]);
 
+  const riskColorMap: Record<string, string> = {
+    critique: colors.destructive,
+    eleve: colors.chart3,
+    modere: colors.chart2,
+    faible: colors.primary,
+  };
   const risksByLevel = useMemo(() => {
     const m = new Map<string, number>();
     risks.forEach((r) => m.set(r.niveau, (m.get(r.niveau) ?? 0) + 1));
-    return Array.from(m.entries()).map(([k, v]) => ({ name: k, value: v, color: RISK_COLORS[k] ?? "#94a3b8" }));
-  }, [risks]);
+    return Array.from(m.entries()).map(([k, v]) => ({ name: k, value: v, color: riskColorMap[k] ?? colors.muted }));
+  }, [risks, colors.muted]);
 
   const dailyActivity = useMemo(() => {
     const days = 14;
