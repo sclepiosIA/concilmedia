@@ -46,6 +46,39 @@ export type AIAnalysisPayload = {
    * alertes LLM. Voir `computeDeterministicAlerts`.
    */
   alertes_regles?: import("./deterministicAlerts").DeterministicAlert[];
+  /** Tensions/ruptures d'approvisionnement (alerte LLM enrichie). */
+  tensions_approvisionnement?: Array<{
+    medicament: string;
+    statut: string;
+    raison?: string;
+    alternative: string;
+    recommandation: string;
+    severite?: string;
+    confiance?: number;
+    reference?: string;
+  }>;
+  /** Suggestions de relais IV → PO validées par le LLM. */
+  relais_iv_po?: Array<{
+    medicament: string;
+    voie_actuelle: string;
+    posologie_po_proposee: string;
+    biodisponibilite_po: number;
+    critere_clinique?: string;
+    economie_eur_jour?: number;
+    confiance?: number;
+    reference?: string;
+  }>;
+  /** Volet médico-économique. */
+  economie?: {
+    cout_journalier_total_eur: number;
+    substitutions_generiques: Array<{
+      medicament: string;
+      generique_propose: string;
+      economie_eur_par_jour: number;
+      confiance?: number;
+    }>;
+    synthese_medicoeconomique?: string;
+  };
 };
 
 export const analyzeConciliation = createServerFn({ method: "POST" })
