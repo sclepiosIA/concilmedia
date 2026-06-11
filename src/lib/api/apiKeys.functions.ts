@@ -14,7 +14,7 @@ async function assertAdmin(supabase: SupabaseLike, userId: string) {
 export const listApiKeys = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context.supabase as never, context.userId);
+    await assertAdmin(context.supabase as unknown as SupabaseLike, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("api_keys")
@@ -33,7 +33,7 @@ export const createApiKey = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase as never, context.userId);
+    await assertAdmin(context.supabase as unknown as SupabaseLike, context.userId);
     const { generateApiKey } = await import("@/lib/api/auth.server");
     const { plain, prefix, hash } = generateApiKey();
     const expiresAt = data.expiresInDays
@@ -74,7 +74,7 @@ export const revokeApiKey = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase as never, context.userId);
+    await assertAdmin(context.supabase as unknown as SupabaseLike, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("api_keys")
@@ -98,7 +98,7 @@ export const getApiKeyUsage = createServerFn({ method: "GET" })
     return d;
   })
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase as never, context.userId);
+    await assertAdmin(context.supabase as unknown as SupabaseLike, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: logs, error } = await supabaseAdmin
       .from("api_usage_logs")
