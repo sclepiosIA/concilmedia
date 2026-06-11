@@ -200,9 +200,35 @@ function EpisodeConciliationPage() {
         </CardContent>
       </Card>
 
+      {trendAlert && previousPoint && (
+        <Card className="mb-3 border-destructive/40 bg-destructive/5">
+          <CardContent className="py-3 flex items-start gap-3">
+            <TrendingUp className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+            <div className="flex-1 text-sm">
+              <div className="font-medium text-destructive">
+                Risque iatrogène en hausse de {trendAlert.delta_vs_precedent! > 0 ? "+" : ""}
+                {trendAlert.delta_vs_precedent} points vs séjour du{" "}
+                {previousPoint.date_entree
+                  ? new Date(previousPoint.date_entree).toLocaleDateString("fr-FR")
+                  : new Date(previousPoint.date).toLocaleDateString("fr-FR")}
+                {previousPoint.service ? ` (${previousPoint.service})` : ""}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                Score précédent : {previousPoint.score} ({previousPoint.niveau}) → actuel : {trendAlert.score} ({trendAlert.niveau}).
+                Consulter la trajectoire complète sur la fiche patient.
+              </div>
+            </div>
+            <Link to="/patients/$patientId" params={{ patientId: episode.patient_id }}>
+              <Button variant="outline" size="sm">Voir la trajectoire</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="my-4">
         <DivergencesSummaryCard conciliations={recon.conciliations} />
       </div>
+
 
 
 
