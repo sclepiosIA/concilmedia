@@ -51,6 +51,7 @@ function Stat({ icon: Icon, label, value, tone }: StatProps) {
 export function AISynthesisHeader({ patientId }: { patientId: string }) {
   const qc = useQueryClient();
   const analyzeFn = useServerFn(analyzePatientSynthesis);
+  const ai = useAiHealth();
 
   const { data: traitements = [] } = useQuery({
     queryKey: ["traitements", patientId],
