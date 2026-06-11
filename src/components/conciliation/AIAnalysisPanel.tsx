@@ -155,6 +155,8 @@ export function AIAnalysisPanel({ episodeId }: { episodeId: string }) {
                 </div>
               )}
             </section>
+
+            <ShortagesEconomicsPanel payload={payload} />
           </>
         )}
 
