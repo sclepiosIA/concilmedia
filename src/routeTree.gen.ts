@@ -32,6 +32,7 @@ import { Route as AuthenticatedAdminBdpmRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as AuthenticatedAdminAiRouteImport } from './routes/_authenticated/admin.ai'
 import { Route as AuthenticatedAdminAiIndexRouteImport } from './routes/_authenticated/admin.ai.index'
+import { Route as ApiPublicV1OpenapiRouteImport } from './routes/api/public/v1/openapi'
 import { Route as ApiPublicV1HealthRouteImport } from './routes/api/public/v1/health'
 import { Route as ApiPublicV1AnalyzeRouteImport } from './routes/api/public/v1/analyze'
 import { Route as ApiPublicFhirSplatRouteImport } from './routes/api/public/fhir/$'
@@ -168,6 +169,11 @@ const AuthenticatedAdminAiIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAdminAiRoute,
   } as any)
+const ApiPublicV1OpenapiRoute = ApiPublicV1OpenapiRouteImport.update({
+  id: '/api/public/v1/openapi',
+  path: '/api/public/v1/openapi',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicV1HealthRoute = ApiPublicV1HealthRouteImport.update({
   id: '/api/public/v1/health',
   path: '/api/public/v1/health',
@@ -248,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
   '/api/public/v1/analyze': typeof ApiPublicV1AnalyzeRoute
   '/api/public/v1/health': typeof ApiPublicV1HealthRoute
+  '/api/public/v1/openapi': typeof ApiPublicV1OpenapiRoute
   '/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
   '/api/public/v1/bdpm/search': typeof ApiPublicV1BdpmSearchRoute
@@ -280,6 +287,7 @@ export interface FileRoutesByTo {
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
   '/api/public/v1/analyze': typeof ApiPublicV1AnalyzeRoute
   '/api/public/v1/health': typeof ApiPublicV1HealthRoute
+  '/api/public/v1/openapi': typeof ApiPublicV1OpenapiRoute
   '/admin/ai': typeof AuthenticatedAdminAiIndexRoute
   '/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
   '/api/public/v1/bdpm/search': typeof ApiPublicV1BdpmSearchRoute
@@ -315,6 +323,7 @@ export interface FileRoutesById {
   '/api/public/fhir/$': typeof ApiPublicFhirSplatRoute
   '/api/public/v1/analyze': typeof ApiPublicV1AnalyzeRoute
   '/api/public/v1/health': typeof ApiPublicV1HealthRoute
+  '/api/public/v1/openapi': typeof ApiPublicV1OpenapiRoute
   '/_authenticated/admin/ai/': typeof AuthenticatedAdminAiIndexRoute
   '/_authenticated/admin/ai/tasks/$slug': typeof AuthenticatedAdminAiTasksSlugRoute
   '/api/public/v1/bdpm/search': typeof ApiPublicV1BdpmSearchRoute
@@ -350,6 +359,7 @@ export interface FileRouteTypes {
     | '/api/public/fhir/$'
     | '/api/public/v1/analyze'
     | '/api/public/v1/health'
+    | '/api/public/v1/openapi'
     | '/admin/ai/'
     | '/admin/ai/tasks/$slug'
     | '/api/public/v1/bdpm/search'
@@ -382,6 +392,7 @@ export interface FileRouteTypes {
     | '/api/public/fhir/$'
     | '/api/public/v1/analyze'
     | '/api/public/v1/health'
+    | '/api/public/v1/openapi'
     | '/admin/ai'
     | '/admin/ai/tasks/$slug'
     | '/api/public/v1/bdpm/search'
@@ -416,6 +427,7 @@ export interface FileRouteTypes {
     | '/api/public/fhir/$'
     | '/api/public/v1/analyze'
     | '/api/public/v1/health'
+    | '/api/public/v1/openapi'
     | '/_authenticated/admin/ai/'
     | '/_authenticated/admin/ai/tasks/$slug'
     | '/api/public/v1/bdpm/search'
@@ -428,6 +440,7 @@ export interface RootRouteChildren {
   ApiPublicFhirSplatRoute: typeof ApiPublicFhirSplatRoute
   ApiPublicV1AnalyzeRoute: typeof ApiPublicV1AnalyzeRoute
   ApiPublicV1HealthRoute: typeof ApiPublicV1HealthRoute
+  ApiPublicV1OpenapiRoute: typeof ApiPublicV1OpenapiRoute
   ApiPublicV1BdpmSearchRoute: typeof ApiPublicV1BdpmSearchRoute
 }
 
@@ -593,6 +606,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/ai/'
       preLoaderRoute: typeof AuthenticatedAdminAiIndexRouteImport
       parentRoute: typeof AuthenticatedAdminAiRoute
+    }
+    '/api/public/v1/openapi': {
+      id: '/api/public/v1/openapi'
+      path: '/api/public/v1/openapi'
+      fullPath: '/api/public/v1/openapi'
+      preLoaderRoute: typeof ApiPublicV1OpenapiRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/v1/health': {
       id: '/api/public/v1/health'
@@ -760,6 +780,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicFhirSplatRoute: ApiPublicFhirSplatRoute,
   ApiPublicV1AnalyzeRoute: ApiPublicV1AnalyzeRoute,
   ApiPublicV1HealthRoute: ApiPublicV1HealthRoute,
+  ApiPublicV1OpenapiRoute: ApiPublicV1OpenapiRoute,
   ApiPublicV1BdpmSearchRoute: ApiPublicV1BdpmSearchRoute,
 }
 export const routeTree = rootRouteImport
