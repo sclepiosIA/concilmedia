@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, Sparkles, ScanSearch, ShieldAlert, Loader2, Download, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, Sparkles, ScanSearch, ShieldAlert, Loader2, Download, CheckCircle2, TrendingUp } from "lucide-react";
 import { generateEpisodeConciliationPdf } from "@/lib/conciliation/pdfExport.functions";
 import { useMedicationReconciliation } from "@/hooks/useMedicationReconciliation";
 import { PharmacistConciliationPanel } from "@/components/conciliation/PharmacistConciliationPanel";
