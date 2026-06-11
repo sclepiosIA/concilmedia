@@ -1,58 +1,55 @@
-# Piste #11 v1 — Score de risque iatrogène longitudinal
+# Piste #12 v1 — Mode dégradé (LLM indisponible)
 
-`risk_scores` est déjà alimenté par épisode (score, niveau, variables, computed_at). Tout est en place pour exploiter l'historique sans changement de schéma majeur.
+Le moteur déterministe (détection divergences, score iatrogène ML inline, conciliation algorithmique) tourne déjà sans LLM. Cette v1 rend l'app **utilisable en continu** quand les providers IA externes (Lovable Gateway, Azure OpenAI, etc.) sont indisponibles : on détecte la panne, on bascule un état global, on neutralise les panneaux IA proprement et on prévient l'utilisateur.
 
-## Objectifs
-
-1. Suivre la trajectoire du risque iatrogène d'un patient au fil des épisodes.
-2. Alerter quand le risque s'aggrave significativement entre deux séjours.
-3. Donner une vue populationnelle (établissement / service) au superviseur.
+Hors scope v1 : auto-hébergement Mistral/Llama (mise en place infra), bascule provider de secours automatique, file d'attente offline avec rejeu.
 
 ## Lots
 
-### Lot A — Server functions d'historique
-Fichier `src/lib/risk/riskTrend.functions.ts` :
-- `getPatientRiskTrend({ patientId })` : joint `risk_scores` ↔ `episodes` (filtre par patient), renvoie la série chronologique `{ episode_id, date_entree, service, score, niveau, variables, delta_vs_precedent }`.
-- `getRiskAlerts({ patientId? })` : retourne les épisodes où `delta >= +3 points` ou passage de niveau (faible→modéré→élevé), avec contexte.
-- `getPopulationRiskStats({ organizationId?, periodDays })` : agrégats — moyenne du dernier score par patient, distribution par niveau, top services à risque, % patients en aggravation.
+### Lot A — Détection & statut serveur
+`src/lib/ai/aiHealth.functions.ts` :
+- `getAiGatewayHealth()` (serverFn, auth) : ping rapide (timeout 4 s) sur Lovable Gateway via `runAITask("ai-healthcheck", { prompt: "ping" })` avec un prompt minimal. Renvoie `{ status: "ok" | "degraded" | "down", latencyMs, message, providerKind, checkedAt }`.
+- Cache mémoire 60 s côté serveur (Map module-level) pour ne pas marteler le provider.
+- Toute erreur 5xx / réseau / timeout / `429`/`402` → `degraded`.
 
-Toutes protégées par `requireSupabaseAuth`. Lecture seule, pas de migration nécessaire.
+### Lot B — Hook & contexte client
+`src/hooks/useAiHealth.ts` :
+- `useQuery` qui appelle `getAiGatewayHealth` toutes les 60 s, `refetchOnWindowFocus: true`.
+- Expose `{ degraded: boolean, status, message, latencyMs, refetch }`.
+- Persistance soft : dernier état dans `sessionStorage` pour éviter le flash au premier render.
 
-### Lot B — UI patient : timeline + delta
-- Nouveau composant `src/components/patient/RiskTrendCard.tsx` :
-  - mini-courbe SVG (sparkline maison, sans dépendance) du score sur tous les épisodes
-  - badge "↑ aggravation" / "↓ amélioration" / "stable" sur le dernier delta
-  - liste des facteurs (variables JSONB) qui ont basculé positivement vs épisode précédent
-- Intégration dans `patients.$patientId.tsx` via `CollapsibleSection` "Trajectoire du risque iatrogène".
+### Lot C — Bannière UI globale
+Dans `src/routes/_authenticated/route.tsx` :
+- Sous le header, bannière jaune si `status === "degraded"` / rouge si `down` : "Mode dégradé — les fonctions IA sont temporairement indisponibles. Conciliation algorithmique, score ML inline et exports restent opérationnels."
+- Bouton "Réessayer" → `refetch()`.
 
-### Lot C — Alertes sur fiche épisode
-- Dans `episodes.$episodeId.tsx`, encart en haut : "⚠ Risque en hausse de +X points vs séjour du JJ/MM/AAAA" si delta significatif détecté côté serveur.
-- Lien vers la fiche patient pour voir l'historique complet.
+### Lot D — Désactivation gracieuse des panneaux IA
+Composants à rendre « dégradés » (au lieu de planter / spinner infini) :
+- `AIAnalysisPanel`, `AISynthesisHeader`, `ClinicalRecommendationsCard`,
+- bouton « Synthèse IA » dans la fiche patient,
+- bouton « Conciliation IA complète » et « Lettre de liaison IA » sur sortie,
+- panneaux IA admin (RLHF, banc d'essai).
 
-### Lot D — Vue populationnelle (superviseur)
-- Nouvelle route `src/routes/_authenticated/risk-population.tsx` :
-  - filtre période (30/90/365 j) et service
-  - cartes KPI : score moyen, % niveau élevé, % patients aggravés
-  - tableau "Top patients aggravés" (lien fiche) et "Top services à risque"
-- Lien depuis la sidebar (visible si rôle superviseur/admin — `has_role`).
+Pour chacun, lecture du hook → si dégradé : message d'indisponibilité + CTA "Réessayer" + lien vers une doc courte. Boutons disabled. Les actions déjà lancées restent affichées (résultats historiques DB).
 
-### Lot E — Marquage piste #11
-- `ameliorations.tsx` : ajout `statut: "Livré v1"` à la piste #11.
+### Lot E — Surface de transparence
+- Petit indicateur de statut IA dans le header (point vert/jaune/rouge + tooltip latence) cliquable → ouvre un popover récap (provider courant, dernière vérif, message).
+- Page `/admin/ai` : encart "État providers" qui affiche le résultat de `getAiGatewayHealth` + bouton « Tester ».
+
+### Lot F — Marquage piste #12
+`ameliorations.tsx` : `statut: "Livré v1"` sur la piste #12, mention "v2 = LLM auto-hébergé".
 
 ## Détails techniques
 
-- Calcul des deltas : tri par `computed_at` croissant ; `delta = score_n - score_{n-1}` ; basculement de niveau via mapping `faible=1, modéré=2, élevé=3`.
-- Seuils alertes : `delta >= +3` OU passage à un niveau supérieur → flag rouge ; `delta <= -3` → vert.
-- Sparkline : SVG inline, pas de lib externe (50×120 px, ligne + points colorés par niveau).
-- Agrégats populationnels : une seule requête `risk_scores` + `episodes` + `patients`, filtre `organization_id` via `has_role` superviseur.
-- Aucune migration SQL. Les types existants suffisent.
-
-## Hors v1
-- Forecast prédictif (modèle ML)  → futur v2.
-- Notification push / email sur aggravation → futur v2.
+- Aucune migration nécessaire.
+- `getAiGatewayHealth` réutilise `runAITask` avec un prompt 1 token, `max_tokens: 1` — coût négligeable.
+- Cache : `let cache: { value, expiresAt } | null` dans le module ; pas de Redis (single-region).
+- Bannière : composant `AiHealthBanner` placé dans `AuthLayout` sous `<header>`.
+- Hook centralisé `useAiHealth()` lu par bannière, indicateur header et tous les panneaux IA → une seule query partagée via clé `["ai-health"]`.
+- Pas de service worker / PWA (hors scope v1).
 
 ## Critères d'acceptation
-- Fiche patient affiche la courbe + delta sur tous les épisodes du patient.
-- Fiche épisode affiche un encart d'alerte quand le score augmente significativement.
-- Route `/risk-population` accessible aux superviseurs uniquement, KPI cohérents.
-- Piste #11 marquée "Livré v1" dans l'onglet améliorations.
+- Quand le provider IA est OK : aucune bannière, indicateur vert dans le header.
+- Quand on coupe la clé `LOVABLE_API_KEY` (ou que la gateway répond 5xx) : bannière jaune en ≤ 60 s, panneaux IA affichent un état "indisponible" cliquable, conciliation algorithmique + score iatrogène + exports PDF continuent de fonctionner.
+- "Réessayer" relance la vérification immédiatement.
+- Piste #12 marquée "Livré v1".
