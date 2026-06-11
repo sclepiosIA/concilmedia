@@ -284,10 +284,14 @@ function DashboardPage() {
         .from("risk_scores")
         .select("id, score, niveau, episode_id, computed_at, episodes(motif, service, patient_id, patients(nom, prenom))")
         .order("score", { ascending: false })
-        .limit(10);
+        .limit(100);
       return data ?? [];
     },
   });
+  const [prioPage, setPrioPage] = useState(0);
+  const PRIO_PER_PAGE = 10;
+  const prioTotalPages = Math.max(1, Math.ceil(priorities.length / PRIO_PER_PAGE));
+  const paginatedPriorities = priorities.slice(prioPage * PRIO_PER_PAGE, (prioPage + 1) * PRIO_PER_PAGE);
 
   const seedMut = useMutation({
     mutationFn: async (n: number) => seed({ data: { n } }),
@@ -297,6 +301,28 @@ function DashboardPage() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erreur"),
   });
+
+  // Trend (delta période courante vs précédente, même longueur)
+  const periodDays = Math.max(1, Math.round((new Date(toIso).getTime() - new Date(fromIso).getTime()) / 86400000));
+  const prevFromIso = new Date(new Date(fromIso).getTime() - periodDays * 86400000).toISOString();
+  const prevToIso = new Date(new Date(fromIso).getTime() - 1).toISOString();
+  const prevDivQ = useQuery({
+    queryKey: ["dash-prev-divergences", prevFromIso, prevToIso, service, epIds],
+    queryFn: async () => {
+      let q = supabase
+        .from("conciliation_medicaments")
+        .select("id, gravite, statut, episode_id, created_at")
+        .gte("created_at", prevFromIso)
+        .lte("created_at", prevToIso);
+      if (service !== "all") q = q.in("episode_id", epIds.length ? epIds : ["00000000-0000-0000-0000-000000000000"]);
+      const { data } = await q;
+      return data ?? [];
+    },
+  });
+  const prevDiv = prevDivQ.data ?? [];
+  const prevCritiques = prevDiv.filter((d) => d.gravite === "critique" || d.gravite === "majeur").length;
+  const prevConciliations = new Set(prevDiv.map((d) => d.episode_id)).size;
+  const delta = (cur: number, prev: number) => prev === 0 ? (cur > 0 ? 100 : 0) : Math.round(((cur - prev) / prev) * 100);
 
   const isLoadingKpis = patientsCountQ.isLoading || divQ.isLoading || risksQ.isLoading || treatsQ.isLoading;
 
