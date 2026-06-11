@@ -33,6 +33,7 @@ import {
   regenerateDischargeLetter,
   exportDischargeLetterPdf,
 } from "@/lib/discharge/dischargeLetter.functions";
+import { pushDocumentToMes } from "@/lib/dmp/mesPush.functions";
 
 export const Route = createFileRoute("/_authenticated/episodes/$episodeId/sortie")({
   head: () => ({ meta: [{ title: "Conciliation de sortie" }] }),
