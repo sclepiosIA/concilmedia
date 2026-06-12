@@ -45,8 +45,8 @@ export const extractOrdonnance = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }): Promise<ExtractOrdonnanceResult> => {
     const { supabase, userId } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY manquante");
+    // Clé IA résolue par resolveAITask() selon la config Admin IA (Azure prioritaire).
+    // Le 2ᵉ avis "Modèle B" via Lovable est best-effort et s'auto-désactive si LOVABLE_API_KEY est absent.
 
     // Optional storage upload (best-effort)
     let storagePath: string | undefined;
