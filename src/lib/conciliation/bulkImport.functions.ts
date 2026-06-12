@@ -194,8 +194,7 @@ export const extractPatientDossier = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ExtractInput.parse(d))
   .handler(async ({ data, context }): Promise<ExtractedDossier> => {
     const { supabase } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY manquante");
+    // Clé IA résolue par resolveAITask() selon la config Admin IA (Azure prioritaire).
 
     const { generateText } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
