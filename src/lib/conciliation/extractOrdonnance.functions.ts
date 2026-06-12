@@ -139,20 +139,24 @@ Réponds UNIQUEMENT avec le JSON.`;
       return null;
     });
 
-    // Modèle B — second avis via Lovable Gateway (GPT-5-mini vision) en parallèle
-    const lovableKey = process.env.LOVABLE_API_KEY;
+    // Modèle B — second avis Azure OpenAI (gpt-5.4) sur la même ressource Foundry
+    const azureKey = process.env.AZURE_OPENAI_API_KEY;
     const callB = (async (): Promise<string | null> => {
-      if (!lovableKey) return null;
+      if (!azureKey) return null;
       try {
-        const gateway = createLovableAiGatewayProvider(lovableKey);
+        const azure = createOpenAICompatible({
+          name: "azure-foundry",
+          baseURL: "https://ia-interne-resource.services.ai.azure.com/openai/v1",
+          headers: { "api-key": azureKey, Authorization: `Bearer ${azureKey}` },
+        });
         const res = await generateText({
-          model: gateway("openai/gpt-5-mini"),
+          model: azure("gpt-5.4"),
           system: __systemPrompt,
           messages: userMessages,
         });
         return res.text;
       } catch (e) {
-        console.warn("[extractOrdonnance] modèle B a échoué:", e instanceof Error ? e.message : e);
+        console.warn("[extractOrdonnance] modèle B (Azure gpt-5.4) a échoué:", e instanceof Error ? e.message : e);
         return null;
       }
     })();
