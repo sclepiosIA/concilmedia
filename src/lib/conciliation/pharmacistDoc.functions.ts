@@ -181,8 +181,7 @@ export const comparePharmacistVsAI = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => GetInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY manquante");
+    // Clé IA résolue par resolveAITask() selon la config Admin IA (Azure prioritaire).
 
     const { data: doc } = await supabase
       .from("pharmacist_conciliation_documents")

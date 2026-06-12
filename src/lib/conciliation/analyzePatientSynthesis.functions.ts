@@ -10,8 +10,7 @@ export const analyzePatientSynthesis = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY manquante");
+    // Clé IA résolue par resolveAITask() selon la config Admin IA (Azure prioritaire).
 
     const { data: patient } = await supabase.from("patients").select("*").eq("id", data.patientId).maybeSingle();
     if (!patient) throw new Error("Patient introuvable");

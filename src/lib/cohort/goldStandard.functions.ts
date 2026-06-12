@@ -38,8 +38,7 @@ export const uploadPharmacistGoldStandard = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => UploadInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY manquante");
+    // Clé IA résolue par resolveAITask() selon la config Admin IA (Azure prioritaire).
 
     // 1) Upload file to storage
     const bin = Uint8Array.from(atob(data.fileBase64), (c) => c.charCodeAt(0));

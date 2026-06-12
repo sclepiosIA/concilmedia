@@ -36,8 +36,7 @@ export const analyzeLettreAdmission = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }): Promise<ApplyResult> => {
     const { supabase } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY manquante");
+    // Clé IA résolue par resolveAITask() selon la config Admin IA (Azure prioritaire).
 
     // Resolve file: prefer base64 from client; otherwise download from storage
     let fileBase64 = data.fileBase64;
