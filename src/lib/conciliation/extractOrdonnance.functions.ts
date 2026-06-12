@@ -66,9 +66,9 @@ export const extractOrdonnance = createServerFn({ method: "POST" })
 
     const { generateText } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
+    const { createOpenAICompatible } = await import("@ai-sdk/openai-compatible");
     const __aiTaskSlug = "extract_ordonnance";
-    const __aiDefaultModel = "google/gemini-3-flash-preview";
+    const __aiDefaultModel = "gpt-5.5";
 
     const systemPrompt = `Tu es un assistant pharmaceutique expert en lecture d'ordonnances françaises.
 Analyse l'image / le PDF fourni et extrais les médicaments prescrits.
