@@ -197,7 +197,7 @@ Réponds UNIQUEMENT avec le JSON.`;
     ingest(parsedA);
     ingest(parsedB);
 
-    const modelsRun = [parsedA && "google/gemini-3-flash-preview", parsedB && "openai/gpt-5-mini"].filter(Boolean) as string[];
+    const modelsRun = [parsedA && "azure/gpt-5.5 (modèle A)", parsedB && "azure/gpt-5.4 (modèle B)"].filter(Boolean) as string[];
     const reconciledMeds: ExtractedMedication[] = Array.from(byKey.values()).map(({ med, sources }) => ({
       ...med,
       agreement: sources >= 2 ? "both" : "single",
