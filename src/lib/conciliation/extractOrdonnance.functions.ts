@@ -66,9 +66,9 @@ export const extractOrdonnance = createServerFn({ method: "POST" })
 
     const { generateText } = await import("ai");
     const { resolveAITask } = await import("@/lib/ai/runAITask.server");
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
+    const { createOpenAICompatible } = await import("@ai-sdk/openai-compatible");
     const __aiTaskSlug = "extract_ordonnance";
-    const __aiDefaultModel = "google/gemini-3-flash-preview";
+    const __aiDefaultModel = "gpt-5.5";
 
     const systemPrompt = `Tu es un assistant pharmaceutique expert en lecture d'ordonnances françaises.
 Analyse l'image / le PDF fourni et extrais les médicaments prescrits.
@@ -139,20 +139,24 @@ Réponds UNIQUEMENT avec le JSON.`;
       return null;
     });
 
-    // Modèle B — second avis via Lovable Gateway (GPT-5-mini vision) en parallèle
-    const lovableKey = process.env.LOVABLE_API_KEY;
+    // Modèle B — second avis Azure OpenAI (gpt-5.4) sur la même ressource Foundry
+    const azureKey = process.env.AZURE_OPENAI_API_KEY;
     const callB = (async (): Promise<string | null> => {
-      if (!lovableKey) return null;
+      if (!azureKey) return null;
       try {
-        const gateway = createLovableAiGatewayProvider(lovableKey);
+        const azure = createOpenAICompatible({
+          name: "azure-foundry",
+          baseURL: "https://ia-interne-resource.services.ai.azure.com/openai/v1",
+          headers: { "api-key": azureKey, Authorization: `Bearer ${azureKey}` },
+        });
         const res = await generateText({
-          model: gateway("openai/gpt-5-mini"),
+          model: azure("gpt-5.4"),
           system: __systemPrompt,
           messages: userMessages,
         });
         return res.text;
       } catch (e) {
-        console.warn("[extractOrdonnance] modèle B a échoué:", e instanceof Error ? e.message : e);
+        console.warn("[extractOrdonnance] modèle B (Azure gpt-5.4) a échoué:", e instanceof Error ? e.message : e);
         return null;
       }
     })();
@@ -193,7 +197,7 @@ Réponds UNIQUEMENT avec le JSON.`;
     ingest(parsedA);
     ingest(parsedB);
 
-    const modelsRun = [parsedA && "google/gemini-3-flash-preview", parsedB && "openai/gpt-5-mini"].filter(Boolean) as string[];
+    const modelsRun = [parsedA && "azure/gpt-5.5 (modèle A)", parsedB && "azure/gpt-5.4 (modèle B)"].filter(Boolean) as string[];
     const reconciledMeds: ExtractedMedication[] = Array.from(byKey.values()).map(({ med, sources }) => ({
       ...med,
       agreement: sources >= 2 ? "both" : "single",
