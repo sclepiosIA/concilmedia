@@ -15,14 +15,12 @@ export interface AiHealthSnapshot {
 let cache: { value: AiHealthSnapshot; expiresAt: number } | null = null;
 const CACHE_TTL_MS = 60_000;
 
-const AZURE_URL =
-  "https://ia-interne-resource.services.ai.azure.com/openai/v1/chat/completions";
+const AZURE_BASE = "https://ia-interne-resource.services.ai.azure.com/openai/v1";
 
 async function probeAzure(): Promise<AiHealthSnapshot> {
   const apiKey = process.env.AZURE_OPENAI_API_KEY ?? null;
   const checkedAt = new Date().toISOString();
   if (!apiKey) {
-    // Fallback : ping Lovable si Azure non configuré.
     const lov = process.env.LOVABLE_API_KEY;
     if (!lov) {
       return {
@@ -39,19 +37,14 @@ async function probeAzure(): Promise<AiHealthSnapshot> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
-    const resp = await fetch(AZURE_URL, {
-      method: "POST",
+    // GET /models : endpoint léger, sans payload, idéal pour un health-check.
+    const resp = await fetch(`${AZURE_BASE}/models`, {
+      method: "GET",
       signal: controller.signal,
       headers: {
-        "Content-Type": "application/json",
         "api-key": apiKey,
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: "gpt-5.5",
-        max_completion_tokens: 1,
-        messages: [{ role: "user", content: "ping" }],
-      }),
     });
     const latencyMs = Date.now() - start;
     if (resp.ok) {
@@ -66,13 +59,28 @@ async function probeAzure(): Promise<AiHealthSnapshot> {
         checkedAt,
       };
     }
+    // Récupère le détail pour diagnostiquer (400 = body/route, 401 = clé, 404 = déploiement).
+    let detail = "";
+    try {
+      const txt = await resp.text();
+      detail = txt.slice(0, 200).replace(/\s+/g, " ").trim();
+    } catch { /* noop */ }
+    if (resp.status === 401 || resp.status === 403) {
+      return { status: "down", message: `Azure : clé refusée (${resp.status}).`, latencyMs, providerKind: "azure_openai", checkedAt };
+    }
     if (resp.status === 429) {
       return { status: "degraded", message: "Azure : limite atteinte (429).", latencyMs, providerKind: "azure_openai", checkedAt };
     }
     if (resp.status >= 500) {
       return { status: "degraded", message: `Azure en erreur (${resp.status}).`, latencyMs, providerKind: "azure_openai", checkedAt };
     }
-    return { status: "degraded", message: `Azure : réponse inattendue (${resp.status}).`, latencyMs, providerKind: "azure_openai", checkedAt };
+    return {
+      status: "degraded",
+      message: `Azure : réponse ${resp.status}${detail ? ` — ${detail}` : ""}`,
+      latencyMs,
+      providerKind: "azure_openai",
+      checkedAt,
+    };
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     const isTimeout = msg.toLowerCase().includes("abort");
